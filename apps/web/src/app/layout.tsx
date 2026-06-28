@@ -11,13 +11,13 @@ import {
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   ...buildPageMetadata({
-    title: 'MindCare Online Therapy',
+    title: 'Raha | Elite Wellness Kenya',
     description:
-      'Access licensed therapists, private sessions, and mental wellness support online.',
+      'Kenya premium marketplace for verified massage therapists, spas, and wellness professionals.',
     path: '/',
-    keywords: ['online therapy', 'licensed therapists', 'mental health support'],
+    keywords: ['massage Kenya', 'spa booking Kenya', 'wellness marketplace', 'Raha'],
   }),
-  applicationName: 'MindCare',
+  applicationName: 'Raha',
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',
@@ -30,7 +30,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const themeInitScript = `
     (function () {
       try {
-        var stored = localStorage.getItem('mindcare-theme');
+        var stored = localStorage.getItem('raha-theme') || localStorage.getItem('mindcare-theme');
         var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
         var theme = stored === 'light' || stored === 'dark' ? stored : (systemDark ? 'dark' : 'light');
         document.documentElement.classList.toggle('dark', theme === 'dark');
