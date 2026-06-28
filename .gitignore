@@ -54,6 +54,9 @@ yarn-error.log*
 
 # Local environment files
 .env
+.env.*
+!.env.example
+!**/.env.example
 .env.*.local
 .env.local
 
@@ -86,4 +89,5 @@ apps/web/.next/cache/
 
 # Next.js build output
 apps/web/.next/
+
 
