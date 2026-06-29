@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const FALLBACK_SITE_URL = 'https://raha.co.ke';
+const FALLBACK_SITE_URL = 'https://utamu.co.ke';
 const DEFAULT_OG_IMAGE = '/assets/logo.png';
 
 export function getSiteUrl(): string {
@@ -32,7 +32,6 @@ export function buildPageMetadata(params: {
   noIndex?: boolean;
 }): Metadata {
   const canonical = absoluteUrl(params.path);
-
   return {
     title: params.title,
     description: params.description,
@@ -46,72 +45,27 @@ export function buildPageMetadata(params: {
       url: canonical,
       title: params.title,
       description: params.description,
-      siteName: 'Raha',
-      images: [
-        {
-          url: absoluteUrl(DEFAULT_OG_IMAGE),
-          width: 1200,
-          height: 630,
-          alt: 'Raha wellness marketplace in Kenya',
-        },
-      ],
+      siteName: 'Utamu',
+      images: [{ url: absoluteUrl(DEFAULT_OG_IMAGE), width: 1200, height: 630, alt: 'Utamu verified Kenyan model directory' }],
     },
-    twitter: {
-      card: 'summary_large_image',
-      title: params.title,
-      description: params.description,
-      images: [absoluteUrl(DEFAULT_OG_IMAGE)],
-    },
+    twitter: { card: 'summary_large_image', title: params.title, description: params.description, images: [absoluteUrl(DEFAULT_OG_IMAGE)] },
   };
 }
 
 export function buildOrganizationSchema() {
   const siteUrl = getSiteUrl();
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'Organization',
-    name: 'Raha',
-    url: siteUrl,
-    logo: absoluteUrl('/assets/logo.png'),
-    sameAs: [],
-  };
+  return { '@context': 'https://schema.org', '@type': 'Organization', name: 'Utamu', url: siteUrl, logo: absoluteUrl('/assets/logo.png'), sameAs: [] };
 }
 
 export function buildWebsiteSchema() {
   const siteUrl = getSiteUrl();
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'WebSite',
-    name: 'Raha',
-    url: siteUrl,
-    description: 'Premium wellness booking for verified massage therapists, spas, and wellness professionals in Kenya.',
-  };
+  return { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Utamu', url: siteUrl, description: 'Verified Kenyan model and talent directory with M-Pesa deposits and admin compliance workflows.' };
 }
 
 export function buildBreadcrumbSchema(items: Array<{ name: string; path: string }>) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'BreadcrumbList',
-    itemListElement: items.map((item, index) => ({
-      '@type': 'ListItem',
-      position: index + 1,
-      name: item.name,
-      item: absoluteUrl(item.path),
-    })),
-  };
+  return { '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: items.map((item, index) => ({ '@type': 'ListItem', position: index + 1, name: item.name, item: absoluteUrl(item.path) })) };
 }
 
 export function buildFaqSchema(items: Array<{ question: string; answer: string }>) {
-  return {
-    '@context': 'https://schema.org',
-    '@type': 'FAQPage',
-    mainEntity: items.map((item) => ({
-      '@type': 'Question',
-      name: item.question,
-      acceptedAnswer: {
-        '@type': 'Answer',
-        text: item.answer,
-      },
-    })),
-  };
+  return { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: items.map((item) => ({ '@type': 'Question', name: item.question, acceptedAnswer: { '@type': 'Answer', text: item.answer } })) };
 }

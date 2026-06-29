@@ -9,7 +9,7 @@ export default function AntiSpamPolicyPage() {
     <SupportPageLayout
       eyebrow="Compliance"
       title="Anti-Spam Policy"
-      description="MindCare is committed to responsible communications. We do not tolerate spam, deceptive outreach, or misuse of platform messaging features."
+      description="Utamu is committed to responsible communications. We do not tolerate spam, deceptive outreach, or misuse of platform messaging features."
       lastUpdated={lastUpdated}
       sections={[
         {
@@ -17,7 +17,7 @@ export default function AntiSpamPolicyPage() {
           title: 'No unsolicited bulk email',
           body: (
             <p>
-              MindCare does not send unsolicited bulk email. We do not permit use of our services to send
+              Utamu does not send unsolicited bulk email. We do not permit use of our services to send
               spam, harvest contacts, or distribute unwanted mass communications.
             </p>
           ),
@@ -30,7 +30,7 @@ export default function AntiSpamPolicyPage() {
               <li>Account and authentication actions (e.g., login and verification notices).</li>
               <li>Receipts, billing confirmations, and payment-related service messages.</li>
               <li>Support follow-ups and issue resolution updates.</li>
-              <li>Service updates related to your MindCare usage.</li>
+              <li>Service updates related to your Utamu usage.</li>
               <li>Optional promotional or educational messages only when you opt in.</li>
             </ul>
           ),
@@ -61,8 +61,8 @@ export default function AntiSpamPolicyPage() {
           title: 'Report suspected abuse',
           body: (
             <p>
-              If you receive suspicious or abusive messages claiming to be from MindCare, email
-              support@mindcareonlinetherapy.com with the full message details so our team can investigate.
+              If you receive suspicious or abusive messages claiming to be from Utamu, email
+              support@utamu.co.ke with the full message details so our team can investigate.
             </p>
           ),
         },

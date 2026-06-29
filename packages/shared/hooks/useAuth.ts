@@ -14,7 +14,7 @@ export interface UseLoginOptions {
 // Detect React Native vs Web; RN needs screen names, Web uses paths.
 const isNative = typeof navigator !== 'undefined' && (navigator as any)?.product === 'ReactNative';
 
-// Map web-style paths to native screen names (MindCare minimal).
+// Map web-style paths to native screen names (Utamu minimal).
 function routeAlias(input?: string): string | undefined {
   if (!input) return input;
   if (!isNative) return input; // keep raw paths on web
@@ -38,7 +38,7 @@ function routeAlias(input?: string): string | undefined {
     case '/profile/me':
       return 'Account';
     default:
-      // MindCare: safest default is Builder
+      // Utamu: safest default is Builder
       return 'Builder';
   }
 }
@@ -147,7 +147,7 @@ const useAuth = (options?: UseLoginOptions) => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<Error | null>(null);
 
-  /** GOOGLE OAUTH CALLBACK FLOW (MindCare) */
+  /** GOOGLE OAUTH CALLBACK FLOW (Utamu) */
   const handleGoogleOAuthCode = useCallback(
     async (code: string) => {
       try {
@@ -181,7 +181,7 @@ const useAuth = (options?: UseLoginOptions) => {
     [alertFn]
   );
 
-  /** EMAIL/PASSWORD FLOWS (MindCare) */
+  /** EMAIL/PASSWORD FLOWS (Utamu) */
   const loginWithEmail = useCallback(
     async (payload: AuthPayload): Promise<AuthResponse> => {
       const resp = await api.login(backendUrl, payload);
@@ -222,7 +222,7 @@ const useAuth = (options?: UseLoginOptions) => {
     [backendUrl, setToken, setProfile]
   );
 
-  /** OTP reset flow (MindCare) */
+  /** OTP reset flow (Utamu) */
   const sendResetOTP = useCallback(
     async (email: string): Promise<AuthResponse> => {
       return api.requestOTP(backendUrl, email);

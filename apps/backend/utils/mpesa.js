@@ -28,14 +28,14 @@ const MPESA_BASE = MPESA_ENV === 'sandbox'
   ? 'https://sandbox.safaricom.co.ke'
   : 'https://api.safaricom.co.ke';
 
-// Callback precedence for MindCare:
-// 1) MPESA_MindCare_CALLBACK_URL (dedicated MindCare callback)
-// 2) MindCare_MPESA_CALLBACK_URL (legacy MindCare-specific variable)
+// Callback precedence for Utamu:
+// 1) MPESA_Utamu_CALLBACK_URL (dedicated Utamu callback)
+// 2) Utamu_MPESA_CALLBACK_URL (legacy Utamu-specific variable)
 // 3) MPESA_CALLBACK_URL (generic fallback when intentionally shared)
 // 4) CALLBACK_URL (legacy generic fallback)
-const MindCare_CALLBACK_URL =
-  process.env.MPESA_MindCare_CALLBACK_URL ||
-  process.env.MindCare_MPESA_CALLBACK_URL ||
+const Utamu_CALLBACK_URL =
+  process.env.MPESA_Utamu_CALLBACK_URL ||
+  process.env.Utamu_MPESA_CALLBACK_URL ||
   process.env.MPESA_CALLBACK_URL ||
   callbackURL;
 
@@ -49,8 +49,8 @@ const MindCare_CALLBACK_URL =
   ['MPESA_SHORTCODE', shortcode],
   ['CALLBACK_URL', callbackURL],
   ['MPESA_CALLBACK_URL', process.env.MPESA_CALLBACK_URL],
-  ['MPESA_MindCare_CALLBACK_URL', process.env.MPESA_MindCare_CALLBACK_URL],
-  ['MindCare_MPESA_CALLBACK_URL', process.env.MindCare_MPESA_CALLBACK_URL],
+  ['MPESA_Utamu_CALLBACK_URL', process.env.MPESA_Utamu_CALLBACK_URL],
+  ['Utamu_MPESA_CALLBACK_URL', process.env.Utamu_MPESA_CALLBACK_URL],
   ['TIMEOUT_URL', timeoutURL],
   ['RESULT_URL', resultURL],
   ['MPESA_INITIATOR_NAME', initiatorName],
@@ -62,7 +62,7 @@ const MindCare_CALLBACK_URL =
 });
 
 export function resolveStkCallbackUrl({ product = 'default' } = {}) {
-  if (product === 'MindCare') return MindCare_CALLBACK_URL || null;
+  if (product === 'Utamu') return Utamu_CALLBACK_URL || null;
   return globalStkCallback || null;
 }
 

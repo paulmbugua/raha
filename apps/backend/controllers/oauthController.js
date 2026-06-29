@@ -2,7 +2,7 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import pool from '../config/db.js';
 
-const OAUTH_STATE_COOKIE = 'MindCare_oauth_state';
+const OAUTH_STATE_COOKIE = 'Utamu_oauth_state';
 const OAUTH_STATE_TTL_MS = 10 * 60 * 1000;
 const OAUTH_CODE_TTL_MS = 60 * 1000;
 
@@ -14,7 +14,7 @@ const now = () => Date.now();
 const isProd = process.env.NODE_ENV === 'production';
 
 const APP_FRONTEND_URL =
-  process.env.FRONTEND_URL?.trim() || 'https://mindcareonlinetherapy.com';
+  process.env.FRONTEND_URL?.trim() || 'https://utamu.co.ke';
 
 const createToken = (id) =>
   jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '1d' });

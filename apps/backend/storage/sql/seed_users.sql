@@ -1,4 +1,4 @@
--- Seed script for MindCare users table (PostgreSQL).
+-- Seed script for Utamu users table (PostgreSQL).
 -- Safe to run multiple times; uses IF NOT EXISTS guards and inserts only if missing.
 
 -- 1) Table + constraints
@@ -25,7 +25,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS users_email_unique
 -- 2) Dev-only seed users
 -- Password is "Password123!" (bcrypt hash).
 INSERT INTO public.users (name, email, password, role, tokens)
-SELECT 'MindCare Admin', 'admin@mindcare.local',
+SELECT 'Utamu Admin', 'admin@mindcare.local',
        '$2b$10$y0ft0aMdPrScKaxVTUY0weWeN4HBCeYH2Dg./nPT.8kE.Pg/aElQW',
        'admin', 0
 WHERE NOT EXISTS (
@@ -33,7 +33,7 @@ WHERE NOT EXISTS (
 );
 
 INSERT INTO public.users (name, email, password, role, tokens)
-SELECT 'MindCare Demo User', 'demo@mindcare.local',
+SELECT 'Utamu Demo User', 'demo@mindcare.local',
        '$2b$10$y0ft0aMdPrScKaxVTUY0weWeN4HBCeYH2Dg./nPT.8kE.Pg/aElQW',
        'user', 0
 WHERE NOT EXISTS (

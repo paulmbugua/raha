@@ -303,7 +303,7 @@ export const googleLogin = async (req, res) => {
     }
 
     // Allow either Firebase project ID or Google client ID verification
-    const firebaseProjectId = process.env.FIREBASE_PROJECT_ID; // <-- set this for MindCare if using Firebase ID tokens
+    const firebaseProjectId = process.env.FIREBASE_PROJECT_ID; // <-- set this for Utamu if using Firebase ID tokens
     const allowedAudiences = [
       process.env.GOOGLE_CLIENT_ID_WEB,
       process.env.GOOGLE_CLIENT_ID_ANDROID,
@@ -358,7 +358,7 @@ export const googleLogin = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Invalid token claims' });
     }
 
-    // MindCare: always role='user' (no role selection)
+    // Utamu: always role='user' (no role selection)
    const emailNorm = String(email).trim().toLowerCase();
 
 const { rows } = await pool.query(

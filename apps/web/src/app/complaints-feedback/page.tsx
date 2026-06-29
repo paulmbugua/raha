@@ -1,28 +1,13 @@
 import type { Metadata } from 'next';
-import ComplaintsFeedbackPage from '../../pages/ComplaintsFeedback';
-import { buildBreadcrumbSchema, buildPageMetadata } from '../../lib/seo';
+import UtamuApp from '../../components/utamu/UtamuApp';
+import { buildPageMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Complaints & Feedback | MindCare',
-  description:
-    'Contact MindCare with service complaints, billing concerns, technical issues, account concerns, and product feedback.',
-  path: '/complaints-feedback',
-  keywords: ['MindCare complaints', 'MindCare feedback', 'online therapy support'],
+  title: 'Utamu | Verified Kenyan Model and Talent Directory',
+  description: 'Utamu routes are served through the verified Kenyan model and talent directory experience.',
+  path: '/',
 });
 
-const breadcrumbSchema = buildBreadcrumbSchema([
-  { name: 'Home', path: '/' },
-  { name: 'Complaints & Feedback', path: '/complaints-feedback' },
-]);
-
 export default function Page() {
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
-      <ComplaintsFeedbackPage />
-    </>
-  );
+  return <UtamuApp />;
 }

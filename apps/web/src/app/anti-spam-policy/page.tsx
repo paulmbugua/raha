@@ -1,28 +1,13 @@
 import type { Metadata } from 'next';
-import AntiSpamPolicyPage from '../../pages/AntiSpamPolicy';
-import { buildBreadcrumbSchema, buildPageMetadata } from '../../lib/seo';
+import UtamuApp from '../../components/utamu/UtamuApp';
+import { buildPageMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Anti-Spam Policy | MindCare',
-  description:
-    'Review MindCare anti-spam commitments, permitted communications, unsubscribe expectations, and abuse reporting instructions.',
-  path: '/anti-spam-policy',
-  keywords: ['MindCare anti-spam policy', 'email compliance', 'online therapy support'],
+  title: 'Utamu | Verified Kenyan Model and Talent Directory',
+  description: 'Utamu routes are served through the verified Kenyan model and talent directory experience.',
+  path: '/',
 });
 
-const breadcrumbSchema = buildBreadcrumbSchema([
-  { name: 'Home', path: '/' },
-  { name: 'Anti-Spam Policy', path: '/anti-spam-policy' },
-]);
-
 export default function Page() {
-  return (
-    <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbSchema) }}
-      />
-      <AntiSpamPolicyPage />
-    </>
-  );
+  return <UtamuApp />;
 }

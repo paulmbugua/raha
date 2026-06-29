@@ -11,13 +11,13 @@ import {
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   ...buildPageMetadata({
-    title: 'Raha | Elite Wellness Kenya',
+    title: 'Utamu | Verified Kenyan Model and Talent Directory',
     description:
-      'Kenya premium marketplace for verified massage therapists, spas, and wellness professionals.',
+      'Premium dark-elegance directory for verified Kenyan models, talent bookings, M-Pesa deposits, reviews, and admin compliance.',
     path: '/',
-    keywords: ['massage Kenya', 'spa booking Kenya', 'wellness marketplace', 'Raha'],
+    keywords: ['Utamu', 'Kenyan models', 'verified talent', 'M-Pesa booking', 'model directory'],
   }),
-  applicationName: 'Raha',
+  applicationName: 'Utamu',
   icons: {
     icon: '/favicon.png',
     shortcut: '/favicon.png',
@@ -30,9 +30,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   const themeInitScript = `
     (function () {
       try {
-        var stored = localStorage.getItem('raha-theme') || localStorage.getItem('mindcare-theme');
-        var systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var theme = stored === 'light' || stored === 'dark' ? stored : (systemDark ? 'dark' : 'light');
+        var stored = localStorage.getItem('utamu-theme') || localStorage.getItem('raha-theme') || localStorage.getItem('mindcare-theme');
+        var theme = stored === 'light' || stored === 'dark' ? stored : 'dark';
         document.documentElement.classList.toggle('dark', theme === 'dark');
       } catch (e) {}
     })();

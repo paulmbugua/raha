@@ -2,7 +2,7 @@
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const DEFAULT_PUBLIC_BACKEND_URL = 'https://server.mindcareonlinetherapy.com';
+const DEFAULT_PUBLIC_BACKEND_URL = 'https://api.utamu.co.ke';
 const nextPublicBackendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL?.trim().replace(/\/+$/, '') || DEFAULT_PUBLIC_BACKEND_URL;
 

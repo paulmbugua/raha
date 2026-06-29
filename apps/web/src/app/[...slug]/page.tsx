@@ -1,14 +1,14 @@
 import type { Metadata } from 'next';
-import RahaApp from '../../components/raha/RahaApp';
+import UtamuApp from '../../components/utamu/UtamuApp';
 import { buildPageMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Raha App | Wellness Marketplace Routes',
-  description: 'Explore Raha customer, provider, booking, checkout, wallet, subscription, review, and admin screens.',
+  title: 'Utamu App | Discovery, Profiles, Verification, Payments and Admin',
+  description: 'Explore Utamu discovery, model profiles, model dashboard, verification, M-Pesa checkout, reviews, notifications, and admin analytics.',
   path: '/',
 });
 
 export default async function Page({ params }: { params: Promise<{ slug?: string[] }> }) {
   const resolved = await params;
-  return <RahaApp slug={resolved.slug} />;
+  return <UtamuApp slug={resolved.slug} />;
 }
