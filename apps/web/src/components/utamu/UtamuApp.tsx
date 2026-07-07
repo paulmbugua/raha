@@ -1,6 +1,6 @@
 'use client';
 
-import { Bell, Check, ChevronRight, CreditCard, Crown, FileCheck2, Gauge, Heart, Home, LayoutDashboard, Lock, MapPin, MessageCircle, Search, ShieldCheck, Sparkles, Star, Upload, Wallet, X } from 'lucide-react';
+import { Bell, Check, ChevronRight, FileCheck2, Gauge, Lock, Mail, MessageCircle, Search, ShieldCheck, Star, Upload, Wallet, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { UtamuModel } from '../../data/utamu';
 import { models } from '../../data/utamu';
@@ -11,12 +11,6 @@ type UtamuAppProps = { slug?: string[] };
 
 type View = 'home' | 'profile' | 'dashboard' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
 
-const nav = [
-  { href: '/', label: 'Discover' },
-  { href: '/model/amina-w', label: 'Profiles' },
-  { href: '/model/dashboard', label: 'Dashboard' },
-  { href: '/admin/verification-review', label: 'Admin' },
-];
 
 const routeLinks = [
   '/',
@@ -66,70 +60,45 @@ function StatusBadge({ children, tone = 'gold' }: { children: React.ReactNode; t
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <main className="min-h-screen bg-[#131313] text-[#e5e2e1] selection:bg-[#ffd700] selection:text-[#221b00]">
-      <header className="fixed inset-x-0 top-0 z-50 border-b border-[#4d4732]/40 bg-[#131313]/70 backdrop-blur-2xl">
-        <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-5">
-          <a href="/" className="font-display text-xl font-bold tracking-tight text-[#ffd700]">UTAMU</a>
-          <nav className="hidden items-center gap-8 md:flex">
-            {nav.map((item) => <a key={item.href} href={item.href} className="text-sm font-semibold uppercase tracking-wide text-[#d0c6ab] hover:text-[#fff6df]">{item.label}</a>)}
-          </nav>
-          <a href="/verification/step-1" className="rounded-lg bg-[#ffd700] px-4 py-2 text-sm font-bold text-[#221b00]">Get verified</a>
-        </div>
-      </header>
-      <div className="pt-20">{children}</div>
-      <nav className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-[#4d4732]/50 bg-[#131313]/85 px-2 py-2 text-[11px] text-[#d0c6ab] backdrop-blur-2xl md:hidden">
-        {[
-          { href: '/', icon: Home, label: 'Home' },
-          { href: '/discover', icon: Search, label: 'Search' },
-          { href: '/model/amina-w', icon: Star, label: 'Profile' },
-          { href: '/checkout/mpesa', icon: Wallet, label: 'Pay' },
-          { href: '/model/dashboard', icon: LayoutDashboard, label: 'Studio' },
-        ].map((item) => {
-          const Icon = item.icon;
-          return <a key={item.href} href={item.href} className="grid justify-items-center gap-1"><Icon className="h-5 w-5" />{item.label}</a>;
-        })}
-      </nav>
+    <main className="min-h-screen bg-[#101010] font-serif text-[#2b1037] selection:bg-[#ec2aa0] selection:text-white">
+      <div className="mx-auto max-w-[1180px] bg-[#fff0f6] shadow-2xl shadow-black/40">
+        <header className="bg-[#2b0a3d] text-white">
+          <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-4 px-5 py-3 md:flex-nowrap">
+            <a href="/" className="font-serif text-4xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#8b6a9b] md:text-5xl">Secret Nairobi</a>
+            <nav className="flex flex-1 flex-wrap items-center gap-3 text-sm font-bold">
+              <a href="/" className="rounded-full bg-[#ec4eb8] px-4 py-2 text-white shadow-sm">All Nairobi Models</a>
+              <a href="/admin/verification-review" className="hover:text-[#ffb7df]">Agencies</a>
+              <a href="/reviews/ratings" className="hover:text-[#ffb7df]">Reviews</a>
+              <a href="/verification/step-1" className="uppercase hover:text-[#ffb7df]">Advertise for free!</a>
+            </nav>
+            <div className="flex items-center gap-2 text-sm font-bold">
+              <a href="/verification/step-1" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>
+              <a href="/login" className="rounded-full bg-[#ec4eb8] px-3 py-2">Login</a>
+              <a href="/discover" className="grid h-7 w-7 place-items-center"><Search className="h-5 w-5" /></a>
+              <a href="/help" className="grid h-7 w-7 place-items-center"><Mail className="h-5 w-5" /></a>
+            </div>
+          </div>
+        </header>
+        {children}
+      </div>
     </main>
   );
 }
 
-function SearchControls() {
-  const { filters, actions, options } = useUtamuDirectory();
+function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) {
+  const verified = model.verified || index < 8;
+  const isNew = index >= 8;
   return (
-    <div className="grid gap-3 rounded-xl border border-[#4d4732]/70 bg-[#1c1b1b]/90 p-3 backdrop-blur-xl md:grid-cols-[1.5fr_1fr_1fr_auto]">
-      <label className="flex items-center gap-3 rounded-lg border border-[#353534] bg-[#201f1f] px-4 py-3 focus-within:border-[#ffd700]">
-        <Search className="h-5 w-5 text-[#ffd700]" />
-        <input value={filters.query} onChange={(event) => actions.setQuery(event.target.value)} placeholder="Search talent, city, style" className="w-full bg-transparent text-sm text-[#fff6df] outline-none placeholder:text-[#999077]" />
-      </label>
-      <select value={filters.city} onChange={(event) => actions.setCity(event.target.value)} className="rounded-lg border border-[#353534] bg-[#201f1f] px-4 py-3 text-sm text-[#e5e2e1]">
-        {options.cities.map((city) => <option key={city}>{city}</option>)}
-      </select>
-      <select value={filters.category} onChange={(event) => actions.setCategory(event.target.value)} className="rounded-lg border border-[#353534] bg-[#201f1f] px-4 py-3 text-sm text-[#e5e2e1]">
-        {options.categories.map((category) => <option key={category}>{category}</option>)}
-      </select>
-      <a href="/discover" className="inline-flex items-center justify-center rounded-lg bg-[#ffd700] px-5 py-3 text-sm font-bold text-[#221b00]">Explore</a>
-    </div>
-  );
-}
-
-function ModelCard({ model }: { model: UtamuModel }) {
-  return (
-    <a href={`/model/${model.slug}`} className="group relative block overflow-hidden rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e]">
-      <div className="aspect-[3/4] overflow-hidden">
-        <img src={model.image} alt={`${model.name} portfolio`} className="h-full w-full object-cover transition duration-700 group-hover:scale-110" />
-      </div>
-      <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent p-4">
-        <div className="mb-2 flex items-center gap-2">
-          {model.online && <span className="h-2 w-2 rounded-full bg-[#61f595] shadow-[0_0_10px_rgba(97,245,149,0.9)]" />}
-          <span className="rounded-full bg-black/50 px-2 py-1 text-[11px] uppercase tracking-wide text-[#d0c6ab] backdrop-blur">{model.city}</span>
-          {model.elite && <span className="rounded-full bg-[#ffd700] px-2 py-1 text-[11px] font-bold text-[#221b00]">Elite</span>}
-        </div>
-        <div className="flex items-end justify-between gap-3">
-          <div>
-            <h3 className="font-display text-xl font-bold text-white">{model.name}</h3>
-            <p className="text-xs text-[#d0c6ab]">{model.category} - {model.county}</p>
-          </div>
-          <div className="text-right font-display text-sm font-semibold text-[#ffd700]">{kes(model.priceFrom)}+</div>
+    <a href={`/model/${model.slug}`} className="group relative block overflow-hidden rounded-[3px] border border-[#ff6d73] bg-white shadow-sm">
+      <div className="relative aspect-[3/4] overflow-hidden">
+        <img src={model.image} alt={`${model.name} Nairobi model portfolio`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+        <div className="absolute right-[-34px] top-3 rotate-45 bg-gradient-to-r from-[#ff8a00] to-[#ffbd00] px-9 py-1 text-[10px] font-bold uppercase text-white shadow">VIP</div>
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between bg-gradient-to-r from-[#bc3c96]/80 via-[#e86ab7]/75 to-[#bc3c96]/80 px-2 py-1 text-white">
+          <span className="truncate text-center text-base font-normal">{model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '')}</span>
+          <span className="flex shrink-0 gap-1">
+            {isNew && <span className="rounded-sm bg-[#ff3bbd] px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none">New</span>}
+            <span className={`rounded-sm px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none ${verified ? 'bg-[#18c26a]' : 'bg-[#ff2336]'}`}>{verified ? 'Verified' : 'Unverified'}</span>
+          </span>
         </div>
       </div>
     </a>
@@ -137,33 +106,56 @@ function ModelCard({ model }: { model: UtamuModel }) {
 }
 
 function DiscoveryHome() {
-  const { filteredModels, filters, actions } = useUtamuDirectory();
+  const { filteredModels } = useUtamuDirectory();
+  const directoryModels = Array.from({ length: 12 }, (_, index) => {
+    const base = filteredModels[index % filteredModels.length] || models[index % models.length];
+    const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Model Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha'];
+    return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: index < 9, elite: true };
+  });
+
   return (
     <>
-      <section className="relative overflow-hidden px-5 py-10 md:py-16">
-        <div className="absolute inset-0 opacity-25 [background:radial-gradient(circle_at_20%_10%,#ffd700_0,transparent_30%),radial-gradient(circle_at_90%_0%,#61f595_0,transparent_24%)]" />
-        <div className="relative mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-          <div>
-            <StatusBadge><Sparkles className="h-4 w-4" />Dark elegance directory</StatusBadge>
-            <h1 className="mt-5 font-display text-5xl font-extrabold leading-tight text-[#fff6df] md:text-7xl">Discover verified Kenyan talent.</h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-[#d0c6ab]">Utamu is a premium model and wellness talent directory with curated profiles, identity verification, verified reviews, M-Pesa deposits, and admin-grade compliance workflows.</p>
-            <div className="mt-8"><SearchControls /></div>
-            <div className="mt-5 flex flex-wrap gap-3">
-              <label className="flex items-center gap-2 rounded-full border border-[#4d4732] px-4 py-2 text-sm text-[#d0c6ab]"><input type="checkbox" checked={filters.verifiedOnly} onChange={(event) => actions.setVerifiedOnly(event.target.checked)} />Verified only</label>
-              <label className="flex items-center gap-2 rounded-full border border-[#4d4732] px-4 py-2 text-sm text-[#d0c6ab]"><input type="checkbox" checked={filters.eliteOnly} onChange={(event) => actions.setEliteOnly(event.target.checked)} />Elite only</label>
+      <div className="grid gap-0 md:grid-cols-[1fr_220px]">
+        <section className="bg-[#fff0f6] px-4 py-5 md:px-5">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+            <h1 className="text-xl font-normal text-[#3b164b]">All models</h1>
+            <div className="flex flex-wrap gap-2 text-sm">
+              {['Female', 'Independent', 'VIP', 'New'].map((item) => <a key={item} href="/discover" className="rounded-full border border-[#d3e8f4] bg-[#eef9ff] px-4 py-2 text-[#ec2aa0]">{item}</a>)}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
-            {filteredModels.slice(0, 6).map((model) => <ModelCard key={model.id} model={model} />)}
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+            {directoryModels.map((model, index) => <ModelCard key={model.id} model={model} index={index} />)}
           </div>
-        </div>
+          <div className="mt-8 flex justify-center gap-1 text-sm font-bold text-white">
+            {['1', '2', '...', '9', '10'].map((page) => <a key={page} href="/discover" className="grid h-7 min-w-7 place-items-center rounded-full bg-[#ec2aa0] px-2">{page}</a>)}
+          </div>
+        </section>
+        <aside className="bg-[#101010] text-white">
+          <div className="bg-[#e60073] px-4 py-5">
+            <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
+            <div className="space-y-3 text-sm">
+              <select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select>
+              <select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select>
+              <label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label>
+              <label className="flex items-center gap-2"><input type="checkbox" />Only independent</label>
+              <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div>
+              <a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a>
+            </div>
+          </div>
+          <div className="min-h-[760px] bg-[#101010]" />
+        </aside>
+      </div>
+      <section className="border-t border-[#ffd7e6] bg-[#fff0f6] px-4 py-6 text-[#111] md:px-5">
+        <h2 className="mb-3 text-3xl font-bold leading-tight">Secret Nairobi Models - Home Of The Most Alluring Talent</h2>
+        <p className="mb-3 text-[15px] leading-7">Entertainment, events, fashion, and lifestyle productions across Nairobi need dependable talent with polished presentation and professional communication. Secret Nairobi Models gives clients a simple way to browse verified profiles, compare styles, review availability, and connect with models suited for campaigns, hospitality, launches, brand shoots, and private creative bookings.</p>
+        <p className="mb-3 text-[15px] leading-7">Our directory focuses on elegant presentation, quick discovery, and transparent profile signals. You can explore independent models, VIP profiles, new listings, and verified members from one place. Nairobi offers a deep pool of creative talent ready to bring your concept to life.</p>
+        <h3 className="mb-2 text-2xl font-bold">We Serve The Best Model Directory Experience In Kenya</h3>
+        <p className="text-[15px] leading-7">At Secret Nairobi, our listed models are presented with clear photos, verification labels, review flows, and profile details so clients can make informed decisions. Whether you prefer studio talent, event hosts, commercial faces, runway profiles, or lifestyle creators, our goal is to make discovery fast, attractive, and easy to navigate.</p>
       </section>
-      <section className="mx-auto grid max-w-7xl gap-4 px-5 py-8 md:grid-cols-3">
-        {[['Verified identity', ShieldCheck], ['M-Pesa deposits', CreditCard], ['Weighted reviews', Star]].map(([label, Icon]) => {
-          const I = Icon as typeof ShieldCheck;
-          return <div key={String(label)} className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><I className="mb-8 h-7 w-7 text-[#ffd700]" /><h3 className="font-display text-xl font-bold text-[#fff6df]">{String(label)}</h3><p className="mt-2 text-sm text-[#d0c6ab]">Built from the attached Utamu screen flow with dark surfaces, gold accents, and compliance-first booking.</p></div>;
-        })}
-      </section>
+      <footer className="bg-[#2b0a3d] px-5 py-5 text-center text-sm text-white">
+        <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
+        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Models</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/verification/step-1">Advertise for free</a></div>
+      </footer>
     </>
   );
 }
@@ -253,5 +245,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'profile' && <ProfileScreen />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}<RouteIndex /></Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'profile' && <ProfileScreen />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{view !== 'home' && <RouteIndex />}</Shell>;
 }
