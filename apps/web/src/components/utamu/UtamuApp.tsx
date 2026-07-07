@@ -357,6 +357,12 @@ function RegistrationFormScreen({ path }: { path: string }) {
         </section>
         <RegistrationQuickSearch />
       </div>
+      <section className="bg-[#fff0f6] px-5 py-16 md:py-24">
+        <div className="mx-auto max-w-4xl border-t border-[#ffd0e8] pt-8 text-center">
+          <p className="text-sm leading-7 text-[#9b8090]">Your account details are reviewed carefully so every Secret Nairobi profile starts with cleaner data, better trust signals, and a more polished public presence.</p>
+          <div className="mx-auto mt-8 h-1 w-24 rounded-full bg-[#e60073]" />
+        </div>
+      </section>
       <RegistrationFooter />
     </>
   );
