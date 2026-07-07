@@ -109,9 +109,9 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
 
 function DiscoveryHome() {
   const { filteredModels } = useUtamuDirectory();
-  const directoryModels = Array.from({ length: 12 }, (_, index) => {
+  const directoryModels = Array.from({ length: 48 }, (_, index) => {
     const base = filteredModels[index % filteredModels.length] || models[index % models.length];
-    const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Model Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha'];
+    const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Model Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
     return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: index < 9, elite: true };
   });
 
@@ -247,39 +247,103 @@ function RegisterScreen() {
       </section>
       <footer className="bg-[#fff0f6] px-4 pb-5 text-center text-xs text-[#e60073] md:px-5">
         <div className="mb-4 flex flex-wrap justify-center gap-2"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
-        <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">© 2026 SecretNairobi.com - Models in Nairobi</div>
+        <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">(c) 2026 SecretNairobi.com - Models in Nairobi</div>
       </footer>
     </>
   );
 }
 
-function ProfileScreen() {
-  const model = models[0];
+function ProfileScreen({ path }: { path: string }) {
+  const slug = path.replace(/^model\/?/, '') || 'amina-w';
+  const model = models.find((item) => item.slug === slug) || models[0];
+  const displayName = model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '') || 'Sara';
+  const phone = '+254710474716';
+  const gallery = Array.from({ length: 10 }, (_, index) => model.gallery[index % model.gallery.length] || model.image);
+  const topRated = Array.from({ length: 8 }, (_, index) => {
+    const base = models[index % models.length];
+    const names = ['Jenny Nairobi', 'Miss Anna', 'Evelyn', 'Selena no.1 Nairobi', 'Mia', 'Hellen', 'Emma', 'Ivy'];
+    return { ...base, id: `top-${index}`, name: names[index] || base.name, verified: true, elite: true };
+  });
+  const facts = [
+    ['Availability', 'Incall, Outcall'],
+    ['Ethnicity', 'Kenyan'],
+    ['Hair color', 'Blonde'],
+    ['Hair length', 'Long'],
+    ['Bust size', 'Regular'],
+    ['Height', model.height],
+    ['Weight', '48kg'],
+    ['Build', 'Regular'],
+    ['Looks', 'Ultra polished'],
+    ['Smoker', 'No'],
+    ['Professional style', 'Calm, reliable and polished'],
+  ];
+  const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings'];
+
   return (
-    <section className="mx-auto max-w-7xl px-5 py-8">
-      <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div>
-          <div className="relative overflow-hidden rounded-2xl border border-[#2a2a2a]">
-            <img src={model.gallery[0]} alt="Utamu profile hero" className="h-[520px] w-full object-cover" />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
-            <div className="absolute bottom-0 p-6">
-              <div className="flex flex-wrap gap-2"><StatusBadge><ShieldCheck className="h-4 w-4" />Verified</StatusBadge><StatusBadge tone="green">Online now</StatusBadge><StatusBadge>Elite</StatusBadge></div>
-              <h1 className="mt-4 font-display text-5xl font-extrabold text-white">{model.name}</h1>
-              <p className="mt-2 text-[#d0c6ab]">{model.age} - {model.height} - {model.city}, {model.county}</p>
+    <>
+      <div className="grid gap-0 md:grid-cols-[1fr_220px]">
+        <section className="bg-[#fff0f6] px-3 py-5 text-[#2b1037] md:px-4">
+          <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h1 className="text-3xl font-normal text-[#ff4eb8]">{displayName}</h1>
+              <div className="mt-2 flex gap-2 text-[11px] font-bold uppercase text-white"><span className="rounded-full bg-[#ff8a00] px-2 py-1">VIP</span><span className="rounded-full bg-[#18c26a] px-2 py-1">Verified</span></div>
             </div>
+            <div className="text-right text-[#ff4eb8]"><div className="text-xs text-[#8d7a88]">call me</div><a href={`tel:${phone}`} className="text-2xl font-bold">{phone}</a></div>
           </div>
-          <div className="mt-5 grid gap-4 md:grid-cols-3">{model.gallery.slice(1, 4).map((image) => <img key={image} src={image} alt="Portfolio" className="h-64 rounded-xl object-cover" />)}</div>
-          <div className="mt-6 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">About</h2><p className="mt-3 leading-7 text-[#d0c6ab]">{model.bio}</p><div className="mt-5 flex flex-wrap gap-2">{model.specialties.map((item) => <StatusBadge key={item} tone="muted">{item}</StatusBadge>)}</div></div>
-        </div>
-        <aside className="h-fit rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e]/90 p-5 backdrop-blur-xl lg:sticky lg:top-24">
-          <div className="flex items-center justify-between"><span className="font-display text-3xl font-bold text-[#ffd700]">{kes(model.priceFrom)}+</span><span className="flex items-center gap-1 text-sm"><Star className="h-4 w-4 fill-[#ffd700] text-[#ffd700]" />{model.rating} ({model.reviews})</span></div>
-          <p className="mt-3 text-sm text-[#d0c6ab]">{model.responseTime}. Direct contact unlocks only after verified M-Pesa deposit.</p>
-          <div className="mt-5 grid gap-3">{model.rates.map((rate) => <div key={rate.label} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between gap-4"><div><p className="font-semibold text-[#fff6df]">{rate.label}</p><p className="text-xs text-[#999077]">{rate.duration}</p></div><span className="font-display font-bold text-[#ffd700]">{kes(rate.price)}</span></div></div>)}</div>
-          <a href="/checkout/mpesa" className="mt-5 flex items-center justify-center gap-2 rounded-lg bg-[#25d366] px-5 py-3 font-bold text-white"><MessageCircle className="h-5 w-5" />Pay deposit via M-Pesa</a>
-          <a href="/reviews/ratings" className="mt-3 flex items-center justify-center rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Leave verified review</a>
+          <div className="grid grid-cols-2 gap-1 md:grid-cols-5">
+            {gallery.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${displayName} portfolio ${index + 1}`} className="aspect-[4/5] w-full object-cover" />)}
+          </div>
+          <section className="mt-6 bg-white p-5">
+            <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">About me:</h2>
+            <p className="mt-4 text-[14px] leading-7"><strong>{model.age} years old {model.category} - Independent Nairobi Model.</strong></p>
+            <p className="mt-2 text-[14px] leading-7">Hello, my name is {displayName}. I am based around {model.city}, {model.county}, and available for polished model bookings, portfolio shoots, campaigns, brand appearances, hospitality hosting, and creative productions. I keep communication clear, arrive prepared, and work with clients who value professionalism and privacy.</p>
+            <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="mt-4 inline-flex font-bold text-[#ff1d9b]">WhatsApp Me</a>
+          </section>
+          <div className="mt-3 grid gap-3 md:grid-cols-2">
+            <section className="bg-white p-5">
+              <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Model rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
+                {facts.map(([label, value]) => <div key={label}><dt className="mb-1 font-bold uppercase text-[#ff4eb8]">{label}</dt><dd>{value}</dd></div>)}
+              </dl>
+            </section>
+            <section className="bg-white p-5">
+              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Services:</h2>
+              <ul className="mt-4 space-y-2 text-[14px]">{services.map((service) => <li key={service} className="flex gap-2"><Check className="h-4 w-4 text-[#25b86b]" /><span>{service}</span></li>)}</ul>
+            </section>
+            <section className="bg-white p-5">
+              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Languages spoken:</h2>
+              <p className="mt-4 text-[13px]"><strong className="uppercase text-[#ff4eb8]">English:</strong><br />Fluent</p>
+              <p className="mt-3 text-[13px]"><strong className="uppercase text-[#ff4eb8]">Swahili:</strong><br />Fluent</p>
+            </section>
+            <section className="bg-white p-5">
+              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Rates:</h2>
+              <div className="mt-5 grid grid-cols-[1fr_1fr_1fr] text-center text-[13px]"><strong></strong><strong className="bg-[#ff4eb8] py-1 text-white">Studio</strong><strong className="bg-[#ff4eb8] py-1 text-white">Event</strong><strong className="py-3 text-left">1 hour</strong><span className="py-3">{kes(model.priceFrom)}</span><span className="py-3">{kes(model.priceFrom + 2500)}</span></div>
+            </section>
+            <section className="bg-white p-5">
+              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Contact info:</h2>
+              <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-[13px]"><dt className="font-bold">Phone:</dt><dd className="text-[#ff4eb8]">{phone}</dd><dt className="font-bold">WhatsApp:</dt><dd><a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="text-[#ff4eb8]">WhatsApp</a></dd></dl>
+              <p className="mt-4 text-[13px] leading-6">Tell us you found this profile on <strong>Secret Nairobi</strong> to improve response handling and platform safety.</p>
+              <a href="/messages" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Email Me</a>
+            </section>
+          </div>
+          <section className="mt-3 bg-white p-5">
+            <div className="flex items-center justify-between"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Reviews:</h2><a href="/reviews/ratings" className="rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Add Review</a></div>
+            <p className="mt-4 text-sm">No reviews yet</p>
+          </section>
+          <section className="mt-6">
+            <h2 className="mb-4 text-xl font-normal text-[#3b164b]">Top Rated Models</h2>
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div>
+          </section>
+        </section>
+        <aside className="bg-[#101010] text-white">
+          <div className="bg-[#e60073] px-4 py-5">
+            <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
+            <div className="space-y-3 text-sm"><select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select><select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select><label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label><label className="flex items-center gap-2"><input type="checkbox" />Only independent</label><div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div><a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a></div>
+          </div>
+          <div className="min-h-[1800px] bg-[#101010]" />
         </aside>
       </div>
-    </section>
+    </>
   );
 }
 
@@ -338,5 +402,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'profile' && <ProfileScreen />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{view !== 'home' && view !== 'register' && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'profile'].includes(view) && <RouteIndex />}</Shell>;
 }
