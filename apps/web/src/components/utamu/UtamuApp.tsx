@@ -343,6 +343,27 @@ function ProfileScreen({ path }: { path: string }) {
           <div className="min-h-[1800px] bg-[#101010]" />
         </aside>
       </div>
+
+      <section className="bg-[#fff0f6] px-5 py-10 text-[#111]">
+        <div className="grid gap-10 md:grid-cols-3">
+          <article>
+            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Models In Nairobi?</h2>
+            <p className="text-[15px] leading-8">Secret Nairobi makes model discovery direct, attractive, and organized. Clients can compare verified profiles, browse portfolio images, review availability signals, and choose talent suited for campaigns, launches, hospitality, shoots, and lifestyle events across Nairobi.</p>
+          </article>
+          <article>
+            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2>
+            <p className="text-[15px] leading-8">Every profile flow is built around presentation quality and trust. Independent models can manage their own listing, agencies can coordinate multiple profiles, and clients get a familiar directory experience with clear account paths and visible verification cues.</p>
+          </article>
+          <article>
+            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Models Make Life Enjoyable</h2>
+            <p className="text-[15px] leading-8">The platform keeps discovery simple for everyone. Free user accounts support favorites and reviews, while model and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.</p>
+          </article>
+        </div>
+        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional model profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
+        <div className="mt-6 text-center font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
+        <div className="mt-10 flex flex-wrap justify-center gap-2 text-center text-xs text-[#e60073]"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
+      </section>
+      <footer className="bg-[#101010] px-5 py-2 text-center text-xs font-bold text-white">(c) 2026 SecretNairobi.com - Models in Nairobi</footer>
     </>
   );
 }
