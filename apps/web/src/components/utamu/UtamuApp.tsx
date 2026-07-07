@@ -306,7 +306,10 @@ function FormRow({ label, hint, required = false, children }: { label: string; h
 
 const fieldClass = 'h-9 w-full border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
 const selectClass = 'h-9 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
-const checkboxCardClass = 'flex min-h-9 items-center gap-2 rounded-[3px] border border-[#ffd0e8] bg-white/80 px-3 py-2 text-sm text-[#003b5c] transition hover:border-[#ff55c7] hover:bg-white';
+const checkboxCardClass = 'flex min-h-9 cursor-pointer items-center gap-2 rounded-[3px] border border-[#ffd0e8] bg-white/80 px-3 py-2 text-sm text-[#003b5c] transition hover:border-[#ff55c7] hover:bg-white';
+const serviceTileBaseClass = 'flex min-h-12 cursor-pointer items-center gap-3 rounded-[4px] border px-4 py-3 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-[#ff55c7]/30';
+const serviceTileSelectedClass = 'border-[#e60073] bg-[#e60073] text-white shadow-sm';
+const serviceTileIdleClass = 'border-[#ffbad9] bg-white/85 text-[#003b5c] hover:border-[#e60073] hover:bg-[#fff8fc]';
 const kenyanTowns = [
   'Nairobi', 'Westlands', 'Karen', 'Kilimani', 'Runda', 'Kitengela', 'Ruiru', 'Thika', 'Kiambu', 'Kikuyu',
   'Ngong', 'Athi River', 'Machakos', 'Mombasa', 'Diani', 'Kilifi', 'Malindi', 'Watamu', 'Lamu', 'Voi',
@@ -388,7 +391,24 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Professional orientation"><select className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 md:grid-cols-[1fr_160px]"><select className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-lg"><div className="mb-4 flex items-center justify-end gap-3 text-sm"><span>Currency:</span><select className={selectClass + ' w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid grid-cols-[120px_1fr_1fr] gap-2 text-center text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
-                <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2"><label className={checkboxCardClass + ' md:col-span-2'}><input type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} /> Select all services</label>{services.map((service) => <label key={service} className={checkboxCardClass}><input type="checkbox" checked={selectedServices.includes(service)} onChange={() => toggleService(service)} /> {service}</label>)}</div></FormRow>
+                <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">
+                  <label className={serviceTileBaseClass + ' md:col-span-2 ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+                    <input className="sr-only" type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} />
+                    <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#e60073]' : 'border-[#e60073] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
+                    <span className="flex-1">Select all services</span>
+                    <span className={allServicesSelected ? 'text-xs text-white' : 'text-xs text-[#9b8090]'}>{selectedServices.length}/{services.length} selected</span>
+                  </label>
+                  {services.map((service) => {
+                    const selected = selectedServices.includes(service);
+                    return (
+                      <label key={service} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+                        <input className="sr-only" type="checkbox" checked={selected} onChange={() => toggleService(service)} />
+                        <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
+                        <span>{service}</span>
+                      </label>
+                    );
+                  })}
+                </div></FormRow>
               </>
             )}
             <div className="pt-2 text-center"><button className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm">Complete Registration</button></div>
