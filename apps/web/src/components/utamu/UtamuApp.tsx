@@ -314,6 +314,21 @@ const kenyanTowns = [
   'Narok', 'Meru', 'Embu', 'Isiolo', 'Garissa', 'Wajir', 'Marsabit', 'Bungoma', 'Busia', 'Homa Bay',
   'Migori', 'Kitale', 'Lodwar', 'Mandera'
 ];
+const birthYears = Array.from({ length: 49 }, (_, index) => 2008 - index);
+const birthMonths = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const birthDays = Array.from({ length: 31 }, (_, index) => index + 1);
+const kenyanEthnicities = ['Kikuyu', 'Luhya', 'Kalenjin', 'Luo', 'Kamba', 'Somali', 'Kisii', 'Mijikenda', 'Meru', 'Maasai', 'Turkana', 'Teso', 'Embu', 'Taita', 'Taveta', 'Kuria', 'Samburu', 'Borana', 'Swahili', 'Orma', 'Rendille', 'El Molo', 'Ogiek', 'Suba', 'Pokot', 'Nandi', 'Marakwet', 'Keiyo', 'Tugen', 'Ilchamus', 'Tharaka', 'Mbeere', 'Gabra', 'Bajuni', 'Boni', 'Prefer not to say'];
+const hairColors = ['Black', 'Dark brown', 'Brown', 'Light brown', 'Blonde', 'Auburn', 'Red', 'Grey', 'Dyed / fashion color', 'Prefer not to say'];
+const hairLengths = ['Shaved', 'Short', 'Shoulder length', 'Medium', 'Long', 'Very long', 'Braids / locs', 'Wig / varies', 'Prefer not to say'];
+const bustSizes = ['Petite', 'Small', 'Medium', 'Full', 'Large', 'Very large', 'Prefer not to say'];
+const buildOptions = ['Petite', 'Slim', 'Athletic', 'Toned', 'Average', 'Curvy', 'Full figured', 'Tall', 'Prefer not to say'];
+const lookOptions = ['Natural', 'Elegant', 'Glamorous', 'Sporty', 'Corporate', 'Fashion-forward', 'Classic', 'Runway', 'Commercial', 'Luxury'];
+const heightOptions = Array.from({ length: 46 }, (_, index) => 145 + index);
+const weightOptions = Array.from({ length: 36 }, (_, index) => 40 + index * 2);
+const smokerOptions = ['No', 'Occasionally', 'Yes', 'Prefer not to say'];
+const orientationOptions = ['Fashion and runway', 'Commercial modeling', 'Beauty and skincare', 'Lifestyle content', 'Event hosting', 'Hospitality presentation', 'Brand ambassador', 'Portfolio shoots', 'Editorial campaigns', 'Promotional campaigns'];
+const spokenLanguages = ['English', 'Kiswahili', 'Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Somali', 'Kisii', 'Meru', 'Maasai', 'Arabic', 'French', 'German', 'Spanish', 'Chinese'];
+const languageLevels = ['Basic', 'Conversational', 'Fluent', 'Native'];
 
 function RegistrationFormScreen({ path }: { path: string }) {
   const kind = path.split('/')[1] || 'member';
@@ -321,10 +336,14 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const isAgency = kind === 'agency';
   const isMember = kind === 'member';
   const title = isIndependent ? 'Independent Model Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
-  const formMinHeight = isIndependent ? 'min-h-[1880px]' : isAgency ? 'min-h-[980px]' : 'min-h-[720px]';
+  const formMinHeight = isIndependent ? 'min-h-[2080px]' : isAgency ? 'min-h-[980px]' : 'min-h-[720px]';
   const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
   const agencyServices = ['Independent model management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Model onboarding', 'Brand partnerships'];
   const memberPreferences = ['Save favorite profiles', 'Compare model profiles', 'Request booking details', 'Follow verified models', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const allServicesSelected = selectedServices.length === services.length;
+  const toggleService = (service: string) => setSelectedServices((current) => current.includes(service) ? current.filter((item) => item !== service) : [...current, service]);
+  const toggleAllServices = () => setSelectedServices(allServicesSelected ? [] : services);
 
   return (
     <>
@@ -353,18 +372,23 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
               <>
-                <FormRow label="Gender" required><label className="text-sm"><input type="radio" name="gender" /> Female</label></FormRow>
-                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-1 md:grid-cols-3"><select className={selectClass}><option>Day</option></select><select className={selectClass}><option>Month</option></select><select className={selectClass}><option>Year</option></select></div></FormRow>
-                {['Ethnicity', 'Hair Color', 'Hair length', 'Bust size', 'Build', 'Looks'].map((item) => <FormRow key={item} label={item} required><select className={selectClass}><option>Select</option></select></FormRow>)}
-                <FormRow label="Height" required><div className="flex items-center gap-2"><input className="h-9 w-20 border border-[#ff55c7] bg-white px-2" /><span>cm</span></div></FormRow>
-                <FormRow label="Weight" required><div className="flex items-center gap-2"><input className="h-9 w-20 border border-[#ff55c7] bg-white px-2" /><span>kg</span></div></FormRow>
+                <FormRow label="Gender" required><select className={selectClass + ' w-full'}><option>Female</option><option>Male</option></select></FormRow>
+                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 md:grid-cols-3"><select className={selectClass + ' w-full'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select className={selectClass + ' w-full'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select className={selectClass + ' w-full'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
+                <FormRow label="Ethnicity" required><select className={selectClass + ' w-full'}><option>Select ethnicity</option>{kenyanEthnicities.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Hair Color" required><select className={selectClass + ' w-full'}><option>Select hair color</option>{hairColors.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Hair length" required><select className={selectClass + ' w-full'}><option>Select hair length</option>{hairLengths.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Bust size" required><select className={selectClass + ' w-full'}><option>Select bust size</option>{bustSizes.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Build" required><select className={selectClass + ' w-full'}><option>Select build</option>{buildOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Looks" required><select className={selectClass + ' w-full'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Height" required><select className={selectClass + ' w-full'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
+                <FormRow label="Weight" required><select className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
                 <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2"><label className={checkboxCardClass}><input type="checkbox" /> Studio / incall</label><label className={checkboxCardClass}><input type="checkbox" /> On-location / outcall</label></div></FormRow>
-                <FormRow label="Smoker" required><div className="flex gap-4 text-sm"><label><input type="radio" name="smoker" /> Yes</label><label><input type="radio" name="smoker" /> No</label></div></FormRow>
+                <FormRow label="Smoker" required><select className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="About you" required><textarea className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
-                <FormRow label="Professional orientation"><input className={fieldClass} /></FormRow>
-                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 md:grid-cols-[1fr_160px]"><input className={fieldClass} /><select className={selectClass}><option>Select level</option></select></div>)}</div></FormRow>
+                <FormRow label="Professional orientation"><select className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 md:grid-cols-[1fr_160px]"><select className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-lg"><div className="mb-4 flex items-center justify-end gap-3 text-sm"><span>Currency:</span><select className={selectClass + ' w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid grid-cols-[120px_1fr_1fr] gap-2 text-center text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
-                <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">{services.map((service) => <label key={service} className={checkboxCardClass}><input type="checkbox" /> {service}</label>)}</div></FormRow>
+                <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2"><label className={checkboxCardClass + ' md:col-span-2'}><input type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} /> Select all services</label>{services.map((service) => <label key={service} className={checkboxCardClass}><input type="checkbox" checked={selectedServices.includes(service)} onChange={() => toggleService(service)} /> {service}</label>)}</div></FormRow>
               </>
             )}
             <div className="pt-2 text-center"><button className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm">Complete Registration</button></div>
