@@ -9,13 +9,16 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 
 type UtamuAppProps = { slug?: string[] };
 
-type View = 'home' | 'register' | 'profile' | 'dashboard' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type View = 'home' | 'register' | 'registration' | 'profile' | 'dashboard' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
 
 
 const routeLinks = [
   '/',
   '/discover',
   '/register',
+  '/register/independent-model',
+  '/register/agency',
+  '/register/member',
   '/model/amina-w',
   '/model/profile',
   '/model/dashboard',
@@ -36,6 +39,7 @@ function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
   if (path === 'register') return 'register';
+  if (path.startsWith('register/')) return 'registration';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
@@ -169,7 +173,7 @@ function RegisterScreen() {
       title: 'Register as Independent Model',
       price: 'Free',
       cta: 'Register here',
-      ctaHref: '/verification/step-1',
+      ctaHref: '/register/independent-model',
       features: ['Add a single profile', 'Add portfolio pictures', 'Add contact information', 'Upgrade to VIP visibility', 'Manage blocked clients', 'Profile analytics and messages'],
       highlight: 'Ksh 1,000 for 1 month',
     },
@@ -177,7 +181,7 @@ function RegisterScreen() {
       title: 'Register as Agency',
       price: 'Ksh 5,000 for 1 month',
       cta: 'Register here',
-      ctaHref: '/admin/verification-review',
+      ctaHref: '/register/agency',
       features: ['Add multiple profiles', 'Add profile pictures', 'Add contact information', 'Upgrade agency listings to VIP', 'Add internal notes', 'Manage verification workflow'],
       highlight: 'Ksh 1,000 for 1 month',
     },
@@ -185,7 +189,7 @@ function RegisterScreen() {
       title: 'Register as Normal User',
       price: 'Free',
       cta: 'Register here',
-      ctaHref: '/discover',
+      ctaHref: '/register/member',
       features: ['Mark favorite profiles', 'See profile photos', 'Contact verified models', 'Add reviews to models you rate', 'Save Nairobi searches', 'Receive profile updates'],
     },
   ];
@@ -249,6 +253,111 @@ function RegisterScreen() {
         <div className="mb-4 flex flex-wrap justify-center gap-2"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
         <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">(c) 2026 SecretNairobi.com - Models in Nairobi</div>
       </footer>
+    </>
+  );
+}
+
+
+function RegistrationQuickSearch() {
+  return (
+    <aside className="bg-[#101010] text-white">
+      <div className="bg-[#e60073] px-4 py-5">
+        <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
+        <div className="space-y-3 text-sm">
+          <select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select>
+          <select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select>
+          <label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label>
+          <label className="flex items-center gap-2"><input type="checkbox" />Only independent</label>
+          <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div>
+          <a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a>
+        </div>
+      </div>
+      <div className="min-h-full bg-[#101010]" />
+    </aside>
+  );
+}
+
+function RegistrationFooter() {
+  return (
+    <>
+      <section className="bg-[#fff0f6] px-5 py-10 text-[#111]">
+        <div className="grid gap-10 md:grid-cols-3">
+          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Models In Nairobi?</h2><p className="text-[15px] leading-8">Secret Nairobi makes registration clear for models, agencies, and members. Every account path is organized around profile quality, communication, verification, and safe discovery.</p></article>
+          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2><p className="text-[15px] leading-8">Independent models can prepare a complete public profile, agencies can coordinate multiple listings, and members can create lightweight accounts for favorites, reviews, and saved browsing.</p></article>
+          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Models Make Life Enjoyable</h2><p className="text-[15px] leading-8">The platform keeps Nairobi discovery simple while giving premium accounts stronger visibility through VIP placement, profile completeness, and trusted account signals.</p></article>
+        </div>
+        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional model profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
+        <div className="mt-6 text-center font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
+        <div className="mt-10 flex flex-wrap justify-center gap-2 text-center text-xs text-[#e60073]"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
+      </section>
+      <footer className="bg-[#101010] px-5 py-2 text-center text-xs font-bold text-white">(c) 2026 SecretNairobi.com - Models in Nairobi</footer>
+    </>
+  );
+}
+
+function FormRow({ label, hint, required = false, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-2 md:grid-cols-[300px_1fr] md:items-start">
+      <label className="text-sm font-normal text-[#00627c]">{label}{required && <span className="text-[#ff1493]">*</span>}{hint && <span className="mt-1 block text-xs text-[#a99aa5]">{hint}</span>}</label>
+      <div>{children}</div>
+    </div>
+  );
+}
+
+const fieldClass = 'h-9 w-full border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
+const selectClass = 'h-9 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
+
+function RegistrationFormScreen({ path }: { path: string }) {
+  const kind = path.split('/')[1] || 'member';
+  const isIndependent = kind === 'independent-model';
+  const isAgency = kind === 'agency';
+  const isMember = kind === 'member';
+  const title = isIndependent ? 'Independent Model Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
+  const formMinHeight = isIndependent ? 'min-h-[1840px]' : isAgency ? 'min-h-[720px]' : 'min-h-[520px]';
+  const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
+
+  return (
+    <>
+      <div className="grid gap-0 md:grid-cols-[1fr_220px]">
+        <section className={'bg-[#fff0f6] px-5 py-5 text-[#003b5c] ' + formMinHeight}>
+          <h1 className="text-2xl font-normal text-[#3b164b]">{title}</h1>
+          {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Models should register here</div>}
+          <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
+          <form className="mt-7 space-y-6">
+            <FormRow label="Username" hint="Between 4 and 30 characters" required><input className={fieldClass} /></FormRow>
+            <FormRow label="Password" hint="Must be between 6 and 50 characters" required><input type="password" className={fieldClass} /></FormRow>
+            {!isMember && <FormRow label={isAgency ? 'Email' : 'Your email'} required><input type="email" className={fieldClass} /></FormRow>}
+            {isMember && <FormRow label="Name" hint="will be publicly shown" required><input className={fieldClass} /></FormRow>}
+            {isMember && <FormRow label="Email" required><input type="email" className={fieldClass} /></FormRow>}
+            {isIndependent && <FormRow label="Name" hint="will be publicly shown" required><input className={fieldClass} /></FormRow>}
+            {isAgency && <FormRow label="Agency Name" required><input className={fieldClass} /></FormRow>}
+            {!isMember && <FormRow label="Phone" required><input className={fieldClass} /></FormRow>}
+            {!isMember && <FormRow label="Website"><input className={fieldClass} /></FormRow>}
+            {!isMember && <FormRow label="Country" required><select className={selectClass}><option>Select country</option><option>Kenya</option></select></FormRow>}
+            {!isMember && <FormRow label="City" required><span className="text-sm text-[#00627c]">Please select a country first</span></FormRow>}
+            {isAgency && <FormRow label="About the Agency" required><textarea className="min-h-32 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /></FormRow>}
+            {isIndependent && (
+              <>
+                <FormRow label="Gender" required><label className="text-sm"><input type="radio" name="gender" /> Female</label></FormRow>
+                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-1 md:grid-cols-3"><select className={selectClass}><option>Day</option></select><select className={selectClass}><option>Month</option></select><select className={selectClass}><option>Year</option></select></div></FormRow>
+                {['Ethnicity', 'Hair Color', 'Hair length', 'Bust size', 'Build', 'Looks'].map((item) => <FormRow key={item} label={item} required><select className={selectClass}><option>Select</option></select></FormRow>)}
+                <FormRow label="Height" required><div className="flex items-center gap-2"><input className="h-9 w-20 border border-[#ff55c7] bg-white px-2" /><span>cm</span></div></FormRow>
+                <FormRow label="Weight" required><div className="flex items-center gap-2"><input className="h-9 w-20 border border-[#ff55c7] bg-white px-2" /><span>kg</span></div></FormRow>
+                <FormRow label="Availability" required><div className="flex gap-4 text-sm"><label><input type="checkbox" /> Incall</label><label><input type="checkbox" /> Outcall</label></div></FormRow>
+                <FormRow label="Smoker" required><div className="flex gap-4 text-sm"><label><input type="radio" name="smoker" /> Yes</label><label><input type="radio" name="smoker" /> No</label></div></FormRow>
+                <FormRow label="About you" required><textarea className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
+                <FormRow label="Professional orientation"><input className={fieldClass} /></FormRow>
+                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 md:grid-cols-[1fr_160px]"><input className={fieldClass} /><select className={selectClass}><option>Select level</option></select></div>)}</div></FormRow>
+                <FormRow label="Rates"><div className="max-w-lg"><div className="mb-4 flex items-center justify-end gap-3 text-sm"><span>Currency:</span><select className={selectClass + ' w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid grid-cols-[120px_1fr_1fr] gap-2 text-center text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
+                <FormRow label="Services"><div className="grid gap-2 text-sm md:grid-cols-2">{services.map((service) => <label key={service}><input type="checkbox" /> {service}</label>)}</div></FormRow>
+              </>
+            )}
+            <div className="pt-2 text-center"><button className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm">Complete Registration</button></div>
+          </form>
+        </section>
+        <RegistrationQuickSearch />
+      </div>
+      <RegistrationFooter />
     </>
   );
 }
@@ -423,5 +532,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'profile'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'registration', 'profile'].includes(view) && <RouteIndex />}</Shell>;
 }
