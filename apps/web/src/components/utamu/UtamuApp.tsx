@@ -280,7 +280,7 @@ function RegistrationQuickSearch() {
 function RegistrationFooter() {
   return (
     <>
-      <section className="bg-[#fff0f6] px-5 py-10 text-[#111]">
+      <section className="bg-[#fff0f6] px-5 py-16 text-[#111] md:py-20">
         <div className="grid gap-10 md:grid-cols-3">
           <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Models In Nairobi?</h2><p className="text-[15px] leading-8">Secret Nairobi makes registration clear for models, agencies, and members. Every account path is organized around profile quality, communication, verification, and safe discovery.</p></article>
           <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2><p className="text-[15px] leading-8">Independent models can prepare a complete public profile, agencies can coordinate multiple listings, and members can create lightweight accounts for favorites, reviews, and saved browsing.</p></article>
@@ -306,6 +306,14 @@ function FormRow({ label, hint, required = false, children }: { label: string; h
 
 const fieldClass = 'h-9 w-full border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
 const selectClass = 'h-9 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
+const checkboxCardClass = 'flex min-h-9 items-center gap-2 rounded-[3px] border border-[#ffd0e8] bg-white/80 px-3 py-2 text-sm text-[#003b5c] transition hover:border-[#ff55c7] hover:bg-white';
+const kenyanTowns = [
+  'Nairobi', 'Westlands', 'Karen', 'Kilimani', 'Runda', 'Kitengela', 'Ruiru', 'Thika', 'Kiambu', 'Kikuyu',
+  'Ngong', 'Athi River', 'Machakos', 'Mombasa', 'Diani', 'Kilifi', 'Malindi', 'Watamu', 'Lamu', 'Voi',
+  'Nakuru', 'Naivasha', 'Nanyuki', 'Nyeri', 'Eldoret', 'Kisumu', 'Kakamega', 'Kisii', 'Kericho', 'Bomet',
+  'Narok', 'Meru', 'Embu', 'Isiolo', 'Garissa', 'Wajir', 'Marsabit', 'Bungoma', 'Busia', 'Homa Bay',
+  'Migori', 'Kitale', 'Lodwar', 'Mandera'
+];
 
 function RegistrationFormScreen({ path }: { path: string }) {
   const kind = path.split('/')[1] || 'member';
@@ -313,8 +321,10 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const isAgency = kind === 'agency';
   const isMember = kind === 'member';
   const title = isIndependent ? 'Independent Model Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
-  const formMinHeight = isIndependent ? 'min-h-[1840px]' : isAgency ? 'min-h-[720px]' : 'min-h-[520px]';
+  const formMinHeight = isIndependent ? 'min-h-[1880px]' : isAgency ? 'min-h-[980px]' : 'min-h-[720px]';
   const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
+  const agencyServices = ['Independent model management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Model onboarding', 'Brand partnerships'];
+  const memberPreferences = ['Save favorite profiles', 'Compare model profiles', 'Request booking details', 'Follow verified models', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
 
   return (
     <>
@@ -329,13 +339,18 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {!isMember && <FormRow label={isAgency ? 'Email' : 'Your email'} required><input type="email" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="Name" hint="will be publicly shown" required><input className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="Email" required><input type="email" className={fieldClass} /></FormRow>}
+            {isMember && <FormRow label="City"><select className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select></FormRow>}
+            {isMember && <FormRow label="Browsing interest"><select className={selectClass + ' w-full'}><option>Verified Nairobi models</option><option>VIP models</option><option>Agency represented models</option><option>Portfolio and campaign talent</option></select></FormRow>}
+            {isMember && <FormRow label="Member preferences"><div className="grid gap-2 md:grid-cols-2">{memberPreferences.map((item) => <label key={item} className={checkboxCardClass}><input type="checkbox" /> {item}</label>)}</div></FormRow>}
             {isIndependent && <FormRow label="Name" hint="will be publicly shown" required><input className={fieldClass} /></FormRow>}
             {isAgency && <FormRow label="Agency Name" required><input className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Phone" required><input className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Website"><input className={fieldClass} /></FormRow>}
-            {!isMember && <FormRow label="Country" required><select className={selectClass}><option>Select country</option><option>Kenya</option></select></FormRow>}
-            {!isMember && <FormRow label="City" required><span className="text-sm text-[#00627c]">Please select a country first</span></FormRow>}
+            {!isMember && <FormRow label="Country" required><select className={selectClass}><option>Kenya</option></select></FormRow>}
+            {!isMember && <FormRow label="City" required><select className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><span className="mt-1 block text-xs text-[#a99aa5]">Popular Kenyan towns and Nairobi neighborhoods are included for faster setup.</span></FormRow>}
             {isAgency && <FormRow label="About the Agency" required><textarea className="min-h-32 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /></FormRow>}
+            {isAgency && <FormRow label="Agency services"><div className="grid gap-2 md:grid-cols-2">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input type="checkbox" /> {service}</label>)}</div></FormRow>}
+            {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
               <>
                 <FormRow label="Gender" required><label className="text-sm"><input type="radio" name="gender" /> Female</label></FormRow>
@@ -343,13 +358,13 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 {['Ethnicity', 'Hair Color', 'Hair length', 'Bust size', 'Build', 'Looks'].map((item) => <FormRow key={item} label={item} required><select className={selectClass}><option>Select</option></select></FormRow>)}
                 <FormRow label="Height" required><div className="flex items-center gap-2"><input className="h-9 w-20 border border-[#ff55c7] bg-white px-2" /><span>cm</span></div></FormRow>
                 <FormRow label="Weight" required><div className="flex items-center gap-2"><input className="h-9 w-20 border border-[#ff55c7] bg-white px-2" /><span>kg</span></div></FormRow>
-                <FormRow label="Availability" required><div className="flex gap-4 text-sm"><label><input type="checkbox" /> Incall</label><label><input type="checkbox" /> Outcall</label></div></FormRow>
+                <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2"><label className={checkboxCardClass}><input type="checkbox" /> Studio / incall</label><label className={checkboxCardClass}><input type="checkbox" /> On-location / outcall</label></div></FormRow>
                 <FormRow label="Smoker" required><div className="flex gap-4 text-sm"><label><input type="radio" name="smoker" /> Yes</label><label><input type="radio" name="smoker" /> No</label></div></FormRow>
                 <FormRow label="About you" required><textarea className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
                 <FormRow label="Professional orientation"><input className={fieldClass} /></FormRow>
                 <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 md:grid-cols-[1fr_160px]"><input className={fieldClass} /><select className={selectClass}><option>Select level</option></select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-lg"><div className="mb-4 flex items-center justify-end gap-3 text-sm"><span>Currency:</span><select className={selectClass + ' w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid grid-cols-[120px_1fr_1fr] gap-2 text-center text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
-                <FormRow label="Services"><div className="grid gap-2 text-sm md:grid-cols-2">{services.map((service) => <label key={service}><input type="checkbox" /> {service}</label>)}</div></FormRow>
+                <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">{services.map((service) => <label key={service} className={checkboxCardClass}><input type="checkbox" /> {service}</label>)}</div></FormRow>
               </>
             )}
             <div className="pt-2 text-center"><button className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm">Complete Registration</button></div>
@@ -357,10 +372,10 @@ function RegistrationFormScreen({ path }: { path: string }) {
         </section>
         <RegistrationQuickSearch />
       </div>
-      <section className="bg-[#fff0f6] px-5 py-16 md:py-24">
-        <div className="mx-auto max-w-4xl border-t border-[#ffd0e8] pt-8 text-center">
+      <section className="bg-[#fff0f6] px-5 py-24 md:py-36">
+        <div className="mx-auto max-w-5xl border-y border-[#ffc4e1] bg-white/45 px-6 py-12 text-center shadow-inner">
           <p className="text-sm leading-7 text-[#9b8090]">Your account details are reviewed carefully so every Secret Nairobi profile starts with cleaner data, better trust signals, and a more polished public presence.</p>
-          <div className="mx-auto mt-8 h-1 w-24 rounded-full bg-[#e60073]" />
+          <div className="mx-auto mt-10 h-1.5 w-32 rounded-full bg-[#e60073]" />
         </div>
       </section>
       <RegistrationFooter />
