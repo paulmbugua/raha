@@ -9,12 +9,13 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 
 type UtamuAppProps = { slug?: string[] };
 
-type View = 'home' | 'profile' | 'dashboard' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type View = 'home' | 'register' | 'profile' | 'dashboard' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
 
 
 const routeLinks = [
   '/',
   '/discover',
+  '/register',
   '/model/amina-w',
   '/model/profile',
   '/model/dashboard',
@@ -34,6 +35,7 @@ const routeLinks = [
 function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
+  if (path === 'register') return 'register';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
@@ -72,7 +74,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <a href="/verification/step-1" className="uppercase hover:text-[#ffb7df]">Advertise for free!</a>
             </nav>
             <div className="flex items-center gap-2 text-sm font-bold">
-              <a href="/verification/step-1" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>
+              <a href="/register" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>
               <a href="/login" className="rounded-full bg-[#ec4eb8] px-3 py-2">Login</a>
               <a href="/discover" className="grid h-7 w-7 place-items-center"><Search className="h-5 w-5" /></a>
               <a href="/help" className="grid h-7 w-7 place-items-center"><Mail className="h-5 w-5" /></a>
@@ -155,6 +157,97 @@ function DiscoveryHome() {
       <footer className="bg-[#2b0a3d] px-5 py-5 text-center text-sm text-white">
         <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
         <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Models</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/verification/step-1">Advertise for free</a></div>
+      </footer>
+    </>
+  );
+}
+
+
+function RegisterScreen() {
+  const plans = [
+    {
+      title: 'Register as Independent Model',
+      price: 'Free',
+      cta: 'Register here',
+      ctaHref: '/verification/step-1',
+      features: ['Add a single profile', 'Add portfolio pictures', 'Add contact information', 'Upgrade to VIP visibility', 'Manage blocked clients', 'Profile analytics and messages'],
+      highlight: 'Ksh 1,000 for 1 month',
+    },
+    {
+      title: 'Register as Agency',
+      price: 'Ksh 5,000 for 1 month',
+      cta: 'Register here',
+      ctaHref: '/admin/verification-review',
+      features: ['Add multiple profiles', 'Add profile pictures', 'Add contact information', 'Upgrade agency listings to VIP', 'Add internal notes', 'Manage verification workflow'],
+      highlight: 'Ksh 1,000 for 1 month',
+    },
+    {
+      title: 'Register as Normal User',
+      price: 'Free',
+      cta: 'Register here',
+      ctaHref: '/discover',
+      features: ['Mark favorite profiles', 'See profile photos', 'Contact verified models', 'Add reviews to models you rate', 'Save Nairobi searches', 'Receive profile updates'],
+    },
+  ];
+  const infoBlocks = [
+    {
+      title: 'Why Choose Our Models In Nairobi?',
+      body: 'Secret Nairobi makes model discovery direct, attractive, and organized. Clients can compare verified profiles, browse portfolio images, review availability signals, and choose talent suited for campaigns, launches, hospitality, shoots, and lifestyle events across Nairobi.',
+    },
+    {
+      title: 'The Gratifying Professional Services',
+      body: 'Every profile flow is built around presentation quality and trust. Independent models can manage their own listing, agencies can coordinate multiple profiles, and clients get a familiar directory experience with clear account paths and visible verification cues.',
+    },
+    {
+      title: 'Affordable Models Make Life Enjoyable',
+      body: 'The platform keeps discovery simple for everyone. Free user accounts support favorites and reviews, while model and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.',
+    },
+  ];
+
+  return (
+    <>
+      <section className="bg-[#101010] px-4 pb-6 pt-2 text-[#222] md:px-5">
+        <h1 className="text-center text-3xl font-normal leading-tight text-white md:text-4xl">Create an Account</h1>
+        <div className="grid gap-8 py-10 md:grid-cols-3">
+          {plans.map((plan) => (
+            <article key={plan.title} className="overflow-hidden rounded-[3px] bg-white shadow-lg shadow-black/30">
+              <h2 className="bg-gradient-to-b from-[#ff4fbd] to-[#e60073] px-3 py-3 text-sm font-bold text-white">{plan.title}</h2>
+              <div className="p-5">
+                <ul className="space-y-3 text-sm text-[#8a8a8a]">
+                  {plan.features.map((feature) => (
+                    <li key={feature} className="flex items-start gap-2">
+                      <Check className="mt-0.5 h-4 w-4 shrink-0 text-[#168eea]" />
+                      <span>{feature}</span>
+                    </li>
+                  ))}
+                </ul>
+                {plan.highlight && <div className="mt-3 text-center"><span className="inline-flex bg-[#1fbfa5] px-2 py-1 text-xs font-bold text-white">{plan.highlight}</span></div>}
+                <div className="mt-6 border-t border-[#eeeeee] pt-4">
+                  <p className="mb-4 text-2xl font-normal text-[#555]">{plan.price}</p>
+                  <a href={plan.ctaHref} className="inline-flex items-center gap-2 rounded-[3px] bg-[#23b86b] px-5 py-3 text-sm font-bold text-white hover:bg-[#1fa461]">{plan.cta}<ChevronRight className="h-4 w-4" /></a>
+                </div>
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="bg-[#fff0f6] px-4 py-10 text-[#111] md:px-5">
+        <div className="grid gap-8 md:grid-cols-3">
+          {infoBlocks.map((block) => (
+            <article key={block.title}>
+              <h2 className="mb-4 text-base font-bold text-[#9b9098]">{block.title}</h2>
+              <p className="text-[14px] leading-7">{block.body}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+      <section className="bg-[#fff0f6] px-4 pb-8 text-center text-[13px] leading-6 text-[#b3a7af] md:px-5">
+        <p>This platform is intended for adults creating or browsing professional model profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
+        <div className="mt-5 font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
+      </section>
+      <footer className="bg-[#fff0f6] px-4 pb-5 text-center text-xs text-[#e60073] md:px-5">
+        <div className="mb-4 flex flex-wrap justify-center gap-2"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
+        <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">© 2026 SecretNairobi.com - Models in Nairobi</div>
       </footer>
     </>
   );
@@ -245,5 +338,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'profile' && <ProfileScreen />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{view !== 'home' && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'profile' && <ProfileScreen />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{view !== 'home' && view !== 'register' && <RouteIndex />}</Shell>;
 }
