@@ -1,7 +1,7 @@
 'use client';
 
 import { Bell, Check, ChevronRight, FileCheck2, Gauge, Lock, Mail, MessageCircle, Search, ShieldCheck, Star, Upload, Wallet, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { UtamuModel } from '../../data/utamu';
 import { models } from '../../data/utamu';
 import { utamuApi } from '../../lib/utamuApi';
@@ -9,7 +9,24 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 
 type UtamuAppProps = { slug?: string[] };
 
-type View = 'home' | 'register' | 'registration' | 'profile' | 'dashboard' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; fullName?: string; accountType?: string; emailVerified?: boolean } | null };
+type View = 'home' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+
+const SESSION_KEY = 'utamu.session';
+const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
+
+function readSession(): UtamuSession | null {
+  if (typeof window === 'undefined') return null;
+  try { return JSON.parse(window.localStorage.getItem(SESSION_KEY) || 'null'); } catch { return null; }
+}
+
+function saveSession(session: UtamuSession) {
+  if (typeof window !== 'undefined') window.localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+  if (typeof window !== 'undefined') window.localStorage.removeItem(SESSION_KEY);
+}
 
 
 const routeLinks = [
@@ -19,6 +36,8 @@ const routeLinks = [
   '/register/independent-model',
   '/register/agency',
   '/register/member',
+  '/register/confirm-email',
+  '/messages',
   '/model/amina-w',
   '/model/profile',
   '/model/dashboard',
@@ -39,7 +58,10 @@ function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
   if (path === 'register') return 'register';
+  if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
   if (path.startsWith('register/')) return 'registration';
+  if (path === 'messages') return 'messages';
+  if (['edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
@@ -65,6 +87,13 @@ function StatusBadge({ children, tone = 'gold' }: { children: React.ReactNode; t
 }
 
 function Shell({ children }: { children: React.ReactNode }) {
+  const [session, setSession] = useState<UtamuSession | null>(null);
+  const [unread, setUnread] = useState(0);
+  useEffect(() => {
+    const next = readSession();
+    setSession(next);
+    if (next?.token) utamuApi.getNotifications(next.token).then((data: any) => setUnread(Number(data.unreadMessages || 0)));
+  }, []);
   return (
     <main className="min-h-screen bg-[#101010] font-serif text-[#2b1037] selection:bg-[#ec2aa0] selection:text-white">
       <div className="mx-auto max-w-[1180px] bg-[#fff0f6] shadow-2xl shadow-black/40">
@@ -78,10 +107,13 @@ function Shell({ children }: { children: React.ReactNode }) {
               <a href="/verification/step-1" className="uppercase hover:text-[#ffb7df]">Advertise for free!</a>
             </nav>
             <div className="flex items-center gap-2 text-sm font-bold">
-              <a href="/register" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>
-              <a href="/login" className="rounded-full bg-[#ec4eb8] px-3 py-2">Login</a>
-              <a href="/discover" className="grid h-7 w-7 place-items-center"><Search className="h-5 w-5" /></a>
-              <a href="/help" className="grid h-7 w-7 place-items-center"><Mail className="h-5 w-5" /></a>
+              {!session && <a href="/register" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>}
+              {!session ? <a href="/login" className="rounded-full bg-[#ec4eb8] px-3 py-2">Login</a> : <a href="/model/dashboard" className="rounded-full bg-[#ec4eb8] px-3 py-2">My Account</a>}
+              <form action="/discover" className="flex items-center overflow-hidden rounded-full bg-white/10">
+                <input name="query" aria-label="Search models" placeholder="Search" className="h-8 w-24 bg-transparent px-3 text-xs text-white outline-none placeholder:text-white/70 md:w-32" />
+                <button className="grid h-8 w-8 place-items-center" type="submit"><Search className="h-4 w-4" /></button>
+              </form>
+              <a href="/messages" className="relative grid h-8 w-8 place-items-center rounded-full hover:bg-white/10"><Mail className="h-5 w-5" />{unread > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#e60073] px-1 text-[10px]">{unread}</span>}</a>
             </div>
           </div>
         </header>
@@ -112,7 +144,11 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
 }
 
 function DiscoveryHome() {
-  const { filteredModels } = useUtamuDirectory();
+  const { filteredModels, actions } = useUtamuDirectory();
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    actions.setQuery(params.get('query') || '');
+  }, []);
   const directoryModels = Array.from({ length: 48 }, (_, index) => {
     const base = filteredModels[index % filteredModels.length] || models[index % models.length];
     const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Model Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
@@ -344,9 +380,38 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const agencyServices = ['Independent model management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Model onboarding', 'Brand partnerships'];
   const memberPreferences = ['Save favorite profiles', 'Compare model profiles', 'Request booking details', 'Follow verified models', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+  const [registrationResult, setRegistrationResult] = useState<any>(null);
+  const [registrationError, setRegistrationError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const allServicesSelected = selectedServices.length === services.length;
   const toggleService = (service: string) => setSelectedServices((current) => current.includes(service) ? current.filter((item) => item !== service) : [...current, service]);
   const toggleAllServices = () => setSelectedServices(allServicesSelected ? [] : services);
+  const toggleAvailability = (item: string) => setSelectedAvailability((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+
+  async function handleRegistrationSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setRegistrationError('');
+    if (isIndependent && selectedAvailability.length === 0) {
+      setRegistrationError('Please select at least one availability option.');
+      return;
+    }
+    setSubmitting(true);
+    const formData = new FormData(event.currentTarget);
+    const values = Object.fromEntries(formData.entries());
+    const payload = { ...values, accountType: kind, services: isIndependent ? selectedServices : isAgency ? agencyServices.filter((item) => formData.getAll('agencyServices').includes(item)) : [], availability: selectedAvailability, preferences: formData.getAll('preferences'), profile: values };
+    const result = await utamuApi.registerAccount(payload);
+    setSubmitting(false);
+    if (!(result as any).registrationComplete) {
+      setRegistrationError('Registration could not be completed. Please check your details and try again.');
+      return;
+    }
+    setRegistrationResult(result);
+    window.localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(result));
+    window.history.pushState({}, '', '/register/confirm-email');
+  }
+
+  if (registrationResult) return <ConfirmEmailScreen pending={registrationResult} />;
 
   return (
     <>
@@ -355,23 +420,23 @@ function RegistrationFormScreen({ path }: { path: string }) {
           <h1 className="text-2xl font-normal text-[#3b164b]">{title}</h1>
           {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Models should register here</div>}
           <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
-          <form className="mt-7 space-y-6">
-            <FormRow label="Username" hint="Between 4 and 30 characters" required><input className={fieldClass} /></FormRow>
-            <FormRow label="Password" hint="Must be between 6 and 50 characters" required><input type="password" className={fieldClass} /></FormRow>
-            {!isMember && <FormRow label={isAgency ? 'Email' : 'Your email'} required><input type="email" className={fieldClass} /></FormRow>}
-            {isMember && <FormRow label="Name" hint="will be publicly shown" required><input className={fieldClass} /></FormRow>}
-            {isMember && <FormRow label="Email" required><input type="email" className={fieldClass} /></FormRow>}
+          <form className="mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
+            <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
+            <FormRow label="Password" hint="Must be between 6 and 50 characters" required><input name="password" type="password" className={fieldClass} /></FormRow>
+            {!isMember && <FormRow label={isAgency ? 'Email' : 'Your email'} required><input name="email" type="email" className={fieldClass} /></FormRow>}
+            {isMember && <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} /></FormRow>}
+            {isMember && <FormRow label="Email" required><input name="email" type="email" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="City"><select className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select></FormRow>}
             {isMember && <FormRow label="Browsing interest"><select className={selectClass + ' w-full'}><option>Verified Nairobi models</option><option>VIP models</option><option>Agency represented models</option><option>Portfolio and campaign talent</option></select></FormRow>}
-            {isMember && <FormRow label="Member preferences"><div className="grid gap-2 md:grid-cols-2">{memberPreferences.map((item) => <label key={item} className={checkboxCardClass}><input type="checkbox" /> {item}</label>)}</div></FormRow>}
-            {isIndependent && <FormRow label="Name" hint="will be publicly shown" required><input className={fieldClass} /></FormRow>}
-            {isAgency && <FormRow label="Agency Name" required><input className={fieldClass} /></FormRow>}
-            {!isMember && <FormRow label="Phone" required><input className={fieldClass} /></FormRow>}
-            {!isMember && <FormRow label="Website"><input className={fieldClass} /></FormRow>}
-            {!isMember && <FormRow label="Country" required><select className={selectClass}><option>Kenya</option></select></FormRow>}
-            {!isMember && <FormRow label="City" required><select className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><span className="mt-1 block text-xs text-[#a99aa5]">Popular Kenyan towns and Nairobi neighborhoods are included for faster setup.</span></FormRow>}
+            {isMember && <FormRow label="Member preferences"><div className="grid gap-2 md:grid-cols-2">{memberPreferences.map((item) => <label key={item} className={checkboxCardClass}><input name="preferences" value={item} type="checkbox" /> {item}</label>)}</div></FormRow>}
+            {isIndependent && <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} /></FormRow>}
+            {isAgency && <FormRow label="Agency Name" required><input name="agencyName" className={fieldClass} /></FormRow>}
+            {!isMember && <FormRow label="Phone" required><input name="phone" className={fieldClass} /></FormRow>}
+            {!isMember && <FormRow label="Website"><input name="website" className={fieldClass} /></FormRow>}
+            {!isMember && <FormRow label="Country" required><select name="country" className={selectClass}><option>Kenya</option></select></FormRow>}
+            {!isMember && <FormRow label="City" required><select name="city" className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><span className="mt-1 block text-xs text-[#a99aa5]">Popular Kenyan towns and Nairobi neighborhoods are included for faster setup.</span></FormRow>}
             {isAgency && <FormRow label="About the Agency" required><textarea className="min-h-32 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /></FormRow>}
-            {isAgency && <FormRow label="Agency services"><div className="grid gap-2 md:grid-cols-2">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input type="checkbox" /> {service}</label>)}</div></FormRow>}
+            {isAgency && <FormRow label="Agency services"><div className="grid gap-2 md:grid-cols-2">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input name="agencyServices" value={service} type="checkbox" /> {service}</label>)}</div></FormRow>}
             {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
               <>
@@ -385,7 +450,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Looks" required><select className={selectClass + ' w-full'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Height" required><select className={selectClass + ' w-full'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
                 <FormRow label="Weight" required><select className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
-                <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2"><label className={checkboxCardClass}><input type="checkbox" /> Studio / incall</label><label className={checkboxCardClass}><input type="checkbox" /> On-location / outcall</label></div></FormRow>
+                <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{['Studio / incall', 'On-location / outcall'].map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
                 <FormRow label="Smoker" required><select className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="About you" required><textarea className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
                 <FormRow label="Professional orientation"><select className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
@@ -411,7 +476,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 </div></FormRow>
               </>
             )}
-            <div className="pt-2 text-center"><button className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm">Complete Registration</button></div>
+            {registrationError && <p className="rounded bg-[#d70032] p-3 text-center text-sm font-bold text-white">{registrationError}</p>}<div className="pt-2 text-center"><button disabled={submitting} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm disabled:opacity-60">{submitting ? 'Submitting...' : 'Complete Registration'}</button></div>
           </form>
         </section>
         <RegistrationQuickSearch />
@@ -425,6 +490,42 @@ function RegistrationFormScreen({ path }: { path: string }) {
       <RegistrationFooter />
     </>
   );
+}
+
+function ConfirmEmailScreen({ pending }: { pending?: any }) {
+  const [data, setData] = useState<any>(pending || null);
+  const [message, setMessage] = useState('');
+  const [confirming, setConfirming] = useState(false);
+  useEffect(() => {
+    if (data) return;
+    const params = new URLSearchParams(window.location.search);
+    const stored = window.localStorage.getItem(PENDING_REGISTRATION_KEY);
+    setData(stored ? JSON.parse(stored) : { validationToken: params.get('token'), user: null });
+  }, [data]);
+  async function confirm() {
+    const token = data?.validationToken || new URLSearchParams(window.location.search).get('token');
+    if (!token) { setMessage('Validation token is missing. Please resend the validation email.'); return; }
+    setConfirming(true);
+    const result: any = await utamuApi.confirmEmail(token);
+    setConfirming(false);
+    if (!result?.token) { setMessage('The validation link could not be confirmed.'); return; }
+    saveSession(result);
+    window.localStorage.removeItem(PENDING_REGISTRATION_KEY);
+    window.location.href = '/model/dashboard';
+  }
+  async function resend() {
+    const email = data?.user?.email;
+    if (!email) { setMessage('Email address is missing. Please register again.'); return; }
+    await utamuApi.resendValidation(email);
+    setMessage('Validation email sent again. Check your inbox or the backend email preview log in development.');
+  }
+  return <section className="bg-[#fff0f6] px-5 py-8 text-[#003b5c]">
+    <div className="rounded-[3px] bg-[#67a62b] py-3 text-center text-2xl text-black">Your registration is complete</div>
+    <div className="mt-10 max-w-3xl text-lg leading-8"><p>Before you can use the site you will need to validate your email address.</p><p>We sent a validation link to your email address.</p><p>Please click the link from that email so we can activate your account.</p><p>If you do not validate your email in the next 3 days your account will be deleted.</p></div>
+    <div className="mt-6 flex flex-wrap gap-3"><button onClick={confirm} disabled={confirming} className="rounded-[4px] bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-5 py-3 font-bold text-white">{confirming ? 'Confirming...' : 'Confirm email and open account'}</button><button onClick={resend} className="rounded-[4px] border border-[#e60073] px-5 py-3 font-bold text-[#e60073]">Resend validation email</button></div>
+    {data?.confirmationUrl && <p className="mt-5 break-all text-sm text-[#8c6f7e]">Development validation link: <a className="text-[#e60073]" href={data.confirmationUrl}>{data.confirmationUrl}</a></p>}
+    {message && <p className="mt-4 rounded bg-white p-3 text-sm text-[#d70032]">{message}</p>}
+  </section>;
 }
 
 function ProfileScreen({ path }: { path: string }) {
@@ -452,6 +553,22 @@ function ProfileScreen({ path }: { path: string }) {
     ['Professional style', 'Calm, reliable and polished'],
   ];
   const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings'];
+  const [loginPrompt, setLoginPrompt] = useState(false);
+  const [composerOpen, setComposerOpen] = useState(false);
+  const [messageBody, setMessageBody] = useState('');
+  const [messageStatus, setMessageStatus] = useState('');
+  async function startMessage() {
+    const session = readSession();
+    if (!session?.token) { setLoginPrompt(true); return; }
+    setComposerOpen(true);
+  }
+  async function sendProfileMessage() {
+    const session = readSession();
+    if (!session?.token) { setLoginPrompt(true); return; }
+    await utamuApi.sendMessage({ modelSlug: model.slug, modelName: displayName, message: messageBody, subject: 'Profile enquiry' }, session.token);
+    setMessageStatus('Message sent. The model will see it in their account notifications.');
+    setMessageBody('');
+  }
 
   return (
     <>
@@ -497,7 +614,7 @@ function ProfileScreen({ path }: { path: string }) {
               <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Contact info:</h2>
               <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-[13px]"><dt className="font-bold">Phone:</dt><dd className="text-[#ff4eb8]">{phone}</dd><dt className="font-bold">WhatsApp:</dt><dd><a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="text-[#ff4eb8]">WhatsApp</a></dd></dl>
               <p className="mt-4 text-[13px] leading-6">Tell us you found this profile on <strong>Secret Nairobi</strong> to improve response handling and platform safety.</p>
-              <a href="/messages" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Email Me</a>
+              <button onClick={startMessage} className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white"><Mail className="mr-1 h-4 w-4" />Email Me</button>{loginPrompt && <div className="mt-4 flex items-center justify-between rounded-[3px] bg-[#d70032] px-4 py-3 text-sm font-bold text-white"><span>You need to register or login to send messages</span><button onClick={() => setLoginPrompt(false)} className="rounded-full bg-white px-2 py-1 text-xs text-[#d70032]">Close x</button></div>}{composerOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="Write your message" className="min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={sendProfileMessage} className="mt-2 rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Send message</button>{messageStatus && <p className="mt-2 text-xs text-[#168a4a]">{messageStatus}</p>}</div>}
             </section>
           </div>
           <section className="mt-3 bg-white p-5">
@@ -542,15 +659,39 @@ function ProfileScreen({ path }: { path: string }) {
   );
 }
 
-function DashboardScreen() {
-  const model = models[0];
-  const stats = [
-    ['Bookings', model.stats.bookings],
-    ['Profile views', model.stats.profileViews.toLocaleString('en-KE')],
-    ['Completion', `${model.stats.completion}%`],
-    ['Earnings', kes(model.stats.earnings)],
-  ];
-  return <section className="mx-auto max-w-7xl px-5 py-8"><h1 className="font-display text-4xl font-bold text-[#fff6df]">Model dashboard</h1><p className="mt-2 text-[#d0c6ab]">Verification Pending - Nairobi, KE</p><div className="mt-6 grid gap-4 md:grid-cols-4">{stats.map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-5"><p className="text-xs uppercase tracking-widest text-[#999077]">{String(label)}</p><strong className="mt-3 block font-display text-2xl text-[#fff6df]">{String(value)}</strong></div>)}</div><div className="mt-6 grid gap-5 lg:grid-cols-[1fr_0.8fr]"><Panel title="Identity Verification: Pending" icon={FileCheck2} items={['Selfie match in progress', 'ID document uploaded', 'M-Pesa owner check pending', 'Admin review queue position 04']} /><Panel title="Rate cards" icon={Wallet} items={model.rates.map((rate) => `${rate.label} - ${kes(rate.price)}`)} /></div><div className="mt-6 grid gap-4 md:grid-cols-3">{model.gallery.slice(0, 3).map((image) => <img key={image} src={image} alt="Dashboard gallery" className="h-72 rounded-xl object-cover" />)}</div></section>;
+function AccountSidebar({ active }: { active: string }) {
+  const links = [['View my Profile', '/model/profile'], ['Edit my Profile', '/edit-profile'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
+  return <aside className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold text-[#ff1d9b]">My Account</h2><div className="mt-4 grid gap-2">{links.map(([label, href]) => <a key={href} href={href} className={'rounded-[3px] px-3 py-2 text-sm font-bold ' + (active === href.slice(1) ? 'bg-[#e60073] text-white' : 'bg-[#fff0f6] text-[#3b164b] hover:bg-[#ffd6ec]')}>{label}</a>)}</div></aside>;
+}
+
+function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
+  const [session, setSession] = useState<UtamuSession | null>(null);
+  const [account, setAccount] = useState<any>(null);
+  const [imageUrl, setImageUrl] = useState('');
+  const [password, setPassword] = useState('');
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    if (path === 'logout') { clearSession(); window.location.href = '/'; return; }
+    const next = readSession();
+    setSession(next);
+    if (next?.token) utamuApi.getMe(next.token).then(setAccount);
+  }, [path]);
+  async function addImage() {
+    if (!session?.token || !imageUrl) return;
+    const image = await utamuApi.addProfileImage({ url: imageUrl }, session.token);
+    setAccount((current: any) => ({ ...(current || {}), images: [...(current?.images || []), image] }));
+    setImageUrl('');
+    setNotice('Image added to your profile.');
+  }
+  async function changePassword() {
+    if (!session?.token) return;
+    await utamuApi.changePassword({ password }, session.token);
+    setPassword('');
+    setNotice('Password changed successfully.');
+  }
+  if (!session?.token) return <section className="bg-[#fff0f6] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">You need to <a className="underline" href="/register">register</a> or <a className="underline" href="/login">login</a> to access your account.</div></section>;
+  const images = account?.images || [];
+  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 md:grid-cols-[1fr_260px]"><div className="space-y-4"><div className="bg-white p-5"><h1 className="text-3xl text-[#ff4eb8]">My profile dashboard</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div><div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Add profile images</h2><div className="mt-4 flex flex-col gap-2 md:flex-row"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="Paste image URL" className={fieldClass} /><button onClick={addImage} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add image</button></div><div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <img key={image.id || image.url} src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />)}</div></div>{path === 'edit-profile' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit my profile</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={account?.user?.profile?.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
 }
 
 function VerificationScreen({ path }: { path: string }) {
@@ -582,6 +723,18 @@ function AdminScreen({ path }: { path: string }) {
   return <section className="mx-auto max-w-7xl px-5 py-8"><h1 className="font-display text-4xl font-bold text-[#fff6df]">Verification review</h1><div className="mt-6 grid gap-5 lg:grid-cols-[320px_1fr]"><aside className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4">{verificationCases.map((item) => <div key={item.id} className="mb-3 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><p className="font-semibold text-[#fff6df]">{item.modelName}</p><p className="text-xs text-[#999077]">{item.id} - {item.submittedAt}</p><StatusBadge tone={item.status === 'rejected' ? 'red' : item.status === 'pending' ? 'gold' : 'green'}>{item.status}</StatusBadge></div>)}</aside><div className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Amina W. compliance packet</h2><div className="mt-5 grid gap-4 md:grid-cols-3">{['ID document', 'Selfie match', 'M-Pesa owner'].map((item) => <div key={item} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><FileCheck2 className="mb-8 h-6 w-6 text-[#ffd700]" /><p className="font-semibold">{item}</p><p className="text-xs text-[#999077]">Ready for review</p></div>)}</div><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg bg-[#61f595] px-5 py-3 font-bold text-[#00210c]">Approve</button><button className="rounded-lg bg-[#93000a] px-5 py-3 font-bold text-[#ffdad6]">Reject</button><button className="rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Request changes</button></div></div></div></section>;
 }
 
+function MessagesScreen() {
+  const [session, setSession] = useState<UtamuSession | null>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  useEffect(() => {
+    const next = readSession();
+    setSession(next);
+    if (next?.token) utamuApi.getMessages(next.token).then((items: any) => setMessages(Array.isArray(items) ? items : []));
+  }, []);
+  if (!session?.token) return <section className="bg-[#fff0f6] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">You need to <a className="underline" href="/register">register</a> or <a className="underline" href="/login">login</a> to send and read messages</div></section>;
+  return <section className="bg-[#fff0f6] px-5 py-8"><h1 className="text-3xl text-[#ff4eb8]">Messages</h1><div className="mt-5 grid gap-3">{messages.length === 0 && <p className="bg-white p-5 text-sm">No messages yet.</p>}{messages.map((message) => <article key={message.id} className="bg-white p-5"><div className="flex flex-wrap justify-between gap-2"><strong className="text-[#3b164b]">{message.subject}</strong><span className="text-xs text-[#9b8090]">{new Date(message.created_at).toLocaleString()}</span></div><p className="mt-2 text-sm text-[#7b6e78]">From {message.sender_name} about {message.model_name || message.model_slug || 'profile'}</p><p className="mt-3 text-sm leading-6">{message.body}</p></article>)}</div></section>;
+}
+
 function NotificationScreen() {
   return <section className="grid min-h-[calc(100vh-80px)] place-items-center bg-[#0e0e0e] px-5 py-10"><div className="w-full max-w-sm rounded-[2rem] border border-[#353534] bg-black p-4 shadow-2xl"><div className="rounded-[1.5rem] bg-[#131313] p-5"><p className="text-center text-xs text-[#999077]">Monday, 29 June</p><div className="mt-8 rounded-2xl border border-[#4d4732] bg-[#201f1f]/90 p-4 backdrop-blur"><div className="flex items-center gap-3"><Bell className="h-6 w-6 text-[#ffd700]" /><div><p className="font-semibold text-[#fff6df]">Utamu Verification</p><p className="text-xs text-[#999077]">Now</p></div></div><p className="mt-3 text-sm text-[#d0c6ab]">Your application needs clearer documents. Tap to review and re-submit.</p></div><a href="/verification/rejected" className="mt-8 flex items-center justify-center gap-2 rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]"><Lock className="h-4 w-4" />Open Utamu</a></div></div></section>;
 }
@@ -597,5 +750,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'registration', 'profile'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages'].includes(view) && <RouteIndex />}</Shell>;
 }
