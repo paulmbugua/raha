@@ -95,22 +95,22 @@ function Shell({ children }: { children: React.ReactNode }) {
     if (next?.token) utamuApi.getNotifications(next.token).then((data: any) => setUnread(Number(data.unreadMessages || 0)));
   }, []);
   return (
-    <main className="min-h-screen bg-[#101010] font-serif text-[#2b1037] selection:bg-[#ec2aa0] selection:text-white">
-      <div className="mx-auto max-w-[1180px] bg-[#fff0f6] shadow-2xl shadow-black/40">
+    <main className="min-h-screen overflow-x-hidden bg-[#101010] font-serif text-[#2b1037] selection:bg-[#ec2aa0] selection:text-white">
+      <div className="mx-auto w-full max-w-[1180px] bg-[#fff0f6] shadow-2xl shadow-black/40">
         <header className="bg-[#2b0a3d] text-white">
-          <div className="flex min-h-[72px] flex-wrap items-center justify-between gap-4 px-5 py-3 md:flex-nowrap">
-            <a href="/" className="font-serif text-4xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#8b6a9b] md:text-5xl">Secret Nairobi</a>
-            <nav className="flex flex-1 flex-wrap items-center gap-3 text-sm font-bold">
-              <a href="/" className="rounded-full bg-[#ec4eb8] px-4 py-2 text-white shadow-sm">All Nairobi Models</a>
+          <div className="flex min-h-[72px] flex-col items-stretch gap-3 px-3 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
+            <a href="/" className="text-center font-serif text-3xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#8b6a9b] sm:text-4xl lg:text-left lg:text-5xl">Secret Nairobi</a>
+            <nav className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:flex-1 lg:justify-start">
+              <a href="/" className="rounded-full bg-[#ec4eb8] px-3 py-2 text-white shadow-sm sm:px-4">All Nairobi Models</a>
               <a href="/admin/verification-review" className="hover:text-[#ffb7df]">Agencies</a>
               <a href="/reviews/ratings" className="hover:text-[#ffb7df]">Reviews</a>
               <a href="/verification/step-1" className="uppercase hover:text-[#ffb7df]">Advertise for free!</a>
             </nav>
-            <div className="flex items-center gap-2 text-sm font-bold">
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:justify-end">
               {!session && <a href="/register" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>}
               {!session ? <a href="/login" className="rounded-full bg-[#ec4eb8] px-3 py-2">Login</a> : <a href="/model/dashboard" className="rounded-full bg-[#ec4eb8] px-3 py-2">My Account</a>}
               <form action="/discover" className="flex items-center overflow-hidden rounded-full bg-white/10">
-                <input name="query" aria-label="Search models" placeholder="Search" className="h-8 w-24 bg-transparent px-3 text-xs text-white outline-none placeholder:text-white/70 md:w-32" />
+                <input name="query" aria-label="Search models" placeholder="Search" className="h-8 w-24 bg-transparent px-3 text-xs text-white outline-none placeholder:text-white/70 sm:w-36" />
                 <button className="grid h-8 w-8 place-items-center" type="submit"><Search className="h-4 w-4" /></button>
               </form>
               <a href="/messages" className="relative grid h-8 w-8 place-items-center rounded-full hover:bg-white/10"><Mail className="h-5 w-5" />{unread > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#e60073] px-1 text-[10px]">{unread}</span>}</a>
@@ -157,7 +157,7 @@ function DiscoveryHome() {
 
   return (
     <>
-      <div className="grid gap-0 md:grid-cols-[1fr_220px]">
+      <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
         <section className="bg-[#fff0f6] px-4 py-5 md:px-5">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <h1 className="text-xl font-normal text-[#3b164b]">All models</h1>
@@ -165,7 +165,7 @@ function DiscoveryHome() {
               {['Female', 'Independent', 'VIP', 'New'].map((item) => <a key={item} href="/discover" className="rounded-full border border-[#d3e8f4] bg-[#eef9ff] px-4 py-2 text-[#ec2aa0]">{item}</a>)}
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
             {directoryModels.map((model, index) => <ModelCard key={model.id} model={model} index={index} />)}
           </div>
           <div className="mt-8 flex justify-center gap-1 text-sm font-bold text-white">
@@ -184,11 +184,11 @@ function DiscoveryHome() {
               <a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a>
             </div>
           </div>
-          <div className="min-h-[760px] bg-[#101010]" />
+          <div className="hidden min-h-[760px] bg-[#101010] lg:block" />
         </aside>
       </div>
       <section className="border-t border-[#ffd7e6] bg-[#fff0f6] px-4 py-6 text-[#111] md:px-5">
-        <h2 className="mb-3 text-3xl font-bold leading-tight">Secret Nairobi Models - Home Of The Most Alluring Talent</h2>
+        <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">Secret Nairobi Models - Home Of The Most Alluring Talent</h2>
         <p className="mb-3 text-[15px] leading-7">Entertainment, events, fashion, and lifestyle productions across Nairobi need dependable talent with polished presentation and professional communication. Secret Nairobi Models gives clients a simple way to browse verified profiles, compare styles, review availability, and connect with models suited for campaigns, hospitality, launches, brand shoots, and private creative bookings.</p>
         <p className="mb-3 text-[15px] leading-7">Our directory focuses on elegant presentation, quick discovery, and transparent profile signals. You can explore independent models, VIP profiles, new listings, and verified members from one place. Nairobi offers a deep pool of creative talent ready to bring your concept to life.</p>
         <h3 className="mb-2 text-2xl font-bold">We Serve The Best Model Directory Experience In Kenya</h3>
@@ -248,7 +248,7 @@ function RegisterScreen() {
     <>
       <section className="bg-[#101010] px-4 pb-6 pt-2 text-[#222] md:px-5">
         <h1 className="text-center text-3xl font-normal leading-tight text-white md:text-4xl">Create an Account</h1>
-        <div className="grid gap-8 py-10 md:grid-cols-3">
+        <div className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 lg:py-10">
           {plans.map((plan) => (
             <article key={plan.title} className="overflow-hidden rounded-[3px] bg-white shadow-lg shadow-black/30">
               <h2 className="bg-gradient-to-b from-[#ff4fbd] to-[#e60073] px-3 py-3 text-sm font-bold text-white">{plan.title}</h2>
@@ -333,17 +333,17 @@ function RegistrationFooter() {
 
 function FormRow({ label, hint, required = false, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="grid gap-2 md:grid-cols-[300px_1fr] md:items-start">
+    <div className="grid gap-2 lg:grid-cols-[minmax(160px,260px)_1fr] lg:items-start">
       <label className="text-sm font-normal text-[#00627c]">{label}{required && <span className="text-[#ff1493]">*</span>}{hint && <span className="mt-1 block text-xs text-[#a99aa5]">{hint}</span>}</label>
       <div>{children}</div>
     </div>
   );
 }
 
-const fieldClass = 'h-9 w-full border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
-const selectClass = 'h-9 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
+const fieldClass = 'min-h-10 w-full min-w-0 border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
+const selectClass = 'min-h-10 min-w-0 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
 const checkboxCardClass = 'flex min-h-9 cursor-pointer items-center gap-2 rounded-[3px] border border-[#ffd0e8] bg-white/80 px-3 py-2 text-sm text-[#003b5c] transition hover:border-[#ff55c7] hover:bg-white';
-const serviceTileBaseClass = 'flex min-h-12 cursor-pointer items-center gap-3 rounded-[4px] border px-4 py-3 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-[#ff55c7]/30';
+const serviceTileBaseClass = 'flex min-h-12 cursor-pointer items-center gap-3 rounded-[4px] border px-3 py-3 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-[#ff55c7]/30 sm:px-4';
 const serviceTileSelectedClass = 'border-[#e60073] bg-[#e60073] text-white shadow-sm';
 const serviceTileIdleClass = 'border-[#ffbad9] bg-white/85 text-[#003b5c] hover:border-[#e60073] hover:bg-[#fff8fc]';
 const kenyanTowns = [
@@ -375,7 +375,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const isAgency = kind === 'agency';
   const isMember = kind === 'member';
   const title = isIndependent ? 'Independent Model Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
-  const formMinHeight = isIndependent ? 'min-h-[2080px]' : isAgency ? 'min-h-[980px]' : 'min-h-[720px]';
+  const formMinHeight = isIndependent ? 'lg:min-h-[2080px]' : isAgency ? 'lg:min-h-[980px]' : 'lg:min-h-[720px]';
   const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
   const agencyServices = ['Independent model management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Model onboarding', 'Brand partnerships'];
   const memberPreferences = ['Save favorite profiles', 'Compare model profiles', 'Request booking details', 'Follow verified models', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
@@ -415,8 +415,8 @@ function RegistrationFormScreen({ path }: { path: string }) {
 
   return (
     <>
-      <div className="grid gap-0 md:grid-cols-[1fr_220px]">
-        <section className={'bg-[#fff0f6] px-5 py-5 text-[#003b5c] ' + formMinHeight}>
+      <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
+        <section className={'min-w-0 bg-[#fff0f6] px-4 py-5 text-[#003b5c] sm:px-5 ' + formMinHeight}>
           <h1 className="text-2xl font-normal text-[#3b164b]">{title}</h1>
           {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Models should register here</div>}
           <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
@@ -441,7 +441,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {isIndependent && (
               <>
                 <FormRow label="Gender" required><select className={selectClass + ' w-full'}><option>Female</option><option>Male</option></select></FormRow>
-                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 md:grid-cols-3"><select className={selectClass + ' w-full'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select className={selectClass + ' w-full'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select className={selectClass + ' w-full'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
+                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 sm:grid-cols-3"><select className={selectClass + ' w-full'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select className={selectClass + ' w-full'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select className={selectClass + ' w-full'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
                 <FormRow label="Ethnicity" required><select className={selectClass + ' w-full'}><option>Select ethnicity</option>{kenyanEthnicities.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Hair Color" required><select className={selectClass + ' w-full'}><option>Select hair color</option>{hairColors.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Hair length" required><select className={selectClass + ' w-full'}><option>Select hair length</option>{hairLengths.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
@@ -454,8 +454,8 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Smoker" required><select className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="About you" required><textarea className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
                 <FormRow label="Professional orientation"><select className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 md:grid-cols-[1fr_160px]"><select className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
-                <FormRow label="Rates"><div className="max-w-lg"><div className="mb-4 flex items-center justify-end gap-3 text-sm"><span>Currency:</span><select className={selectClass + ' w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid grid-cols-[120px_1fr_1fr] gap-2 text-center text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
+                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
+                <FormRow label="Rates"><div className="max-w-full overflow-x-auto"><div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3"><span>Currency:</span><select className={selectClass + ' w-full sm:w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[440px] grid-cols-[100px_1fr_1fr] gap-2 text-center text-xs sm:grid-cols-[120px_1fr_1fr] sm:text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
                 <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">
                   <label className={serviceTileBaseClass + ' md:col-span-2 ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
                     <input className="sr-only" type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} />
@@ -481,8 +481,8 @@ function RegistrationFormScreen({ path }: { path: string }) {
         </section>
         <RegistrationQuickSearch />
       </div>
-      <section className="bg-[#fff0f6] px-5 py-24 md:py-36">
-        <div className="mx-auto max-w-5xl border-y border-[#ffc4e1] bg-white/45 px-6 py-12 text-center shadow-inner">
+      <section className="bg-[#fff0f6] px-4 py-16 sm:px-5 md:py-28">
+        <div className="mx-auto max-w-5xl border-y border-[#ffc4e1] bg-white/45 px-4 py-10 text-center shadow-inner sm:px-6 sm:py-12">
           <p className="text-sm leading-7 text-[#9b8090]">Your account details are reviewed carefully so every Secret Nairobi profile starts with cleaner data, better trust signals, and a more polished public presence.</p>
           <div className="mx-auto mt-10 h-1.5 w-32 rounded-full bg-[#e60073]" />
         </div>
@@ -572,8 +572,8 @@ function ProfileScreen({ path }: { path: string }) {
 
   return (
     <>
-      <div className="grid gap-0 md:grid-cols-[1fr_220px]">
-        <section className="bg-[#fff0f6] px-3 py-5 text-[#2b1037] md:px-4">
+      <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
+        <section className="min-w-0 bg-[#fff0f6] px-3 py-5 text-[#2b1037] md:px-4">
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-3xl font-normal text-[#ff4eb8]">{displayName}</h1>
@@ -581,7 +581,7 @@ function ProfileScreen({ path }: { path: string }) {
             </div>
             <div className="text-right text-[#ff4eb8]"><div className="text-xs text-[#8d7a88]">call me</div><a href={`tel:${phone}`} className="text-2xl font-bold">{phone}</a></div>
           </div>
-          <div className="grid grid-cols-2 gap-1 md:grid-cols-5">
+          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
             {gallery.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${displayName} portfolio ${index + 1}`} className="aspect-[4/5] w-full object-cover" />)}
           </div>
           <section className="mt-6 bg-white p-5">
@@ -590,7 +590,7 @@ function ProfileScreen({ path }: { path: string }) {
             <p className="mt-2 text-[14px] leading-7">Hello, my name is {displayName}. I am based around {model.city}, {model.county}, and available for polished model bookings, portfolio shoots, campaigns, brand appearances, hospitality hosting, and creative productions. I keep communication clear, arrive prepared, and work with clients who value professionalism and privacy.</p>
             <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="mt-4 inline-flex font-bold text-[#ff1d9b]">WhatsApp Me</a>
           </section>
-          <div className="mt-3 grid gap-3 md:grid-cols-2">
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <section className="bg-white p-5">
               <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Model rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
@@ -623,7 +623,7 @@ function ProfileScreen({ path }: { path: string }) {
           </section>
           <section className="mt-6">
             <h2 className="mb-4 text-xl font-normal text-[#3b164b]">Top Rated Models</h2>
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div>
+            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div>
           </section>
         </section>
         <aside className="bg-[#101010] text-white">
@@ -631,7 +631,7 @@ function ProfileScreen({ path }: { path: string }) {
             <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
             <div className="space-y-3 text-sm"><select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select><select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select><label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label><label className="flex items-center gap-2"><input type="checkbox" />Only independent</label><div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div><a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a></div>
           </div>
-          <div className="min-h-[1800px] bg-[#101010]" />
+          <div className="hidden min-h-[1800px] bg-[#101010] lg:block" />
         </aside>
       </div>
 
@@ -691,14 +691,14 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
   }
   if (!session?.token) return <section className="bg-[#fff0f6] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">You need to <a className="underline" href="/register">register</a> or <a className="underline" href="/login">login</a> to access your account.</div></section>;
   const images = account?.images || [];
-  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 md:grid-cols-[1fr_260px]"><div className="space-y-4"><div className="bg-white p-5"><h1 className="text-3xl text-[#ff4eb8]">My profile dashboard</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div><div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Add profile images</h2><div className="mt-4 flex flex-col gap-2 md:flex-row"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="Paste image URL" className={fieldClass} /><button onClick={addImage} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add image</button></div><div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <img key={image.id || image.url} src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />)}</div></div>{path === 'edit-profile' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit my profile</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={account?.user?.profile?.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
+  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5"><h1 className="text-3xl text-[#ff4eb8]">My profile dashboard</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div><div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Add profile images</h2><div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="Paste image URL" className={fieldClass} /><button onClick={addImage} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add image</button></div><div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{images.map((image: any) => <img key={image.id || image.url} src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />)}</div></div>{path === 'edit-profile' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit my profile</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={account?.user?.profile?.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
 }
 
 function VerificationScreen({ path }: { path: string }) {
   const rejected = path.includes('rejected');
   const resubmitted = path.includes('resubmission');
   const submitted = path.includes('submitted') || resubmitted;
-  return <section className="mx-auto max-w-3xl px-5 py-10"><div className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#ffd700]/10 text-[#ffd700]">{rejected ? <X className="h-8 w-8" /> : submitted ? <Check className="h-8 w-8" /> : <Upload className="h-8 w-8" />}</div><h1 className="mt-5 text-center font-display text-3xl font-bold text-[#fff6df]">{rejected ? 'Verification rejected' : submitted ? 'Application submitted' : 'Verification step 1'}</h1><p className="mx-auto mt-3 max-w-xl text-center text-[#d0c6ab]">{rejected ? 'Your documents need a clearer upload before your Utamu profile can go live.' : submitted ? 'Your identity verification is in the admin queue. You will receive a notification after review.' : 'Upload ID, selfie proof, service categories, rate card, and M-Pesa payout number for review.'}</p><div className="mt-6 grid gap-3">{['Legal name', 'National ID or passport', 'Live selfie', 'Portfolio images', 'M-Pesa payout phone'].map((field) => <input key={field} placeholder={field} className="rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" />)}</div><a href="/verification/submitted" className="mt-5 flex items-center justify-center rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]">Submit for review</a>{rejected && <a href="/verification/re-apply" className="mt-3 flex items-center justify-center rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Re-apply</a>}</div></section>;
+  return <section className="mx-auto max-w-3xl px-5 py-10"><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#ffd700]/10 text-[#ffd700]">{rejected ? <X className="h-8 w-8" /> : submitted ? <Check className="h-8 w-8" /> : <Upload className="h-8 w-8" />}</div><h1 className="mt-5 text-center font-display text-3xl font-bold text-[#fff6df]">{rejected ? 'Verification rejected' : submitted ? 'Application submitted' : 'Verification step 1'}</h1><p className="mx-auto mt-3 max-w-xl text-center text-[#d0c6ab]">{rejected ? 'Your documents need a clearer upload before your Utamu profile can go live.' : submitted ? 'Your identity verification is in the admin queue. You will receive a notification after review.' : 'Upload ID, selfie proof, service categories, rate card, and M-Pesa payout number for review.'}</p><div className="mt-6 grid gap-3">{['Legal name', 'National ID or passport', 'Live selfie', 'Portfolio images', 'M-Pesa payout phone'].map((field) => <input key={field} placeholder={field} className="rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" />)}</div><a href="/verification/submitted" className="mt-5 flex items-center justify-center rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]">Submit for review</a>{rejected && <a href="/verification/re-apply" className="mt-3 flex items-center justify-center rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Re-apply</a>}</div></section>;
 }
 
 function CheckoutScreen() {
@@ -708,19 +708,19 @@ function CheckoutScreen() {
     await utamuApi.createMpesaPayment({ phone, amount: 500, modelId: 'm-001' });
     setSent(true);
   }
-  return <section className="mx-auto grid max-w-5xl gap-6 px-5 py-10 lg:grid-cols-[0.9fr_1.1fr]"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="Checkout model" className="h-full min-h-[440px] w-full object-cover" /></div><div className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><StatusBadge tone="green">M-Pesa Express</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Pay with M-Pesa</h1><p className="mt-3 text-[#d0c6ab]">A Ksh 500 verified deposit unlocks secure direct coordination and confirms your account intent.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>Portfolio access deposit</span><strong className="text-[#ffd700]">Ksh 500</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Platform safety fee</span><span>Included</span></div></div><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /><button onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white">Send STK push</button>{sent && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">STK push sent. Enter your PIN on your phone and keep this page open.</p>}</div></section>;
+  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="Checkout model" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="green">M-Pesa Express</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Pay with M-Pesa</h1><p className="mt-3 text-[#d0c6ab]">A Ksh 500 verified deposit unlocks secure direct coordination and confirms your account intent.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>Portfolio access deposit</span><strong className="text-[#ffd700]">Ksh 500</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Platform safety fee</span><span>Included</span></div></div><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /><button onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white">Send STK push</button>{sent && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">STK push sent. Enter your PIN on your phone and keep this page open.</p>}</div></section>;
 }
 
 function ReviewScreen() {
-  return <section className="mx-auto max-w-2xl px-5 py-10"><div className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><h1 className="font-display text-3xl font-bold text-[#fff6df]">Submit verified review</h1><div className="mt-5 flex gap-2">{[1, 2, 3, 4, 5].map((item) => <Star key={item} className="h-8 w-8 fill-[#ffd700] text-[#ffd700]" />)}</div><textarea placeholder="Describe professionalism, punctuality, communication, and accuracy." className="mt-5 min-h-40 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" /><label className="mt-4 flex items-center gap-2 text-sm text-[#d0c6ab]"><input type="checkbox" />Post anonymously</label><button className="mt-5 rounded-lg bg-[#ffd700] px-6 py-3 font-bold text-[#221b00]">Submit review</button><p className="mt-4 text-sm text-[#999077]">Verified reviews are weighted heavily in Utamu ranking and compliance checks.</p></div></section>;
+  return <section className="mx-auto max-w-2xl px-5 py-10"><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><h1 className="font-display text-2xl font-bold text-[#fff6df] sm:text-3xl">Submit verified review</h1><div className="mt-5 flex gap-2">{[1, 2, 3, 4, 5].map((item) => <Star key={item} className="h-8 w-8 fill-[#ffd700] text-[#ffd700]" />)}</div><textarea placeholder="Describe professionalism, punctuality, communication, and accuracy." className="mt-5 min-h-40 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" /><label className="mt-4 flex items-center gap-2 text-sm text-[#d0c6ab]"><input type="checkbox" />Post anonymously</label><button className="mt-5 rounded-lg bg-[#ffd700] px-6 py-3 font-bold text-[#221b00]">Submit review</button><p className="mt-4 text-sm text-[#999077]">Verified reviews are weighted heavily in Utamu ranking and compliance checks.</p></div></section>;
 }
 
 function AdminScreen({ path }: { path: string }) {
   const { verificationCases, analytics } = useUtamuDirectory();
   if (path.includes('analytics')) {
-    return <section className="mx-auto max-w-7xl px-5 py-8"><h1 className="font-display text-4xl font-bold text-[#fff6df]">Admin analytics</h1><div className="mt-6 grid gap-4 md:grid-cols-4">{[['Revenue', kes(analytics.revenue)], ['Bookings', analytics.bookings], ['Approval rate', `${analytics.approvalRate}%`], ['Active models', analytics.activeModels]].map(([label, value]) => <div key={String(label)} className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-5"><p className="text-xs uppercase tracking-widest text-[#999077]">{String(label)}</p><strong className="mt-3 block font-display text-2xl text-[#fff6df]">{String(value)}</strong></div>)}</div><div className="mt-6 grid h-72 grid-cols-8 items-end gap-3 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6">{analytics.chart.map((height, index) => <div key={index} className="rounded-t-lg bg-[#ffd700]" style={{ height: `${height}%` }} />)}</div></section>;
+    return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Admin analytics</h1><div className="mt-6 grid gap-4 md:grid-cols-4">{[['Revenue', kes(analytics.revenue)], ['Bookings', analytics.bookings], ['Approval rate', `${analytics.approvalRate}%`], ['Active models', analytics.activeModels]].map(([label, value]) => <div key={String(label)} className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-5"><p className="text-xs uppercase tracking-widest text-[#999077]">{String(label)}</p><strong className="mt-3 block font-display text-2xl text-[#fff6df]">{String(value)}</strong></div>)}</div><div className="mt-6 grid h-64 grid-cols-8 items-end gap-2 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:h-72 sm:gap-3 sm:p-6">{analytics.chart.map((height, index) => <div key={index} className="rounded-t-lg bg-[#ffd700]" style={{ height: `${height}%` }} />)}</div></section>;
   }
-  return <section className="mx-auto max-w-7xl px-5 py-8"><h1 className="font-display text-4xl font-bold text-[#fff6df]">Verification review</h1><div className="mt-6 grid gap-5 lg:grid-cols-[320px_1fr]"><aside className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4">{verificationCases.map((item) => <div key={item.id} className="mb-3 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><p className="font-semibold text-[#fff6df]">{item.modelName}</p><p className="text-xs text-[#999077]">{item.id} - {item.submittedAt}</p><StatusBadge tone={item.status === 'rejected' ? 'red' : item.status === 'pending' ? 'gold' : 'green'}>{item.status}</StatusBadge></div>)}</aside><div className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Amina W. compliance packet</h2><div className="mt-5 grid gap-4 md:grid-cols-3">{['ID document', 'Selfie match', 'M-Pesa owner'].map((item) => <div key={item} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><FileCheck2 className="mb-8 h-6 w-6 text-[#ffd700]" /><p className="font-semibold">{item}</p><p className="text-xs text-[#999077]">Ready for review</p></div>)}</div><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg bg-[#61f595] px-5 py-3 font-bold text-[#00210c]">Approve</button><button className="rounded-lg bg-[#93000a] px-5 py-3 font-bold text-[#ffdad6]">Reject</button><button className="rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Request changes</button></div></div></div></section>;
+  return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Verification review</h1><div className="mt-6 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]"><aside className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4">{verificationCases.map((item) => <div key={item.id} className="mb-3 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><p className="font-semibold text-[#fff6df]">{item.modelName}</p><p className="text-xs text-[#999077]">{item.id} - {item.submittedAt}</p><StatusBadge tone={item.status === 'rejected' ? 'red' : item.status === 'pending' ? 'gold' : 'green'}>{item.status}</StatusBadge></div>)}</aside><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Amina W. compliance packet</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{['ID document', 'Selfie match', 'M-Pesa owner'].map((item) => <div key={item} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><FileCheck2 className="mb-8 h-6 w-6 text-[#ffd700]" /><p className="font-semibold">{item}</p><p className="text-xs text-[#999077]">Ready for review</p></div>)}</div><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg bg-[#61f595] px-5 py-3 font-bold text-[#00210c]">Approve</button><button className="rounded-lg bg-[#93000a] px-5 py-3 font-bold text-[#ffdad6]">Reject</button><button className="rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Request changes</button></div></div></div></section>;
 }
 
 function MessagesScreen() {
@@ -740,11 +740,11 @@ function NotificationScreen() {
 }
 
 function Panel({ title, icon: Icon, items }: { title: string; icon: typeof Gauge; items: string[] }) {
-  return <div className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-6"><Icon className="mb-6 h-7 w-7 text-[#ffd700]" /><h2 className="font-display text-2xl font-bold text-[#fff6df]">{title}</h2><div className="mt-4 grid gap-3">{items.map((item) => <div key={item} className="flex items-center justify-between rounded-xl border border-[#353534] bg-[#201f1f] p-3 text-sm text-[#d0c6ab]"><span>{item}</span><ChevronRight className="h-4 w-4" /></div>)}</div></div>;
+  return <div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><Icon className="mb-6 h-7 w-7 text-[#ffd700]" /><h2 className="font-display text-2xl font-bold text-[#fff6df]">{title}</h2><div className="mt-4 grid gap-3">{items.map((item) => <div key={item} className="flex items-center justify-between rounded-xl border border-[#353534] bg-[#201f1f] p-3 text-sm text-[#d0c6ab]"><span>{item}</span><ChevronRight className="h-4 w-4" /></div>)}</div></div>;
 }
 
 function RouteIndex() {
-  return <section className="mx-auto max-w-7xl px-5 py-10 pb-28"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Connected Utamu routes</h2><div className="mt-4 flex flex-wrap gap-2">{routeLinks.map((route) => <a key={route} href={route} className="rounded-full border border-[#4d4732] bg-[#1e1e1e] px-4 py-2 text-sm text-[#d0c6ab] hover:border-[#ffd700]">{route}</a>)}</div></section>;
+  return <section className="mx-auto max-w-7xl px-4 py-10 pb-28 sm:px-5"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Connected Utamu routes</h2><div className="mt-4 flex flex-wrap gap-2">{routeLinks.map((route) => <a key={route} href={route} className="rounded-full border border-[#4d4732] bg-[#1e1e1e] px-4 py-2 text-sm text-[#d0c6ab] hover:border-[#ffd700]">{route}</a>)}</div></section>;
 }
 
 export default function UtamuApp({ slug }: UtamuAppProps) {
