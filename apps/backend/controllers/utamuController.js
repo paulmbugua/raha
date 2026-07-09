@@ -8,6 +8,10 @@ import { analytics, bookings, models, reviews, verificationCases } from '../data
 const directory = { models, bookings, reviews, verificationCases, analytics };
 const JWT_SECRET = process.env.JWT_SECRET || process.env.UTAMU_JWT_SECRET || 'utamu-local-dev-secret';
 const APP_URL = (process.env.WEB_APP_URL || process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+const MAIL_FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS || process.env.SMTP_FROM || 'noreply@secretnairobi.co.ke';
+const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Secret Nairobi';
+const MAIL_FROM = process.env.MAIL_FROM || `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRESS}>`;
+const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || MAIL_FROM_ADDRESS;
 
 async function tryQuery(sql, params = []) {
   try {
@@ -69,7 +73,7 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
     '<p>You can view your account here:<br><a href="' + APP_URL + '/model/dashboard">' + APP_URL + '/model/dashboard</a></p><p>Secret Nairobi - Models in Nairobi</p>';
 
   if (!process.env.SMTP_HOST) {
-    console.log('[utamu:email-preview]', { to: user.email, confirmationUrl });
+    console.log('[utamu:email-preview]', { from: MAIL_FROM, to: user.email, confirmationUrl });
     return { delivered: false, html, confirmationUrl };
   }
 
@@ -80,10 +84,19 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
   });
   await transporter.sendMail({
-    from: process.env.MAIL_FROM || 'Secret Nairobi <no-reply@utamu.co.ke>',
+    from: MAIL_FROM,
+    replyTo: MAIL_REPLY_TO,
+    envelope: { from: MAIL_FROM_ADDRESS, to: user.email },
     to: user.email,
     subject: 'Validate your Secret Nairobi account',
     html,
+    text: [
+      `Hello ${user.full_name}`,
+      'Before you can use the site you will need to validate your email address.',
+      `Please validate your email address by opening this link: ${confirmationUrl}`,
+      `Account information: type: ${user.account_type}; username: ${user.username || user.email}; password: (hidden)`,
+      'Secret Nairobi - Models in Nairobi',
+    ].join('\n\n'),
   });
   return { delivered: true, html, confirmationUrl };
 }
@@ -228,10 +241,17 @@ export async function getMe(req, res) {
   res.json({ data: { user: publicUser(user), model: modelRows?.[0] || null, images: imageRows || [], unreadMessages: unread?.[0]?.count || 0 } });
 }
 
+function normalizeProfileImageUrl(value) {
+  const url = String(value || '').trim();
+  const publicBase = (process.env.R2_PUBLIC_BASE_URL_IMAGES || '').replace(/\/$/, '');
+  if (!url || /^https?:\/\//i.test(url) || !publicBase) return url;
+  return `${publicBase}/${encodeURIComponent(url).replace(/%2F/g, '/')}`;
+}
+
 export async function addProfileImage(req, res) {
   const user = await authUser(req);
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
-  const url = String(req.body?.url || '').trim();
+  const url = normalizeProfileImageUrl(req.body?.url);
   if (!url) return res.status(400).json({ message: 'Image URL is required.' });
   const modelRows = await tryQuery('select id from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
   const inserted = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, modelRows?.[0]?.id || null, url, req.body?.alt || user.full_name, Number(req.body?.sortOrder || 0)]);

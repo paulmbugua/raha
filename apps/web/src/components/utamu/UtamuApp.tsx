@@ -104,7 +104,7 @@ function Shell({ children }: { children: React.ReactNode }) {
               <a href="/" className="rounded-full bg-[#ec4eb8] px-3 py-2 text-white shadow-sm sm:px-4">All Nairobi Models</a>
               <a href="/admin/verification-review" className="hover:text-[#ffb7df]">Agencies</a>
               <a href="/reviews/ratings" className="hover:text-[#ffb7df]">Reviews</a>
-              <a href="/verification/step-1" className="uppercase hover:text-[#ffb7df]">Advertise for free!</a>
+              <a href="/register" className="uppercase hover:text-[#ffb7df]">Advertise here</a>
             </nav>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:justify-end">
               {!session && <a href="/register" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>}
@@ -165,7 +165,7 @@ function DiscoveryHome() {
               {['Female', 'Independent', 'VIP', 'New'].map((item) => <a key={item} href="/discover" className="rounded-full border border-[#d3e8f4] bg-[#eef9ff] px-4 py-2 text-[#ec2aa0]">{item}</a>)}
             </div>
           </div>
-          <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {directoryModels.map((model, index) => <ModelCard key={model.id} model={model} index={index} />)}
           </div>
           <div className="mt-8 flex justify-center gap-1 text-sm font-bold text-white">
@@ -196,7 +196,7 @@ function DiscoveryHome() {
       </section>
       <footer className="bg-[#2b0a3d] px-5 py-5 text-center text-sm text-white">
         <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
-        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Models</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/verification/step-1">Advertise for free</a></div>
+        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Models</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
       </footer>
     </>
   );

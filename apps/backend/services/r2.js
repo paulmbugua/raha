@@ -8,8 +8,12 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 
 const endpoint = process.env.R2_ENDPOINT;
 const region = process.env.R2_REGION || 'auto';
-const bucket = process.env.R2_BUCKET_DOCS;
-const publicBase = (process.env.R2_PUBLIC_BASE_URL_DOCS || '').replace(/\/$/, '');
+const bucket = process.env.R2_BUCKET_DOCS || process.env.R2_BUCKET_IMAGES;
+const publicBase = (process.env.R2_PUBLIC_BASE_URL_DOCS || process.env.R2_PUBLIC_BASE_URL_IMAGES || '').replace(/\/$/, '');
+const imageBucket = process.env.R2_BUCKET_IMAGES || bucket;
+const imagePublicBase = (process.env.R2_PUBLIC_BASE_URL_IMAGES || publicBase || '').replace(/\/$/, '');
+const previewBucket = process.env.R2_BUCKET_PREVIEWS || imageBucket;
+const previewPublicBase = (process.env.R2_PUBLIC_BASE_URL_PREVIEWS || imagePublicBase || '').replace(/\/$/, '');
 const maxDocBytes = Number(process.env.R2_MAX_DOC_BYTES || 50 * 1024 * 1024);
 const signedExpiry = Number(process.env.R2_DOWNLOAD_EXPIRES_SEC || 900);
 
@@ -39,6 +43,12 @@ export const r2Config = {
   signedExpiry,
   allowedDocMimeTypes,
 };
+export const r2MediaConfig = {
+  imageBucket,
+  imagePublicBase,
+  previewBucket,
+  previewPublicBase,
+};
 
 export function assertAllowedDoc({ bytes, contentType }) {
   if (!allowedDocMimeTypes.has(contentType)) {
@@ -52,6 +62,14 @@ export function assertAllowedDoc({ bytes, contentType }) {
 export function getPublicR2Url(key) {
   if (!publicBase) return null;
   return `${publicBase}/${encodeURIComponent(key).replace(/%2F/g, '/')}`;
+}
+
+export function getPublicImageR2Url(key) {
+  return imagePublicBase ? `${imagePublicBase}/${encodeURIComponent(key).replace(/%2F/g, '/')}` : null;
+}
+
+export function getPublicPreviewR2Url(key) {
+  return previewPublicBase ? `${previewPublicBase}/${encodeURIComponent(key).replace(/%2F/g, '/')}` : null;
 }
 
 export async function putDocObject({ key, body, contentType }) {
