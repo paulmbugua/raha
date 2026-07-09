@@ -119,7 +119,7 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
     ].filter(Boolean);
     const failure = {
       name: 'SmtpConfigurationError',
-      message: `Missing SMTP credentials: ${missing.join(', ')}. Zoho SMTP requires noreply@secretnairobi.co.ke credentials or an app-specific password.`,
+      message: `Missing SMTP credentials: ${missing.join(', ')}. Zoho SMTP must authenticate with support@grogonsacco.co.ke credentials or an app-specific password. noreply@secretnairobi.co.ke is used as the sender alias.`,
       code: 'SMTP_CREDENTIALS_MISSING',
       command: null,
       responseCode: null,
