@@ -1,5 +1,5 @@
 const PROD_BACKEND_URL = 'https://api.utamu.co.ke';
-const DEV_BACKEND_URL = 'http://localhost:4000';
+const DEV_BACKEND_URL = 'http://localhost:4005';
 
 const PRODUCTION_HOST_PATTERNS = [
   'utamu.co.ke',

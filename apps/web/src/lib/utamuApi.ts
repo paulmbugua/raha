@@ -38,7 +38,7 @@ async function postJson<T>(path: string, body: unknown, fallback: T, token?: str
   } catch {
     console.error('[utamu-api] POST failed', { path, apiBase: API_BASE });
     throw new Error(
-      `Could not reach the backend at ${API_BASE}. Start the backend on http://localhost:4000 or set NEXT_PUBLIC_BACKEND_URL to the correct API URL.`,
+      `Could not reach the backend at ${API_BASE}. Start the backend on http://localhost:4005 or set NEXT_PUBLIC_BACKEND_URL to the correct API URL.`,
     );
   }
 }

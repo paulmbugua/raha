@@ -410,7 +410,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
       window.localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(result));
       window.history.pushState({}, '', '/register/confirm-email');
     } catch (error) {
-      setRegistrationError(error instanceof Error ? error.message : 'Registration request failed. Confirm the backend is running on http://localhost:4000.');
+      setRegistrationError(error instanceof Error ? error.message : 'Registration request failed. Confirm the backend is running on http://localhost:4005.');
     } finally {
       setSubmitting(false);
     }

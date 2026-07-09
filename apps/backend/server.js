@@ -6,7 +6,7 @@ import morgan from 'morgan';
 import utamuRoutes from './routes/utamuRoutes.js';
 
 const app = express();
-const port = Number(process.env.PORT || 4000);
+const port = Number(process.env.PORT || 4005);
 const allowedOrigins = String(process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001').split(',').map((origin) => origin.trim()).filter(Boolean);
 
 app.use(cors({ origin: (origin, callback) => (!origin || allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('Not allowed by CORS: ' + origin))), credentials: true }));
