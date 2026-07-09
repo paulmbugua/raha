@@ -64,7 +64,41 @@ async function authUser(req) {
   }
 }
 
+function maskEmail(value) {
+  const email = String(value || '').trim();
+  const [local, domain] = email.split('@');
+  if (!local || !domain) return email ? '[invalid-email]' : '';
+  const visible = local.length <= 2 ? `${local[0] || ''}*` : `${local.slice(0, 2)}***${local.slice(-1)}`;
+  return `${visible}@${domain}`;
+}
+
+function emailFlowLog(event, details = {}, level = 'log') {
+  const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+  logger('[utamu:registration-email]', {
+    event,
+    at: new Date().toISOString(),
+    ...details,
+  });
+}
+
+function smtpDiagnostics() {
+  return {
+    hasSmtpHost: Boolean(process.env.SMTP_HOST),
+    smtpHost: process.env.SMTP_HOST || null,
+    smtpPort: Number(process.env.SMTP_PORT || 587),
+    smtpSecure: process.env.SMTP_SECURE === 'true',
+    hasSmtpUser: Boolean(process.env.SMTP_USER),
+    hasSmtpPass: Boolean(process.env.SMTP_PASS),
+    from: MAIL_FROM,
+    envelopeFrom: MAIL_FROM_ADDRESS,
+    replyTo: MAIL_REPLY_TO,
+    appUrl: APP_URL,
+  };
+}
+
 async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
+  const baseLog = { userId: user.id, accountType: user.account_type, to: maskEmail(user.email) };
+  emailFlowLog('validation_email_prepare', { ...baseLog, ...smtpDiagnostics() });
   const html = '<p>Hello ' + user.full_name + '</p>' +
     '<p>Before you can use the site you will need to validate your email address.</p>' +
     '<p>If you do not validate your email in the next 3 days your account will be deleted.</p>' +
@@ -73,7 +107,7 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
     '<p>You can view your account here:<br><a href="' + APP_URL + '/model/dashboard">' + APP_URL + '/model/dashboard</a></p><p>Secret Nairobi - Models in Nairobi</p>';
 
   if (!process.env.SMTP_HOST) {
-    console.log('[utamu:email-preview]', { from: MAIL_FROM, to: user.email, confirmationUrl });
+    emailFlowLog('validation_email_preview_only', { ...baseLog, reason: 'SMTP_HOST is not configured. Email was not sent to Gmail; validation link is only in backend logs.', confirmationUrl }, 'warn');
     return { delivered: false, html, confirmationUrl };
   }
 
@@ -83,22 +117,44 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
     secure: process.env.SMTP_SECURE === 'true',
     auth: process.env.SMTP_USER ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS } : undefined,
   });
-  await transporter.sendMail({
-    from: MAIL_FROM,
-    replyTo: MAIL_REPLY_TO,
-    envelope: { from: MAIL_FROM_ADDRESS, to: user.email },
-    to: user.email,
-    subject: 'Validate your Secret Nairobi account',
-    html,
-    text: [
-      `Hello ${user.full_name}`,
-      'Before you can use the site you will need to validate your email address.',
-      `Please validate your email address by opening this link: ${confirmationUrl}`,
-      `Account information: type: ${user.account_type}; username: ${user.username || user.email}; password: (hidden)`,
-      'Secret Nairobi - Models in Nairobi',
-    ].join('\n\n'),
-  });
-  return { delivered: true, html, confirmationUrl };
+  try {
+    emailFlowLog('validation_email_send_attempt', baseLog);
+    const info = await transporter.sendMail({
+      from: MAIL_FROM,
+      replyTo: MAIL_REPLY_TO,
+      envelope: { from: MAIL_FROM_ADDRESS, to: user.email },
+      to: user.email,
+      subject: 'Validate your Secret Nairobi account',
+      html,
+      text: [
+        `Hello ${user.full_name}`,
+        'Before you can use the site you will need to validate your email address.',
+        `Please validate your email address by opening this link: ${confirmationUrl}`,
+        `Account information: type: ${user.account_type}; username: ${user.username || user.email}; password: (hidden)`,
+        'Secret Nairobi - Models in Nairobi',
+      ].join('\n\n'),
+    });
+    const result = {
+      messageId: info.messageId || null,
+      accepted: (info.accepted || []).map(maskEmail),
+      rejected: (info.rejected || []).map(maskEmail),
+      pending: (info.pending || []).map(maskEmail),
+      response: info.response || null,
+    };
+    emailFlowLog('validation_email_sent', { ...baseLog, ...result });
+    return { delivered: true, html, confirmationUrl, provider: result };
+  } catch (error) {
+    const failure = {
+      name: error?.name || 'Error',
+      message: error?.message || 'Unknown email delivery error',
+      code: error?.code || null,
+      command: error?.command || null,
+      responseCode: error?.responseCode || null,
+      response: error?.response || null,
+    };
+    emailFlowLog('validation_email_failed', { ...baseLog, ...failure }, 'error');
+    return { delivered: false, html, confirmationUrl, error: failure };
+  }
 }
 
 async function ensureModelForUser(user, body, profile) {
@@ -177,11 +233,20 @@ export async function registerAccount(req, res) {
   const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
   const fullName = body.name || body.fullName || body.agencyName || body.username || 'Secret Nairobi Member';
+  const registrationId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(8).toString('hex');
+  emailFlowLog('registration_started', {
+    registrationId,
+    accountType,
+    email: maskEmail(email),
+    username: body.username || null,
+    availabilityCount: Array.isArray(body.availability) ? body.availability.length : 0,
+    serviceCount: Array.isArray(body.services) ? body.services.length : 0,
+  });
   if (!email || !password || !body.username) return res.status(400).json({ message: 'Username, email and password are required.' });
   if (!body.availability?.length && accountType === 'independent-model') return res.status(400).json({ message: 'Please select at least one availability option.' });
 
   const existing = await tryQuery('select id from utamu_users where lower(email) = lower($1) or lower(username) = lower($2) limit 1', [email, body.username]);
-  if (existing?.[0]) return res.status(409).json({ message: 'An account already exists with that email or username.' });
+  if (existing?.[0]) { emailFlowLog('registration_duplicate', { registrationId, email: maskEmail(email), username: body.username }, 'warn'); return res.status(409).json({ message: 'An account already exists with that email or username.' }); }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const validationToken = crypto.randomBytes(24).toString('hex');
@@ -194,8 +259,10 @@ export async function registerAccount(req, res) {
   );
   const user = insert.rows[0];
   const model = await ensureModelForUser(user, body, profile);
+  emailFlowLog('registration_account_created', { registrationId, userId: user.id, modelId: model?.id || null, status: user.status, email: maskEmail(user.email) });
   const confirmationUrl = APP_URL + '/register/confirm-email?token=' + encodeURIComponent(validationToken);
   const emailPreview = await sendValidationEmail(user, confirmationUrl, true);
+  emailFlowLog('registration_email_result', { registrationId, userId: user.id, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null });
   res.status(201).json({ data: { registrationComplete: true, user: publicUser(user), model, validationToken, confirmationUrl, emailPreview } });
 }
 
@@ -212,13 +279,16 @@ export async function confirmEmail(req, res) {
 
 export async function resendValidation(req, res) {
   const email = String(req.body?.email || '').trim().toLowerCase();
+  const resendId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(8).toString('hex');
+  emailFlowLog('validation_resend_requested', { resendId, email: maskEmail(email) });
   const rows = await tryQuery('select * from utamu_users where email = $1 limit 1', [email]);
   const user = rows?.[0];
-  if (!user) return res.status(404).json({ message: 'Account not found.' });
+  if (!user) { emailFlowLog('validation_resend_missing_account', { resendId, email: maskEmail(email) }, 'warn'); return res.status(404).json({ message: 'Account not found.' }); }
   const validationToken = user.validation_token || crypto.randomBytes(24).toString('hex');
   const updated = await queryWithRetry('update utamu_users set validation_token = $2, validation_sent_at = now() where id = $1 returning *', [user.id, validationToken]);
   const confirmationUrl = APP_URL + '/register/confirm-email?token=' + encodeURIComponent(validationToken);
   const emailPreview = await sendValidationEmail(updated.rows[0], confirmationUrl, false);
+  emailFlowLog('validation_resend_result', { resendId, userId: user.id, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null });
   res.json({ data: { sent: true, confirmationUrl, emailPreview } });
 }
 
