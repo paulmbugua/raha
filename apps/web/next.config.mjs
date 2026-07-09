@@ -2,7 +2,8 @@
 import { createRequire } from 'node:module';
 
 const require = createRequire(import.meta.url);
-const DEFAULT_PUBLIC_BACKEND_URL = 'https://api.utamu.co.ke';
+const isProductionBuild = process.env.NODE_ENV === 'production';
+const DEFAULT_PUBLIC_BACKEND_URL = isProductionBuild ? 'https://api.utamu.co.ke' : 'http://localhost:4000';
 const nextPublicBackendUrl =
   process.env.NEXT_PUBLIC_BACKEND_URL?.trim().replace(/\/+$/, '') || DEFAULT_PUBLIC_BACKEND_URL;
 

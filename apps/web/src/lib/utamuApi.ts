@@ -1,6 +1,9 @@
 import { analytics, bookings, models, reviews, verificationCases } from '../data/utamu';
+import { logResolvedBackendUrl, resolveBackendUrl } from './backendUrl';
 
-const API_BASE = (process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '').replace(/\/$/, '');
+const API_BASE = resolveBackendUrl(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL);
+
+logResolvedBackendUrl('utamu-api', API_BASE);
 
 async function parseResponse<T>(response: Response): Promise<T> {
   const payload = await response.json().catch(() => ({}));
@@ -21,7 +24,6 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown, fallback: T, token?: string): Promise<T> {
-  if (!API_BASE) return fallback;
   try {
     const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
@@ -34,7 +36,10 @@ async function postJson<T>(path: string, body: unknown, fallback: T, token?: str
     });
     return await parseResponse<T>(response);
   } catch {
-    return fallback;
+    console.error('[utamu-api] POST failed', { path, apiBase: API_BASE });
+    throw new Error(
+      `Could not reach the backend at ${API_BASE}. Start the backend on http://localhost:4000 or set NEXT_PUBLIC_BACKEND_URL to the correct API URL.`,
+    );
   }
 }
 

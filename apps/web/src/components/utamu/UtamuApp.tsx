@@ -400,15 +400,20 @@ function RegistrationFormScreen({ path }: { path: string }) {
     const formData = new FormData(event.currentTarget);
     const values = Object.fromEntries(formData.entries());
     const payload = { ...values, accountType: kind, services: isIndependent ? selectedServices : isAgency ? agencyServices.filter((item) => formData.getAll('agencyServices').includes(item)) : [], availability: selectedAvailability, preferences: formData.getAll('preferences'), profile: values };
-    const result = await utamuApi.registerAccount(payload);
-    setSubmitting(false);
-    if (!(result as any).registrationComplete) {
-      setRegistrationError('Registration could not be completed. Please check your details and try again.');
-      return;
+    try {
+      const result = await utamuApi.registerAccount(payload);
+      if (!(result as any).registrationComplete) {
+        setRegistrationError('Registration could not be completed. Please check your details and try again.');
+        return;
+      }
+      setRegistrationResult(result);
+      window.localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(result));
+      window.history.pushState({}, '', '/register/confirm-email');
+    } catch (error) {
+      setRegistrationError(error instanceof Error ? error.message : 'Registration request failed. Confirm the backend is running on http://localhost:4000.');
+    } finally {
+      setSubmitting(false);
     }
-    setRegistrationResult(result);
-    window.localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(result));
-    window.history.pushState({}, '', '/register/confirm-email');
   }
 
   if (registrationResult) return <ConfirmEmailScreen pending={registrationResult} />;
