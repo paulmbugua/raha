@@ -12,6 +12,7 @@ const MAIL_FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS || process.env.SMTP_FROM
 const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Secret Nairobi';
 const MAIL_FROM = process.env.MAIL_FROM || `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRESS}>`;
 const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || MAIL_FROM_ADDRESS;
+const VALIDATION_RESEND_COOLDOWN_MS = Number(process.env.UTAMU_VALIDATION_RESEND_COOLDOWN_MS || 60_000);
 
 async function tryQuery(sql, params = []) {
   try {
@@ -175,6 +176,18 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
   }
 }
 
+function validationRetryAfterSeconds(user) {
+  if (!user?.validation_sent_at || VALIDATION_RESEND_COOLDOWN_MS <= 0) return 0;
+  const lastSentAt = new Date(user.validation_sent_at).getTime();
+  if (!Number.isFinite(lastSentAt)) return 0;
+  const retryAfterMs = VALIDATION_RESEND_COOLDOWN_MS - (Date.now() - lastSentAt);
+  return retryAfterMs > 0 ? Math.ceil(retryAfterMs / 1000) : 0;
+}
+
+function validationConfirmationUrl(token) {
+  return APP_URL + '/register/confirm-email?token=' + encodeURIComponent(token);
+}
+
 async function ensureModelForUser(user, body, profile) {
   if (!['independent-model', 'agency'].includes(user.account_type)) return null;
   const displayName = body.name || body.fullName || body.agencyName || user.full_name;
@@ -280,8 +293,13 @@ export async function registerAccount(req, res) {
     const pendingEmail = sameEmail && (!existingUser.email_verified || existingUser.status === 'pending_email');
     if (pendingEmail) {
       const validationToken = existingUser.validation_token || crypto.randomBytes(24).toString('hex');
+      const retryAfterSeconds = validationRetryAfterSeconds(existingUser);
+      const confirmationUrl = validationConfirmationUrl(validationToken);
+      if (retryAfterSeconds > 0) {
+        emailFlowLog('registration_duplicate_pending_resend_throttled', { registrationId, userId: existingUser.id, email: maskEmail(email), retryAfterSeconds }, 'warn');
+        return res.status(200).json({ data: { registrationComplete: true, resentValidation: false, recentlySent: true, retryAfterSeconds, user: publicUser(existingUser), validationToken, confirmationUrl } });
+      }
       const updated = await queryWithRetry('update utamu_users set validation_token = $2, validation_sent_at = now() where id = $1 returning *', [existingUser.id, validationToken]);
-      const confirmationUrl = APP_URL + '/register/confirm-email?token=' + encodeURIComponent(validationToken);
       const emailPreview = await sendValidationEmail(updated.rows[0], confirmationUrl, false);
       emailFlowLog('registration_duplicate_pending_resend', { registrationId, userId: existingUser.id, email: maskEmail(email), username: body.username, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null }, 'warn');
       return res.status(200).json({ data: { registrationComplete: true, resentValidation: true, user: publicUser(updated.rows[0]), validationToken, confirmationUrl, emailPreview } });
@@ -326,7 +344,7 @@ export async function registerAccount(req, res) {
   const user = insert.rows[0];
   const model = await ensureModelForUser(user, body, profile);
   emailFlowLog('registration_account_created', { registrationId, userId: user.id, modelId: model?.id || null, status: user.status, email: maskEmail(user.email) });
-  const confirmationUrl = APP_URL + '/register/confirm-email?token=' + encodeURIComponent(validationToken);
+  const confirmationUrl = validationConfirmationUrl(validationToken);
   const emailPreview = await sendValidationEmail(user, confirmationUrl, true);
   emailFlowLog('registration_email_result', { registrationId, userId: user.id, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null });
   res.status(201).json({ data: { registrationComplete: true, user: publicUser(user), model, validationToken, confirmationUrl, emailPreview } });
@@ -351,8 +369,13 @@ export async function resendValidation(req, res) {
   const user = rows?.[0];
   if (!user) { emailFlowLog('validation_resend_missing_account', { resendId, email: maskEmail(email) }, 'warn'); return res.status(404).json({ message: 'Account not found.' }); }
   const validationToken = user.validation_token || crypto.randomBytes(24).toString('hex');
+  const retryAfterSeconds = validationRetryAfterSeconds(user);
+  const confirmationUrl = validationConfirmationUrl(validationToken);
+  if (retryAfterSeconds > 0) {
+    emailFlowLog('validation_resend_throttled', { resendId, userId: user.id, email: maskEmail(email), retryAfterSeconds }, 'warn');
+    return res.json({ data: { sent: false, recentlySent: true, retryAfterSeconds, confirmationUrl } });
+  }
   const updated = await queryWithRetry('update utamu_users set validation_token = $2, validation_sent_at = now() where id = $1 returning *', [user.id, validationToken]);
-  const confirmationUrl = APP_URL + '/register/confirm-email?token=' + encodeURIComponent(validationToken);
   const emailPreview = await sendValidationEmail(updated.rows[0], confirmationUrl, false);
   emailFlowLog('validation_resend_result', { resendId, userId: user.id, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null });
   res.json({ data: { sent: true, confirmationUrl, emailPreview } });

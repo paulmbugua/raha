@@ -501,12 +501,21 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
   const [data, setData] = useState<any>(pending || null);
   const [message, setMessage] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   useEffect(() => {
     if (data) return;
     const params = new URLSearchParams(window.location.search);
     const stored = window.localStorage.getItem(PENDING_REGISTRATION_KEY);
     setData(stored ? JSON.parse(stored) : { validationToken: params.get('token'), user: null });
   }, [data]);
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+    const timer = window.setInterval(() => {
+      setResendCooldown((current) => Math.max(0, current - 1));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
   async function confirm() {
     const token = data?.validationToken || new URLSearchParams(window.location.search).get('token');
     if (!token) { setMessage('Validation token is missing. Please resend the validation email.'); return; }
@@ -521,13 +530,28 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
   async function resend() {
     const email = data?.user?.email;
     if (!email) { setMessage('Email address is missing. Please register again.'); return; }
-    await utamuApi.resendValidation(email);
-    setMessage('Validation email sent again. Check your inbox or the backend email preview log in development.');
+    if (resending || resendCooldown > 0) return;
+    setResending(true);
+    setMessage('');
+    try {
+      const result: any = await utamuApi.resendValidation(email);
+      if (result?.recentlySent) {
+        setResendCooldown(Number(result.retryAfterSeconds || 60));
+        setMessage(`A validation email was just sent. Please wait ${Number(result.retryAfterSeconds || 60)} seconds before requesting another one.`);
+      } else {
+        setResendCooldown(60);
+        setMessage('Validation email sent again. Check your inbox and spam folder.');
+      }
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : 'Validation email could not be resent.');
+    } finally {
+      setResending(false);
+    }
   }
   return <section className="bg-[#fff0f6] px-5 py-8 text-[#003b5c]">
     <div className="rounded-[3px] bg-[#67a62b] py-3 text-center text-2xl text-black">Your registration is complete</div>
     <div className="mt-10 max-w-3xl text-lg leading-8"><p>Before you can use the site you will need to validate your email address.</p><p>We sent a validation link to your email address.</p><p>Please click the link from that email so we can activate your account.</p><p>If you do not validate your email in the next 3 days your account will be deleted.</p></div>
-    <div className="mt-6 flex flex-wrap gap-3"><button onClick={confirm} disabled={confirming} className="rounded-[4px] bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-5 py-3 font-bold text-white">{confirming ? 'Confirming...' : 'Confirm email and open account'}</button><button onClick={resend} className="rounded-[4px] border border-[#e60073] px-5 py-3 font-bold text-[#e60073]">Resend validation email</button></div>
+    <div className="mt-6 flex flex-wrap gap-3"><button onClick={confirm} disabled={confirming} className="rounded-[4px] bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-5 py-3 font-bold text-white">{confirming ? 'Confirming...' : 'Confirm email and open account'}</button><button onClick={resend} disabled={resending || resendCooldown > 0} className="rounded-[4px] border border-[#e60073] px-5 py-3 font-bold text-[#e60073] disabled:cursor-not-allowed disabled:opacity-60">{resending ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend validation email'}</button></div>
     {data?.confirmationUrl && <p className="mt-5 break-all text-sm text-[#8c6f7e]">Development validation link: <a className="text-[#e60073]" href={data.confirmationUrl}>{data.confirmationUrl}</a></p>}
     {message && <p className="mt-4 rounded bg-white p-3 text-sm text-[#d70032]">{message}</p>}
   </section>;
