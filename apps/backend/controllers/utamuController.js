@@ -89,6 +89,7 @@ function smtpDiagnostics() {
     smtpSecure: process.env.SMTP_SECURE === 'true',
     hasSmtpUser: Boolean(process.env.SMTP_USER),
     hasSmtpPass: Boolean(process.env.SMTP_PASS),
+    smtpProvider: String(process.env.SMTP_HOST || '').toLowerCase().includes('zoho') ? 'zoho' : 'custom',
     from: MAIL_FROM,
     envelopeFrom: MAIL_FROM_ADDRESS,
     replyTo: MAIL_REPLY_TO,
@@ -107,8 +108,25 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
     '<p>You can view your account here:<br><a href="' + APP_URL + '/model/dashboard">' + APP_URL + '/model/dashboard</a></p><p>Secret Nairobi - Models in Nairobi</p>';
 
   if (!process.env.SMTP_HOST) {
-    emailFlowLog('validation_email_preview_only', { ...baseLog, reason: 'SMTP_HOST is not configured. Email was not sent to Gmail; validation link is only in backend logs.', confirmationUrl }, 'warn');
+    emailFlowLog('validation_email_preview_only', { ...baseLog, reason: 'SMTP_HOST is not configured. Email was not sent to the recipient; validation link is only in backend logs.', confirmationUrl }, 'warn');
     return { delivered: false, html, confirmationUrl };
+  }
+
+  if (!process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    const missing = [
+      !process.env.SMTP_USER ? 'SMTP_USER' : null,
+      !process.env.SMTP_PASS ? 'SMTP_PASS' : null,
+    ].filter(Boolean);
+    const failure = {
+      name: 'SmtpConfigurationError',
+      message: `Missing SMTP credentials: ${missing.join(', ')}. Zoho SMTP requires noreply@secretnairobi.co.ke credentials or an app-specific password.`,
+      code: 'SMTP_CREDENTIALS_MISSING',
+      command: null,
+      responseCode: null,
+      response: null,
+    };
+    emailFlowLog('validation_email_missing_credentials', { ...baseLog, missing, smtpHost: process.env.SMTP_HOST, smtpProvider: 'zoho', ...failure }, 'error');
+    return { delivered: false, html, confirmationUrl, error: failure };
   }
 
   const transporter = nodemailer.createTransport({
