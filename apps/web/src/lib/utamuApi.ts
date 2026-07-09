@@ -24,7 +24,6 @@ async function getJson<T>(path: string, fallback: T): Promise<T> {
 }
 
 async function postJson<T>(path: string, body: unknown, fallback: T, token?: string): Promise<T> {
-  try {
     const response = await fetch(`${API_BASE}${path}`, {
       method: 'POST',
       headers: {
@@ -35,12 +34,6 @@ async function postJson<T>(path: string, body: unknown, fallback: T, token?: str
       body: JSON.stringify(body),
     });
     return await parseResponse<T>(response);
-  } catch {
-    console.error('[utamu-api] POST failed', { path, apiBase: API_BASE });
-    throw new Error(
-      `Could not reach the backend at ${API_BASE}. Start the backend on http://localhost:4005 or set NEXT_PUBLIC_BACKEND_URL to the correct API URL.`,
-    );
-  }
 }
 
 async function getJsonAuth<T>(path: string, token: string | undefined, fallback: T): Promise<T> {

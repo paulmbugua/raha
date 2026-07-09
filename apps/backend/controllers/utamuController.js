@@ -263,8 +263,21 @@ export async function registerAccount(req, res) {
   if (!email || !password || !body.username) return res.status(400).json({ message: 'Username, email and password are required.' });
   if (!body.availability?.length && accountType === 'independent-model') return res.status(400).json({ message: 'Please select at least one availability option.' });
 
-  const existing = await tryQuery('select id from utamu_users where lower(email) = lower($1) or lower(username) = lower($2) limit 1', [email, body.username]);
-  if (existing?.[0]) { emailFlowLog('registration_duplicate', { registrationId, email: maskEmail(email), username: body.username }, 'warn'); return res.status(409).json({ message: 'An account already exists with that email or username.' }); }
+  const existing = await tryQuery('select * from utamu_users where lower(email) = lower($1) or lower(username) = lower($2) limit 1', [email, body.username]);
+  if (existing?.[0]) {
+    const existingUser = existing[0];
+    const sameEmail = String(existingUser.email || '').toLowerCase() === email;
+    const pendingEmail = sameEmail && (!existingUser.email_verified || existingUser.status === 'pending_email');
+    if (pendingEmail) {
+      const validationToken = existingUser.validation_token || crypto.randomBytes(24).toString('hex');
+      const updated = await queryWithRetry('update utamu_users set validation_token = $2, validation_sent_at = now() where id = $1 returning *', [existingUser.id, validationToken]);
+      const confirmationUrl = APP_URL + '/register/confirm-email?token=' + encodeURIComponent(validationToken);
+      const emailPreview = await sendValidationEmail(updated.rows[0], confirmationUrl, false);
+      emailFlowLog('registration_duplicate_pending_resend', { registrationId, userId: existingUser.id, email: maskEmail(email), username: body.username, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null }, 'warn');
+      return res.status(200).json({ data: { registrationComplete: true, resentValidation: true, user: publicUser(updated.rows[0]), validationToken, confirmationUrl, emailPreview } });
+    }
+    emailFlowLog('registration_duplicate', { registrationId, email: maskEmail(email), username: body.username, existingStatus: existingUser.status, existingEmailVerified: existingUser.email_verified }, 'warn'); return res.status(409).json({ message: 'An account already exists with that email or username. Please login or use password recovery.' });
+  }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const validationToken = crypto.randomBytes(24).toString('hex');
