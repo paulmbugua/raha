@@ -36,6 +36,15 @@ async function postJson<T>(path: string, body: unknown, fallback: T, token?: str
     return await parseResponse<T>(response);
 }
 
+async function deleteJson<T>(path: string, fallback: T, token?: string): Promise<T> {
+  if (!API_BASE || !token) return fallback;
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'DELETE',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  return await parseResponse<T>(response);
+}
+
 async function getJsonAuth<T>(path: string, token: string | undefined, fallback: T): Promise<T> {
   if (!API_BASE || !token) return fallback;
   try {
@@ -59,6 +68,7 @@ export const utamuApi = {
   loginAccount: (body: unknown) => postJson('/api/utamu/login', body, { token: '', user: null }),
   getMe: (token?: string) => getJsonAuth('/api/utamu/me', token, { user: null, model: null, images: [], unreadMessages: 0 }),
   addProfileImage: (body: unknown, token?: string) => postJson('/api/utamu/account/images', body, { id: 'local-image', ...(body as object) }, token),
+  deleteProfileImage: (id: string, token?: string) => deleteJson(`/api/utamu/account/images/${encodeURIComponent(id)}`, { deleted: true, id }, token),
   changePassword: (body: unknown, token?: string) => postJson('/api/utamu/account/change-password', body, { changed: true }, token),
   getMessages: (token?: string) => getJsonAuth('/api/utamu/messages', token, []),
   sendMessage: (body: unknown, token?: string) => postJson('/api/utamu/messages', body, { id: 'local-message', sent: true }, token),

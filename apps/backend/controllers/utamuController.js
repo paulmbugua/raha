@@ -417,6 +417,16 @@ export async function addProfileImage(req, res) {
   res.status(201).json({ data: inserted.rows[0] });
 }
 
+export async function deleteProfileImage(req, res) {
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const id = String(req.params?.id || '').trim();
+  if (!id) return res.status(400).json({ message: 'Image id is required.' });
+  const deleted = await queryWithRetry('delete from utamu_profile_images where id = $1 and user_id = $2 returning id', [id, user.id]);
+  if (!deleted.rows[0]) return res.status(404).json({ message: 'Image not found.' });
+  res.json({ data: { deleted: true, id } });
+}
+
 export async function sendMessage(req, res) {
   const user = await authUser(req);
   if (!user) return res.status(401).json({ message: 'You need to register or login to send messages.' });

@@ -4,6 +4,7 @@ import {
   changePassword,
   confirmEmail,
   createMpesaPayment,
+  deleteProfileImage,
   getAdmin,
   getDirectory,
   getMe,
@@ -31,6 +32,7 @@ router.get('/confirm-email', confirmEmail);
 router.post('/resend-validation', resendValidation);
 router.get('/me', getMe);
 router.post('/account/images', addProfileImage);
+router.delete('/account/images/:id', deleteProfileImage);
 router.post('/account/change-password', changePassword);
 router.get('/messages', getMessages);
 router.post('/messages', sendMessage);

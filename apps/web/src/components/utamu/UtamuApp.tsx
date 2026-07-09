@@ -61,7 +61,7 @@ function viewFor(slug?: string[]): View {
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
   if (path.startsWith('register/')) return 'registration';
   if (path === 'messages') return 'messages';
-  if (['edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
+  if (['model/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
@@ -537,7 +537,7 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
       if (!result?.token) { setMessage('The validation link could not be confirmed.'); return; }
       saveSession(result);
       window.localStorage.removeItem(PENDING_REGISTRATION_KEY);
-      window.location.href = '/model/dashboard';
+      window.location.href = '/model/profile';
     } catch (error) {
       const fallback = 'Validation link is invalid or already used. If you already confirmed this account, please login.';
       setMessage(error instanceof Error ? error.message || fallback : fallback);
@@ -730,6 +730,12 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
     setImageUrl('');
     setNotice('Image added to your profile.');
   }
+  async function deleteImage(id: string) {
+    if (!session?.token || !id) return;
+    await utamuApi.deleteProfileImage(id, session.token);
+    setAccount((current: any) => ({ ...(current || {}), images: (current?.images || []).filter((image: any) => image.id !== id) }));
+    setNotice('Image removed from your profile.');
+  }
   async function changePassword() {
     if (!session?.token) return;
     await utamuApi.changePassword({ password }, session.token);
@@ -738,7 +744,38 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
   }
   if (!session?.token) return <section className="bg-[#fff0f6] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">You need to <a className="underline" href="/register">register</a> or <a className="underline" href="/login">login</a> to access your account.</div></section>;
   const images = account?.images || [];
-  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5"><h1 className="text-3xl text-[#ff4eb8]">My profile dashboard</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div><div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Add profile images</h2><div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="Paste image URL" className={fieldClass} /><button onClick={addImage} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add image</button></div><div className="mt-4 grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{images.map((image: any) => <img key={image.id || image.url} src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />)}</div></div>{path === 'edit-profile' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit my profile</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={account?.user?.profile?.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
+  const profile = account?.user?.profile || {};
+  const model = account?.model || {};
+  const isViewProfile = path === 'model/profile' || path === 'model/dashboard';
+  const isEditProfile = path === 'edit-profile';
+  const showFirstUpload = isViewProfile && images.length === 0;
+  const profileRows = [
+    ['Name', account?.user?.fullName || model.display_name],
+    ['Username', account?.user?.username],
+    ['Email', account?.user?.email],
+    ['Phone', account?.user?.phone],
+    ['Account type', account?.user?.accountType],
+    ['City', profile.city || model.city],
+    ['Country', profile.country],
+    ['Gender', profile.gender],
+    ['Date of birth', [profile.birthDay, profile.birthMonth, profile.birthYear].filter(Boolean).join(' ')],
+    ['Ethnicity', profile.ethnicity],
+    ['Hair color', profile.hairColor],
+    ['Hair length', profile.hairLength],
+    ['Bust size', profile.bustSize],
+    ['Height', profile.height],
+    ['Weight', profile.weight],
+    ['Build', profile.build],
+    ['Looks', profile.looks],
+    ['Smoker', profile.smoker],
+    ['Professional orientation', profile.orientation],
+    ['Availability', (profile.availability || []).join(', ')],
+    ['Languages', (profile.languages || []).map((item: any) => [item.language, item.level].filter(Boolean).join(' - ')).filter(Boolean).join(', ')],
+    ['Services', (profile.services || []).join(', ')],
+  ].filter(([, value]) => Boolean(value));
+  const uploadPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">{showFirstUpload ? 'Add your first profile images' : 'Profile image manager'}</h2><p className="mt-3 text-sm leading-6 text-[#7b6e78]">{showFirstUpload ? 'Add at least one strong portfolio image. After your first upload, image management moves to Edit my Profile.' : 'Add more portfolio images or remove older ones while editing your profile.'}</p><div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="Paste image URL" className={fieldClass} /><button onClick={addImage} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add image</button></div>{images.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <figure key={image.id || image.url} className="relative overflow-hidden rounded-[3px] border border-[#ffd1e8]"><img src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />{isEditProfile && <button onClick={() => deleteImage(image.id)} className="absolute right-2 top-2 rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Delete</button>}</figure>)}</div>}</div>;
+  const profileDataPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">My uploaded profile data</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{profileRows.map(([label, value]) => <div key={String(label)} className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">{label}</p><p className="mt-1 text-sm text-[#2b123a]">{String(value)}</p></div>)}</div>{profile.about && <div className="mt-4 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">About</p><p className="mt-2 text-sm leading-7 text-[#2b123a]">{profile.about}</p></div>}{images.length > 0 && isViewProfile && <a href="/edit-profile" className="mt-5 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Edit profile images</a>}</div>;
+  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && <><div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit profile details</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={profile.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
 }
 
 function VerificationScreen({ path }: { path: string }) {
