@@ -250,6 +250,7 @@ export async function registerAccount(req, res) {
   const accountType = body.accountType || 'member';
   const email = String(body.email || '').trim().toLowerCase();
   const password = String(body.password || '');
+  const phone = String(body.phone || '').trim();
   const fullName = body.name || body.fullName || body.agencyName || body.username || 'Secret Nairobi Member';
   const registrationId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(8).toString('hex');
   emailFlowLog('registration_started', {
@@ -259,14 +260,23 @@ export async function registerAccount(req, res) {
     username: body.username || null,
     availabilityCount: Array.isArray(body.availability) ? body.availability.length : 0,
     serviceCount: Array.isArray(body.services) ? body.services.length : 0,
+    hasPhone: Boolean(phone),
   });
   if (!email || !password || !body.username) return res.status(400).json({ message: 'Username, email and password are required.' });
   if (!body.availability?.length && accountType === 'independent-model') return res.status(400).json({ message: 'Please select at least one availability option.' });
 
-  const existing = await tryQuery('select * from utamu_users where lower(email) = lower($1) or lower(username) = lower($2) limit 1', [email, body.username]);
+  const existing = await tryQuery(
+    `select * from utamu_users
+     where lower(email) = lower($1)
+        or lower(username) = lower($2)
+        ${phone ? 'or phone = $3' : ''}
+     limit 1`,
+    phone ? [email, body.username, phone] : [email, body.username]
+  );
   if (existing?.[0]) {
     const existingUser = existing[0];
     const sameEmail = String(existingUser.email || '').toLowerCase() === email;
+    const samePhone = phone && String(existingUser.phone || '').trim() === phone;
     const pendingEmail = sameEmail && (!existingUser.email_verified || existingUser.status === 'pending_email');
     if (pendingEmail) {
       const validationToken = existingUser.validation_token || crypto.randomBytes(24).toString('hex');
@@ -276,18 +286,43 @@ export async function registerAccount(req, res) {
       emailFlowLog('registration_duplicate_pending_resend', { registrationId, userId: existingUser.id, email: maskEmail(email), username: body.username, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null }, 'warn');
       return res.status(200).json({ data: { registrationComplete: true, resentValidation: true, user: publicUser(updated.rows[0]), validationToken, confirmationUrl, emailPreview } });
     }
-    emailFlowLog('registration_duplicate', { registrationId, email: maskEmail(email), username: body.username, existingStatus: existingUser.status, existingEmailVerified: existingUser.email_verified }, 'warn'); return res.status(409).json({ message: 'An account already exists with that email or username. Please login or use password recovery.' });
+    const duplicateField = samePhone ? 'phone' : 'email_or_username';
+    emailFlowLog('registration_duplicate', { registrationId, email: maskEmail(email), username: body.username, duplicateField, existingStatus: existingUser.status, existingEmailVerified: existingUser.email_verified }, 'warn');
+    return res.status(409).json({
+      message: samePhone
+        ? 'That phone number is already registered. Please login or use a different phone number.'
+        : 'An account already exists with that email or username. Please login or use password recovery.',
+    });
   }
 
   const passwordHash = await bcrypt.hash(password, 10);
   const validationToken = crypto.randomBytes(24).toString('hex');
   const role = accountType === 'member' ? 'client' : 'model';
   const profile = { ...body.profile, city: body.city, country: body.country, services: body.services || [], availability: body.availability || [], preferences: body.preferences || [] };
-  const insert = await queryWithRetry(
-    `insert into utamu_users (role, full_name, email, phone, status, username, password_hash, email_verified, validation_token, validation_sent_at, account_type, profile)
-     values ($1,$2,$3,$4,'pending_email',$5,$6,false,$7,now(),$8,$9::jsonb) returning *`,
-    [role, fullName, email, body.phone || null, body.username, passwordHash, validationToken, accountType, JSON.stringify(profile)]
-  );
+  let insert;
+  try {
+    insert = await queryWithRetry(
+      `insert into utamu_users (role, full_name, email, phone, status, username, password_hash, email_verified, validation_token, validation_sent_at, account_type, profile)
+       values ($1,$2,$3,$4,'pending_email',$5,$6,false,$7,now(),$8,$9::jsonb) returning *`,
+      [role, fullName, email, phone || null, body.username, passwordHash, validationToken, accountType, JSON.stringify(profile)]
+    );
+  } catch (error) {
+    if (error?.code === '23505') {
+      const constraint = String(error.constraint || '');
+      const message =
+        constraint === 'utamu_users_phone_key'
+          ? 'That phone number is already registered. Please login or use a different phone number.'
+          : constraint === 'utamu_users_email_key'
+            ? 'That email is already registered. Please login or use password recovery.'
+            : constraint === 'utamu_users_username_key'
+              ? 'That username is already registered. Please choose another username.'
+              : 'An account already exists with those details. Please login or use different details.';
+      emailFlowLog('registration_unique_violation', { registrationId, email: maskEmail(email), username: body.username, constraint, code: error.code }, 'warn');
+      return res.status(409).json({ message });
+    }
+    emailFlowLog('registration_insert_failed', { registrationId, email: maskEmail(email), username: body.username, code: error?.code || null, message: error?.message || 'Unknown registration insert error' }, 'error');
+    return res.status(500).json({ message: 'Registration could not be completed. Please try again.' });
+  }
   const user = insert.rows[0];
   const model = await ensureModelForUser(user, body, profile);
   emailFlowLog('registration_account_created', { registrationId, userId: user.id, modelId: model?.id || null, status: user.status, email: maskEmail(user.email) });
