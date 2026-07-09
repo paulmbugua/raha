@@ -503,11 +503,14 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
   const [confirming, setConfirming] = useState(false);
   const [resending, setResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [autoConfirmAttempted, setAutoConfirmAttempted] = useState(false);
   useEffect(() => {
     if (data) return;
     const params = new URLSearchParams(window.location.search);
+    const urlToken = params.get('token');
     const stored = window.localStorage.getItem(PENDING_REGISTRATION_KEY);
-    setData(stored ? JSON.parse(stored) : { validationToken: params.get('token'), user: null });
+    const storedData = stored ? JSON.parse(stored) : null;
+    setData(urlToken ? { ...(storedData || {}), validationToken: urlToken, confirmationUrl: `${window.location.origin}/register/confirm-email?token=${urlToken}` } : storedData || { validationToken: null, user: null });
   }, [data]);
   useEffect(() => {
     if (resendCooldown <= 0) return;
@@ -516,16 +519,31 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
     }, 1000);
     return () => window.clearInterval(timer);
   }, [resendCooldown]);
-  async function confirm() {
-    const token = data?.validationToken || new URLSearchParams(window.location.search).get('token');
+  useEffect(() => {
+    const token = new URLSearchParams(window.location.search).get('token');
+    if (!token || autoConfirmAttempted || confirming) return;
+    setAutoConfirmAttempted(true);
+    void confirm(token);
+  }, [autoConfirmAttempted, confirming]);
+  async function confirm(tokenOverride?: string) {
+    const urlToken = new URLSearchParams(window.location.search).get('token');
+    const token = tokenOverride || urlToken || data?.validationToken;
     if (!token) { setMessage('Validation token is missing. Please resend the validation email.'); return; }
+    if (confirming) return;
     setConfirming(true);
-    const result: any = await utamuApi.confirmEmail(token);
-    setConfirming(false);
-    if (!result?.token) { setMessage('The validation link could not be confirmed.'); return; }
-    saveSession(result);
-    window.localStorage.removeItem(PENDING_REGISTRATION_KEY);
-    window.location.href = '/model/dashboard';
+    setMessage('');
+    try {
+      const result: any = await utamuApi.confirmEmail(token);
+      if (!result?.token) { setMessage('The validation link could not be confirmed.'); return; }
+      saveSession(result);
+      window.localStorage.removeItem(PENDING_REGISTRATION_KEY);
+      window.location.href = '/model/dashboard';
+    } catch (error) {
+      const fallback = 'Validation link is invalid or already used. If you already confirmed this account, please login.';
+      setMessage(error instanceof Error ? error.message || fallback : fallback);
+    } finally {
+      setConfirming(false);
+    }
   }
   async function resend() {
     const email = data?.user?.email;
@@ -551,7 +569,7 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
   return <section className="bg-[#fff0f6] px-5 py-8 text-[#003b5c]">
     <div className="rounded-[3px] bg-[#67a62b] py-3 text-center text-2xl text-black">Your registration is complete</div>
     <div className="mt-10 max-w-3xl text-lg leading-8"><p>Before you can use the site you will need to validate your email address.</p><p>We sent a validation link to your email address.</p><p>Please click the link from that email so we can activate your account.</p><p>If you do not validate your email in the next 3 days your account will be deleted.</p></div>
-    <div className="mt-6 flex flex-wrap gap-3"><button onClick={confirm} disabled={confirming} className="rounded-[4px] bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-5 py-3 font-bold text-white">{confirming ? 'Confirming...' : 'Confirm email and open account'}</button><button onClick={resend} disabled={resending || resendCooldown > 0} className="rounded-[4px] border border-[#e60073] px-5 py-3 font-bold text-[#e60073] disabled:cursor-not-allowed disabled:opacity-60">{resending ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend validation email'}</button></div>
+    <div className="mt-6 flex flex-wrap gap-3"><button onClick={() => confirm()} disabled={confirming} className="rounded-[4px] bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-5 py-3 font-bold text-white">{confirming ? 'Confirming...' : 'Confirm email and open account'}</button><button onClick={resend} disabled={resending || resendCooldown > 0} className="rounded-[4px] border border-[#e60073] px-5 py-3 font-bold text-[#e60073] disabled:cursor-not-allowed disabled:opacity-60">{resending ? 'Sending...' : resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend validation email'}</button></div>
     {data?.confirmationUrl && <p className="mt-5 break-all text-sm text-[#8c6f7e]">Development validation link: <a className="text-[#e60073]" href={data.confirmationUrl}>{data.confirmationUrl}</a></p>}
     {message && <p className="mt-4 rounded bg-white p-3 text-sm text-[#d70032]">{message}</p>}
   </section>;
