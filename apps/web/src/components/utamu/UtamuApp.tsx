@@ -714,7 +714,9 @@ function AccountSidebar({ active }: { active: string }) {
 function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
   const [session, setSession] = useState<UtamuSession | null>(null);
   const [account, setAccount] = useState<any>(null);
-  const [imageUrl, setImageUrl] = useState('');
+  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
+  const [imagePreviews, setImagePreviews] = useState<{ name: string; url: string; size: number }[]>([]);
+  const [uploadingImages, setUploadingImages] = useState(false);
   const [password, setPassword] = useState('');
   const [notice, setNotice] = useState('');
   useEffect(() => {
@@ -723,12 +725,32 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
     setSession(next);
     if (next?.token) utamuApi.getMe(next.token).then(setAccount);
   }, [path]);
+  function clearSelectedImages() {
+    imagePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    setSelectedImageFiles([]);
+    setImagePreviews([]);
+  }
+  function selectImages(files: FileList | null) {
+    imagePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    const nextFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/')).slice(0, 8);
+    setSelectedImageFiles(nextFiles);
+    setImagePreviews(nextFiles.map((file) => ({ name: file.name, size: file.size, url: URL.createObjectURL(file) })));
+    setNotice(nextFiles.length ? 'Preview ready. Review the images, then add them online.' : 'Please choose image files only.');
+  }
   async function addImage() {
-    if (!session?.token || !imageUrl) return;
-    const image = await utamuApi.addProfileImage({ url: imageUrl }, session.token);
-    setAccount((current: any) => ({ ...(current || {}), images: [...(current?.images || []), image] }));
-    setImageUrl('');
-    setNotice('Image added to your profile.');
+    if (!session?.token || !selectedImageFiles.length || uploadingImages) return;
+    setUploadingImages(true);
+    try {
+      const uploaded: any = await utamuApi.uploadProfileImages(selectedImageFiles, session.token);
+      const nextImages = Array.isArray(uploaded) ? uploaded : [uploaded];
+      setAccount((current: any) => ({ ...(current || {}), images: [...(current?.images || []), ...nextImages] }));
+      clearSelectedImages();
+      setNotice('Images uploaded and added to your online profile.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Images could not be uploaded.');
+    } finally {
+      setUploadingImages(false);
+    }
   }
   async function deleteImage(id: string) {
     if (!session?.token || !id) return;
@@ -773,7 +795,7 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
     ['Languages', (profile.languages || []).map((item: any) => [item.language, item.level].filter(Boolean).join(' - ')).filter(Boolean).join(', ')],
     ['Services', (profile.services || []).join(', ')],
   ].filter(([, value]) => Boolean(value));
-  const uploadPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">{showFirstUpload ? 'Add your first profile images' : 'Profile image manager'}</h2><p className="mt-3 text-sm leading-6 text-[#7b6e78]">{showFirstUpload ? 'Add at least one strong portfolio image. After your first upload, image management moves to Edit my Profile.' : 'Add more portfolio images or remove older ones while editing your profile.'}</p><div className="mt-4 flex flex-col gap-2 sm:flex-row"><input value={imageUrl} onChange={(event) => setImageUrl(event.target.value)} placeholder="Paste image URL" className={fieldClass} /><button onClick={addImage} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add image</button></div>{images.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <figure key={image.id || image.url} className="relative overflow-hidden rounded-[3px] border border-[#ffd1e8]"><img src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />{isEditProfile && <button onClick={() => deleteImage(image.id)} className="absolute right-2 top-2 rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Delete</button>}</figure>)}</div>}</div>;
+  const uploadPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">{showFirstUpload ? 'Add your first profile images' : 'Profile image manager'}</h2><p className="mt-3 text-sm leading-6 text-[#7b6e78]">{showFirstUpload ? 'Choose images from your computer, preview them here, then add them online. After your first upload, image management moves to Edit my Profile.' : 'Choose more images from your computer, preview them, upload them online, or remove older ones.'}</p><div className="mt-4 flex flex-col gap-3 rounded-[3px] border border-dashed border-[#ff9bd0] bg-[#fff8fb] p-4"><input id="profile-image-files" type="file" accept="image/*" multiple onChange={(event) => selectImages(event.target.files)} className="hidden" /><label htmlFor="profile-image-files" className="inline-flex w-fit cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Choose images from file explorer</label>{imagePreviews.length > 0 && <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{imagePreviews.map((preview) => <figure key={preview.url} className="overflow-hidden rounded-[3px] border border-[#ffd1e8] bg-white"><img src={preview.url} alt={preview.name} className="aspect-[4/5] w-full object-cover" /><figcaption className="truncate px-2 py-1 text-xs text-[#7b6e78]">{preview.name}</figcaption></figure>)}</div>}<div className="flex flex-wrap gap-2">{imagePreviews.length > 0 && <button onClick={addImage} disabled={uploadingImages} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{uploadingImages ? 'Uploading...' : 'Add selected images online'}</button>}{imagePreviews.length > 0 && <button onClick={clearSelectedImages} className="rounded-full border border-[#e60073] px-5 py-2 text-sm font-bold text-[#e60073]">Clear previews</button>}</div></div>{images.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <figure key={image.id || image.url} className="relative overflow-hidden rounded-[3px] border border-[#ffd1e8]"><img src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />{isEditProfile && <button onClick={() => deleteImage(image.id)} className="absolute right-2 top-2 rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Delete</button>}</figure>)}</div>}</div>;
   const profileDataPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">My uploaded profile data</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{profileRows.map(([label, value]) => <div key={String(label)} className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">{label}</p><p className="mt-1 text-sm text-[#2b123a]">{String(value)}</p></div>)}</div>{profile.about && <div className="mt-4 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">About</p><p className="mt-2 text-sm leading-7 text-[#2b123a]">{profile.about}</p></div>}{images.length > 0 && isViewProfile && <a href="/edit-profile" className="mt-5 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Edit profile images</a>}</div>;
   return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && <><div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit profile details</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={profile.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
 }

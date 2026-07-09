@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { queryWithRetry } from '../config/db.js';
 import { analytics, bookings, models, reviews, verificationCases } from '../data/utamuSeed.js';
+import { putImageObject } from '../services/r2.js';
 
 const directory = { models, bookings, reviews, verificationCases, analytics };
 const JWT_SECRET = process.env.JWT_SECRET || process.env.UTAMU_JWT_SECRET || 'utamu-local-dev-secret';
@@ -407,6 +408,17 @@ function normalizeProfileImageUrl(value) {
   return `${publicBase}/${encodeURIComponent(url).replace(/%2F/g, '/')}`;
 }
 
+function safeUploadName(name = 'profile-image') {
+  return String(name).toLowerCase().replace(/\.[^.]+$/, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 60) || 'profile-image';
+}
+
+function imageExtension(mime = '') {
+  if (mime === 'image/png') return 'png';
+  if (mime === 'image/webp') return 'webp';
+  if (mime === 'image/gif') return 'gif';
+  return 'jpg';
+}
+
 export async function addProfileImage(req, res) {
   const user = await authUser(req);
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
@@ -415,6 +427,27 @@ export async function addProfileImage(req, res) {
   const modelRows = await tryQuery('select id from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
   const inserted = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, modelRows?.[0]?.id || null, url, req.body?.alt || user.full_name, Number(req.body?.sortOrder || 0)]);
   res.status(201).json({ data: inserted.rows[0] });
+}
+
+export async function uploadProfileImages(req, res) {
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const files = Array.isArray(req.files) ? req.files : [];
+  if (!files.length) return res.status(400).json({ message: 'Please select at least one image.' });
+  const modelRows = await tryQuery('select id from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
+  const modelId = modelRows?.[0]?.id || null;
+  const inserted = [];
+
+  for (const [index, file] of files.entries()) {
+    const ext = imageExtension(file.mimetype);
+    const unique = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(12).toString('hex');
+    const key = ['profiles', user.id, unique + '-' + safeUploadName(file.originalname) + '.' + ext].join('/');
+    const uploaded = await putImageObject({ key, body: file.buffer, contentType: file.mimetype });
+    const row = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, modelId, uploaded.url, file.originalname || user.full_name, Number(req.body?.sortOrder || 0) + index]);
+    inserted.push(row.rows[0]);
+  }
+
+  res.status(201).json({ data: inserted });
 }
 
 export async function deleteProfileImage(req, res) {

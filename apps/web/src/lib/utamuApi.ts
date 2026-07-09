@@ -36,6 +36,18 @@ async function postJson<T>(path: string, body: unknown, fallback: T, token?: str
     return await parseResponse<T>(response);
 }
 
+async function uploadFiles<T>(path: string, files: File[], fallback: T, token?: string): Promise<T> {
+  if (!API_BASE || !token) return fallback;
+  const formData = new FormData();
+  files.forEach((file) => formData.append('images', file));
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+    body: formData,
+  });
+  return await parseResponse<T>(response);
+}
+
 async function deleteJson<T>(path: string, fallback: T, token?: string): Promise<T> {
   if (!API_BASE || !token) return fallback;
   const response = await fetch(`${API_BASE}${path}`, {
@@ -68,6 +80,7 @@ export const utamuApi = {
   loginAccount: (body: unknown) => postJson('/api/utamu/login', body, { token: '', user: null }),
   getMe: (token?: string) => getJsonAuth('/api/utamu/me', token, { user: null, model: null, images: [], unreadMessages: 0 }),
   addProfileImage: (body: unknown, token?: string) => postJson('/api/utamu/account/images', body, { id: 'local-image', ...(body as object) }, token),
+  uploadProfileImages: (files: File[], token?: string) => uploadFiles('/api/utamu/account/images/upload', files, [], token),
   deleteProfileImage: (id: string, token?: string) => deleteJson(`/api/utamu/account/images/${encodeURIComponent(id)}`, { deleted: true, id }, token),
   changePassword: (body: unknown, token?: string) => postJson('/api/utamu/account/change-password', body, { changed: true }, token),
   getMessages: (token?: string) => getJsonAuth('/api/utamu/messages', token, []),

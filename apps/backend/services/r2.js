@@ -15,6 +15,7 @@ const imagePublicBase = (process.env.R2_PUBLIC_BASE_URL_IMAGES || publicBase || 
 const previewBucket = process.env.R2_BUCKET_PREVIEWS || imageBucket;
 const previewPublicBase = (process.env.R2_PUBLIC_BASE_URL_PREVIEWS || imagePublicBase || '').replace(/\/$/, '');
 const maxDocBytes = Number(process.env.R2_MAX_DOC_BYTES || 50 * 1024 * 1024);
+const maxImageBytes = Number(process.env.R2_MAX_IMAGE_BYTES || 8 * 1024 * 1024);
 const signedExpiry = Number(process.env.R2_DOWNLOAD_EXPIRES_SEC || 900);
 
 const allowedDocMimeTypes = new Set([
@@ -22,6 +23,8 @@ const allowedDocMimeTypes = new Set([
   'application/json',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ]);
+
+const allowedImageMimeTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
 
 if (!endpoint || !bucket) {
   console.warn('[r2] Missing R2 endpoint or bucket config; file operations will fail.');
@@ -48,6 +51,8 @@ export const r2MediaConfig = {
   imagePublicBase,
   previewBucket,
   previewPublicBase,
+  maxImageBytes,
+  allowedImageMimeTypes,
 };
 
 export function assertAllowedDoc({ bytes, contentType }) {
@@ -70,6 +75,40 @@ export function getPublicImageR2Url(key) {
 
 export function getPublicPreviewR2Url(key) {
   return previewPublicBase ? `${previewPublicBase}/${encodeURIComponent(key).replace(/%2F/g, '/')}` : null;
+}
+
+export function assertAllowedImage({ bytes, contentType }) {
+  if (!allowedImageMimeTypes.has(contentType)) {
+    throw new Error(`Unsupported image type: ${contentType}`);
+  }
+  if (bytes > maxImageBytes) {
+    throw new Error(`Image exceeds max size of ${maxImageBytes} bytes`);
+  }
+}
+
+export async function putImageObject({ key, body, contentType }) {
+  if (!endpoint || !imageBucket || !imagePublicBase) {
+    throw new Error('R2 image storage is not configured. Set R2_ENDPOINT, R2_BUCKET_IMAGES, and R2_PUBLIC_BASE_URL_IMAGES.');
+  }
+  const bytes = Buffer.isBuffer(body) ? body.byteLength : Buffer.byteLength(body);
+  assertAllowedImage({ bytes, contentType });
+
+  await r2Client.send(
+    new PutObjectCommand({
+      Bucket: imageBucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+      CacheControl: 'public, max-age=31536000, immutable',
+    }),
+  );
+
+  return {
+    key,
+    bytes,
+    contentType,
+    url: getPublicImageR2Url(key),
+  };
 }
 
 export async function putDocObject({ key, body, contentType }) {

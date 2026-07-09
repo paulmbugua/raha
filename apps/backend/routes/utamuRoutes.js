@@ -1,4 +1,5 @@
 import express from 'express';
+import upload from '../middleware/multer.js';
 import {
   addProfileImage,
   changePassword,
@@ -18,6 +19,7 @@ import {
   sendMessage,
   submitReview,
   submitVerification,
+  uploadProfileImages,
 } from '../controllers/utamuController.js';
 
 const router = express.Router();
@@ -32,6 +34,7 @@ router.get('/confirm-email', confirmEmail);
 router.post('/resend-validation', resendValidation);
 router.get('/me', getMe);
 router.post('/account/images', addProfileImage);
+router.post('/account/images/upload', upload.array('images', 8), uploadProfileImages);
 router.delete('/account/images/:id', deleteProfileImage);
 router.post('/account/change-password', changePassword);
 router.get('/messages', getMessages);
