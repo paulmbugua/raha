@@ -419,6 +419,55 @@ function imageExtension(mime = '') {
   return 'jpg';
 }
 
+export async function updateAccountProfile(req, res) {
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const body = req.body || {};
+  const incomingProfile = body.profile && typeof body.profile === 'object' ? body.profile : body;
+  const currentProfile = user.profile || {};
+  const services = Array.isArray(body.services) ? body.services : Array.isArray(incomingProfile.services) ? incomingProfile.services : [];
+  const availability = Array.isArray(body.availability) ? body.availability : Array.isArray(incomingProfile.availability) ? incomingProfile.availability : [];
+  const languages = Array.isArray(incomingProfile.languages) ? incomingProfile.languages : [];
+  const fullName = String(body.name || incomingProfile.name || user.full_name || '').trim() || user.full_name;
+  const phone = String(body.phone || incomingProfile.phone || user.phone || '').trim() || null;
+  const city = String(body.city || incomingProfile.city || currentProfile.city || '').trim() || null;
+  const country = String(body.country || incomingProfile.country || currentProfile.country || '').trim() || null;
+  const nextProfile = {
+    ...currentProfile,
+    ...incomingProfile,
+    name: fullName,
+    phone,
+    city,
+    country,
+    services,
+    availability,
+    languages,
+  };
+
+  try {
+    const updated = await queryWithRetry(
+      'update utamu_users set full_name = $2, phone = $3, profile = $4::jsonb where id = $1 returning *',
+      [user.id, fullName, phone, JSON.stringify(nextProfile)]
+    );
+    const modelRows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
+    let model = modelRows?.[0] || null;
+    if (model) {
+      const changed = await queryWithRetry(
+        'update utamu_models set display_name = $2, city = coalesce($3, city), height = coalesce($4, height), bio = coalesce($5, bio) where id = $1 returning *',
+        [model.id, fullName, city, nextProfile.height || null, nextProfile.about || null]
+      );
+      model = changed.rows[0] || model;
+    }
+    res.json({ data: { user: publicUser(updated.rows[0]), model } });
+  } catch (error) {
+    if (error?.code === '23505') {
+      return res.status(409).json({ message: 'That phone number is already registered. Please use a different phone number.' });
+    }
+    console.error('[utamu:account-profile] update_failed', { userId: user.id, code: error?.code || null, message: error?.message || 'Unknown profile update error' });
+    res.status(500).json({ message: 'Profile changes could not be saved. Please try again.' });
+  }
+}
+
 export async function addProfileImage(req, res) {
   const user = await authUser(req);
   if (!user) return res.status(401).json({ message: 'Unauthorized' });

@@ -20,6 +20,7 @@ import {
   submitReview,
   submitVerification,
   uploadProfileImages,
+  updateAccountProfile,
 } from '../controllers/utamuController.js';
 
 const router = express.Router();
@@ -33,6 +34,7 @@ router.post('/confirm-email', confirmEmail);
 router.get('/confirm-email', confirmEmail);
 router.post('/resend-validation', resendValidation);
 router.get('/me', getMe);
+router.put('/account/profile', updateAccountProfile);
 router.post('/account/images', addProfileImage);
 router.post('/account/images/upload', upload.array('images', 8), uploadProfileImages);
 router.delete('/account/images/:id', deleteProfileImage);

@@ -368,6 +368,7 @@ const smokerOptions = ['No', 'Occasionally', 'Yes', 'Prefer not to say'];
 const orientationOptions = ['Fashion and runway', 'Commercial modeling', 'Beauty and skincare', 'Lifestyle content', 'Event hosting', 'Hospitality presentation', 'Brand ambassador', 'Portfolio shoots', 'Editorial campaigns', 'Promotional campaigns'];
 const spokenLanguages = ['English', 'Kiswahili', 'Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Somali', 'Kisii', 'Meru', 'Maasai', 'Arabic', 'French', 'German', 'Spanish', 'Chinese'];
 const languageLevels = ['Basic', 'Conversational', 'Fluent', 'Native'];
+const modelServices = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
 
 function RegistrationFormScreen({ path }: { path: string }) {
   const kind = path.split('/')[1] || 'member';
@@ -376,7 +377,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const isMember = kind === 'member';
   const title = isIndependent ? 'Independent Model Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
   const formMinHeight = isIndependent ? 'lg:min-h-[2080px]' : isAgency ? 'lg:min-h-[980px]' : 'lg:min-h-[720px]';
-  const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
+  const services = modelServices;
   const agencyServices = ['Independent model management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Model onboarding', 'Brand partnerships'];
   const memberPreferences = ['Save favorite profiles', 'Compare model profiles', 'Request booking details', 'Follow verified models', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
@@ -445,21 +446,21 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
               <>
-                <FormRow label="Gender" required><select className={selectClass + ' w-full'}><option>Female</option><option>Male</option></select></FormRow>
-                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 sm:grid-cols-3"><select className={selectClass + ' w-full'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select className={selectClass + ' w-full'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select className={selectClass + ' w-full'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
-                <FormRow label="Ethnicity" required><select className={selectClass + ' w-full'}><option>Select ethnicity</option>{kenyanEthnicities.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Hair Color" required><select className={selectClass + ' w-full'}><option>Select hair color</option>{hairColors.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Hair length" required><select className={selectClass + ' w-full'}><option>Select hair length</option>{hairLengths.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Bust size" required><select className={selectClass + ' w-full'}><option>Select bust size</option>{bustSizes.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Build" required><select className={selectClass + ' w-full'}><option>Select build</option>{buildOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Looks" required><select className={selectClass + ' w-full'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Height" required><select className={selectClass + ' w-full'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
-                <FormRow label="Weight" required><select className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
+                <FormRow label="Gender" required><select name="gender" className={selectClass + ' w-full'}><option>Female</option><option>Male</option></select></FormRow>
+                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 sm:grid-cols-3"><select name="birthYear" className={selectClass + ' w-full'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select name="birthMonth" className={selectClass + ' w-full'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select name="birthDay" className={selectClass + ' w-full'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
+                <FormRow label="Ethnicity" required><select name="ethnicity" className={selectClass + ' w-full'}><option>Select ethnicity</option>{kenyanEthnicities.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Hair Color" required><select name="hairColor" className={selectClass + ' w-full'}><option>Select hair color</option>{hairColors.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Hair length" required><select name="hairLength" className={selectClass + ' w-full'}><option>Select hair length</option>{hairLengths.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Bust size" required><select name="bustSize" className={selectClass + ' w-full'}><option>Select bust size</option>{bustSizes.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Build" required><select name="build" className={selectClass + ' w-full'}><option>Select build</option>{buildOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Looks" required><select name="looks" className={selectClass + ' w-full'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Height" required><select name="height" className={selectClass + ' w-full'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
+                <FormRow label="Weight" required><select name="weight" className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
                 <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{['Studio / incall', 'On-location / outcall'].map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
-                <FormRow label="Smoker" required><select className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="About you" required><textarea className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
-                <FormRow label="Professional orientation"><select className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
+                <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
+                <FormRow label="Professional orientation"><select name="orientation" className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-full overflow-x-auto"><div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3"><span>Currency:</span><select className={selectClass + ' w-full sm:w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[440px] grid-cols-[100px_1fr_1fr] gap-2 text-center text-xs sm:grid-cols-[120px_1fr_1fr] sm:text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
                 <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">
                   <label className={serviceTileBaseClass + ' md:col-span-2 ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
@@ -706,6 +707,75 @@ function ProfileScreen({ path }: { path: string }) {
   );
 }
 
+
+function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (event: React.FormEvent<HTMLFormElement>) => void; saving: boolean }) {
+  const profile = account?.user?.profile || {};
+  const [selectedServices, setSelectedServices] = useState<string[]>([]);
+  const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+  useEffect(() => {
+    setSelectedServices(Array.isArray(profile.services) ? profile.services : []);
+    setSelectedAvailability(Array.isArray(profile.availability) ? profile.availability : []);
+  }, [account?.user?.id]);
+  const allServicesSelected = selectedServices.length === modelServices.length;
+  const toggleService = (service: string) => setSelectedServices((current) => current.includes(service) ? current.filter((item) => item !== service) : [...current, service]);
+  const toggleAllServices = () => setSelectedServices(allServicesSelected ? [] : modelServices);
+  const toggleAvailability = (item: string) => setSelectedAvailability((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+  const languageRows = [0, 1, 2].map((index) => (Array.isArray(profile.languages) ? profile.languages[index] : null) || {});
+
+  return (
+    <form key={account?.user?.id || 'edit-profile'} onSubmit={onSave} className="bg-white p-5 shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit profile details</h2>
+          <p className="mt-2 text-sm text-[#7b6e78]">Update the same profile details you submitted during registration.</p>
+        </div>
+        <button disabled={saving} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-6 py-2 text-sm font-bold text-white shadow-sm disabled:opacity-60">{saving ? 'Saving...' : 'Save changes'}</button>
+      </div>
+      <div className="mt-6 space-y-6 text-[#003b5c]">
+        <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} defaultValue={profile.name || account?.user?.fullName || ''} /></FormRow>
+        <FormRow label="Phone" required><input name="phone" className={fieldClass} defaultValue={profile.phone || account?.user?.phone || ''} /></FormRow>
+        <FormRow label="Website"><input name="website" className={fieldClass} defaultValue={profile.website || ''} /></FormRow>
+        <FormRow label="Country" required><select name="country" className={selectClass + ' w-full'} defaultValue={profile.country || 'Kenya'}><option>Kenya</option></select></FormRow>
+        <FormRow label="City" required><select name="city" className={selectClass + ' w-full'} defaultValue={profile.city || 'Nairobi'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select></FormRow>
+        <FormRow label="Gender" required><select name="gender" className={selectClass + ' w-full'} defaultValue={profile.gender || 'Female'}><option>Female</option><option>Male</option></select></FormRow>
+        <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 sm:grid-cols-3"><select name="birthYear" className={selectClass + ' w-full'} defaultValue={profile.birthYear || 'Year'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select name="birthMonth" className={selectClass + ' w-full'} defaultValue={profile.birthMonth || 'Month'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select name="birthDay" className={selectClass + ' w-full'} defaultValue={profile.birthDay || 'Date'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
+        <FormRow label="Ethnicity" required><select name="ethnicity" className={selectClass + ' w-full'} defaultValue={profile.ethnicity || 'Select ethnicity'}><option>Select ethnicity</option>{kenyanEthnicities.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Hair Color" required><select name="hairColor" className={selectClass + ' w-full'} defaultValue={profile.hairColor || 'Select hair color'}><option>Select hair color</option>{hairColors.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Hair length" required><select name="hairLength" className={selectClass + ' w-full'} defaultValue={profile.hairLength || 'Select hair length'}><option>Select hair length</option>{hairLengths.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Bust size" required><select name="bustSize" className={selectClass + ' w-full'} defaultValue={profile.bustSize || 'Select bust size'}><option>Select bust size</option>{bustSizes.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Build" required><select name="build" className={selectClass + ' w-full'} defaultValue={profile.build || 'Select build'}><option>Select build</option>{buildOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Looks" required><select name="looks" className={selectClass + ' w-full'} defaultValue={profile.looks || 'Select looks'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Height" required><select name="height" className={selectClass + ' w-full'} defaultValue={profile.height || 'Select height'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
+        <FormRow label="Weight" required><select name="weight" className={selectClass + ' w-full'} defaultValue={profile.weight || 'Select weight'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
+        <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{['Studio / incall', 'On-location / outcall'].map((item) => { const selected = selectedAvailability.includes(item); return <label key={item} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><input className="sr-only" name="availability" value={item} type="checkbox" checked={selected} onChange={() => toggleAvailability(item)} /><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</label>; })}</div></FormRow>
+        <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'} defaultValue={profile.smoker || 'No'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" defaultValue={profile.about || ''} /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
+        <FormRow label="Professional orientation"><select name="orientation" className={selectClass + ' w-full'} defaultValue={profile.orientation || 'Select orientation'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Languages spoken"><div className="space-y-2">{languageRows.map((row: any, item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'} defaultValue={row.language || 'Select language'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'} defaultValue={row.level || 'Select level'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
+        <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">
+          <label className={serviceTileBaseClass + ' md:col-span-2 ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+            <input className="sr-only" type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} />
+            <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#e60073]' : 'border-[#e60073] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
+            <span className="flex-1">Select all services</span>
+            <span className={allServicesSelected ? 'text-xs text-white' : 'text-xs text-[#9b8090]'}>{selectedServices.length}/{modelServices.length} selected</span>
+          </label>
+          {modelServices.map((service) => {
+            const selected = selectedServices.includes(service);
+            return (
+              <label key={service} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+                <input className="sr-only" name="services" value={service} type="checkbox" checked={selected} onChange={() => toggleService(service)} />
+                <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
+                <span>{service}</span>
+              </label>
+            );
+          })}
+        </div></FormRow>
+        <div className="pt-2 text-center"><button disabled={saving} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm disabled:opacity-60">{saving ? 'Saving...' : 'Save profile changes'}</button></div>
+      </div>
+    </form>
+  );
+}
+
 function AccountSidebar({ active }: { active: string }) {
   const links = [['View my Profile', '/model/profile'], ['Edit my Profile', '/edit-profile'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
   return <aside className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold text-[#ff1d9b]">My Account</h2><div className="mt-4 grid gap-2">{links.map(([label, href]) => <a key={href} href={href} className={'rounded-[3px] px-3 py-2 text-sm font-bold ' + (active === href.slice(1) ? 'bg-[#e60073] text-white' : 'bg-[#fff0f6] text-[#3b164b] hover:bg-[#ffd6ec]')}>{label}</a>)}</div></aside>;
@@ -717,6 +787,7 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const [imagePreviews, setImagePreviews] = useState<{ name: string; url: string; size: number }[]>([]);
   const [uploadingImages, setUploadingImages] = useState(false);
+  const [savingProfile, setSavingProfile] = useState(false);
   const [password, setPassword] = useState('');
   const [notice, setNotice] = useState('');
   useEffect(() => {
@@ -735,7 +806,7 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
     const nextFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/')).slice(0, 8);
     setSelectedImageFiles(nextFiles);
     setImagePreviews(nextFiles.map((file) => ({ name: file.name, size: file.size, url: URL.createObjectURL(file) })));
-    setNotice(nextFiles.length ? 'Preview ready. Review the images, then add them online.' : 'Please choose image files only.');
+    setNotice(nextFiles.length ? 'Preview ready. Review, then publish online.' : 'Please select image files only.');
   }
   async function addImage() {
     if (!session?.token || !selectedImageFiles.length || uploadingImages) return;
@@ -745,7 +816,7 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
       const nextImages = Array.isArray(uploaded) ? uploaded : [uploaded];
       setAccount((current: any) => ({ ...(current || {}), images: [...(current?.images || []), ...nextImages] }));
       clearSelectedImages();
-      setNotice('Images uploaded and added to your online profile.');
+      setNotice('Images published to your profile.');
     } catch (error) {
       setNotice(error instanceof Error ? error.message : 'Images could not be uploaded.');
     } finally {
@@ -757,6 +828,54 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
     await utamuApi.deleteProfileImage(id, session.token);
     setAccount((current: any) => ({ ...(current || {}), images: (current?.images || []).filter((image: any) => image.id !== id) }));
     setNotice('Image removed from your profile.');
+  }
+  async function saveProfile(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session?.token || savingProfile) return;
+    const formData = new FormData(event.currentTarget);
+    const values = Object.fromEntries(formData.entries()) as Record<string, FormDataEntryValue>;
+    const clean = (key: string) => String(values[key] || '').trim();
+    const languages = [0, 1, 2]
+      .map((index) => ({ language: clean('language' + index), level: clean('languageLevel' + index) }))
+      .filter((item) => item.language && item.language !== 'Select language');
+    const currentProfile = account?.user?.profile || {};
+    const nextProfile = {
+      ...currentProfile,
+      name: clean('name'),
+      phone: clean('phone'),
+      website: clean('website'),
+      country: clean('country') || 'Kenya',
+      city: clean('city'),
+      gender: clean('gender'),
+      birthYear: clean('birthYear'),
+      birthMonth: clean('birthMonth'),
+      birthDay: clean('birthDay'),
+      ethnicity: clean('ethnicity'),
+      hairColor: clean('hairColor'),
+      hairLength: clean('hairLength'),
+      bustSize: clean('bustSize'),
+      build: clean('build'),
+      looks: clean('looks'),
+      height: clean('height'),
+      weight: clean('weight'),
+      smoker: clean('smoker'),
+      about: clean('about'),
+      orientation: clean('orientation'),
+      availability: formData.getAll('availability').map(String),
+      services: formData.getAll('services').map(String),
+      languages,
+    };
+    setSavingProfile(true);
+    try {
+      const result: any = await utamuApi.updateProfile({ profile: nextProfile, name: nextProfile.name, phone: nextProfile.phone, city: nextProfile.city, country: nextProfile.country, services: nextProfile.services, availability: nextProfile.availability }, session.token);
+      setAccount((current: any) => ({ ...(current || {}), user: result.user || current?.user, model: result.model || current?.model }));
+      if (result.user) saveSession({ ...session, user: result.user });
+      setNotice('Profile changes saved.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Profile changes could not be saved.');
+    } finally {
+      setSavingProfile(false);
+    }
   }
   async function changePassword() {
     if (!session?.token) return;
@@ -795,9 +914,9 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
     ['Languages', (profile.languages || []).map((item: any) => [item.language, item.level].filter(Boolean).join(' - ')).filter(Boolean).join(', ')],
     ['Services', (profile.services || []).join(', ')],
   ].filter(([, value]) => Boolean(value));
-  const uploadPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">{showFirstUpload ? 'Add your first profile images' : 'Profile image manager'}</h2><p className="mt-3 text-sm leading-6 text-[#7b6e78]">{showFirstUpload ? 'Choose images from your computer, preview them here, then add them online. After your first upload, image management moves to Edit my Profile.' : 'Choose more images from your computer, preview them, upload them online, or remove older ones.'}</p><div className="mt-4 flex flex-col gap-3 rounded-[3px] border border-dashed border-[#ff9bd0] bg-[#fff8fb] p-4"><input id="profile-image-files" type="file" accept="image/*" multiple onChange={(event) => selectImages(event.target.files)} className="hidden" /><label htmlFor="profile-image-files" className="inline-flex w-fit cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Choose images from file explorer</label>{imagePreviews.length > 0 && <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{imagePreviews.map((preview) => <figure key={preview.url} className="overflow-hidden rounded-[3px] border border-[#ffd1e8] bg-white"><img src={preview.url} alt={preview.name} className="aspect-[4/5] w-full object-cover" /><figcaption className="truncate px-2 py-1 text-xs text-[#7b6e78]">{preview.name}</figcaption></figure>)}</div>}<div className="flex flex-wrap gap-2">{imagePreviews.length > 0 && <button onClick={addImage} disabled={uploadingImages} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{uploadingImages ? 'Uploading...' : 'Add selected images online'}</button>}{imagePreviews.length > 0 && <button onClick={clearSelectedImages} className="rounded-full border border-[#e60073] px-5 py-2 text-sm font-bold text-[#e60073]">Clear previews</button>}</div></div>{images.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <figure key={image.id || image.url} className="relative overflow-hidden rounded-[3px] border border-[#ffd1e8]"><img src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />{isEditProfile && <button onClick={() => deleteImage(image.id)} className="absolute right-2 top-2 rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Delete</button>}</figure>)}</div>}</div>;
+  const uploadPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">{showFirstUpload ? 'Add your first profile images' : 'Profile image manager'}</h2><p className="mt-3 text-sm leading-6 text-[#7b6e78]">{showFirstUpload ? 'Select portfolio images, preview them here, then publish them online. After your first upload, image management moves to Edit my Profile.' : 'Preview new portfolio images before publishing, or remove older ones.'}</p><div className="mt-4 flex flex-col gap-3 rounded-[3px] border border-dashed border-[#ff9bd0] bg-[#fff8fb] p-4"><input id="profile-image-files" type="file" accept="image/*" multiple onChange={(event) => selectImages(event.target.files)} className="hidden" /><label htmlFor="profile-image-files" className="inline-flex w-fit cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Select images</label>{imagePreviews.length > 0 && <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{imagePreviews.map((preview) => <figure key={preview.url} className="overflow-hidden rounded-[3px] border border-[#ffd1e8] bg-white"><img src={preview.url} alt={preview.name} className="aspect-[4/5] w-full object-cover" /><figcaption className="truncate px-2 py-1 text-xs text-[#7b6e78]">{preview.name}</figcaption></figure>)}</div>}<div className="flex flex-wrap gap-2">{imagePreviews.length > 0 && <button onClick={addImage} disabled={uploadingImages} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{uploadingImages ? 'Uploading...' : 'Publish selected images'}</button>}{imagePreviews.length > 0 && <button onClick={clearSelectedImages} className="rounded-full border border-[#e60073] px-5 py-2 text-sm font-bold text-[#e60073]">Clear previews</button>}</div></div>{images.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <figure key={image.id || image.url} className="relative overflow-hidden rounded-[3px] border border-[#ffd1e8]"><img src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />{isEditProfile && <button onClick={() => deleteImage(image.id)} className="absolute right-2 top-2 rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Delete</button>}</figure>)}</div>}</div>;
   const profileDataPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">My uploaded profile data</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{profileRows.map(([label, value]) => <div key={String(label)} className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">{label}</p><p className="mt-1 text-sm text-[#2b123a]">{String(value)}</p></div>)}</div>{profile.about && <div className="mt-4 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">About</p><p className="mt-2 text-sm leading-7 text-[#2b123a]">{profile.about}</p></div>}{images.length > 0 && isViewProfile && <a href="/edit-profile" className="mt-5 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Edit profile images</a>}</div>;
-  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && <><div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Edit profile details</h2><textarea className="mt-4 min-h-32 w-full border border-[#ff55c7] p-3" defaultValue={profile.about || ''} /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Save profile</button></div>{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
+  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
 }
 
 function VerificationScreen({ path }: { path: string }) {
