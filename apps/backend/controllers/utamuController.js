@@ -136,6 +136,15 @@ function emailFlowLog(event, details = {}, level = 'log') {
   });
 }
 
+function loginFlowLog(event, details = {}, level = 'log') {
+  const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
+  logger('[utamu:login]', {
+    event,
+    at: new Date().toISOString(),
+    ...details,
+  });
+}
+
 function smtpDiagnostics() {
   return {
     hasSmtpHost: Boolean(process.env.SMTP_HOST),
@@ -443,14 +452,43 @@ export async function resendValidation(req, res) {
 }
 
 export async function loginAccount(req, res) {
-  const login = String(req.body?.login || req.body?.email || '').trim().toLowerCase();
+  const login = String(req.body?.login || req.body?.email || req.body?.username || '').trim().toLowerCase();
   const password = String(req.body?.password || '');
+  const requestId = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(8).toString('hex');
+  loginFlowLog('login_started', { requestId, login: maskEmail(login), hasPassword: Boolean(password), passwordLength: password.length });
+  if (!login || !password) {
+    loginFlowLog('login_missing_fields', { requestId, login: maskEmail(login), hasPassword: Boolean(password) }, 'warn');
+    return res.status(400).json({ message: 'Email/username and password are required.' });
+  }
   const rows = await tryQuery('select * from utamu_users where lower(email) = $1 or lower(username) = $1 limit 1', [login]);
   const user = rows?.[0];
-  if (!user || !user.password_hash || !(await bcrypt.compare(password, user.password_hash))) return res.status(401).json({ message: 'Invalid login details.' });
+  loginFlowLog('login_lookup_result', {
+    requestId,
+    login: maskEmail(login),
+    found: Boolean(user),
+    userId: user?.id || null,
+    accountType: user?.account_type || null,
+    status: user?.status || null,
+    emailVerified: user?.email_verified ?? null,
+    hasPasswordHash: Boolean(user?.password_hash),
+  }, user ? 'log' : 'warn');
+  if (!user) return res.status(401).json({ message: 'No account exists for that email or username.' });
+  if (!user.password_hash) {
+    loginFlowLog('login_missing_password_hash', { requestId, userId: user.id, login: maskEmail(login) }, 'error');
+    return res.status(401).json({ message: 'This account has no password set. Please reset your password or register again.' });
+  }
+  const passwordMatches = await bcrypt.compare(password, user.password_hash);
+  loginFlowLog('login_password_checked', { requestId, userId: user.id, passwordMatches }, passwordMatches ? 'log' : 'warn');
+  if (!passwordMatches) return res.status(401).json({ message: 'Password is incorrect.' });
+  if (!user.email_verified || user.status === 'pending_email') {
+    loginFlowLog('login_blocked_pending_email', { requestId, userId: user.id, status: user.status, emailVerified: user.email_verified }, 'warn');
+    return res.status(403).json({ message: 'Please confirm your email before logging in.' });
+  }
   await queryWithRetry('update utamu_users set last_login_at = now() where id = $1', [user.id]);
+  loginFlowLog('login_success', { requestId, userId: user.id, accountType: user.account_type });
   res.json({ data: { token: signUser(user), user: publicUser(user) } });
 }
+
 
 export async function getMe(req, res) {
   const user = await authUser(req);
