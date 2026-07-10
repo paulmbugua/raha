@@ -88,6 +88,7 @@ export const utamuApi = {
   getDirectory: () => getJson('/api/utamu/directory', { models, bookings, reviews, verificationCases, analytics }),
   getModels: (query = '') => getJson(`/api/utamu/models?query=${encodeURIComponent(query)}`, models),
   getModel: (slug: string) => getJson(`/api/utamu/models/${slug}`, models.find((model) => model.slug === slug) ?? models[0]),
+  getReviews: () => getJson('/api/utamu/reviews', reviews),
   registerAccount: (body: unknown) => postJson('/api/utamu/register', body, { registrationComplete: true, validationToken: 'local-token', confirmationUrl: '/register/confirm-email?token=local-token' }),
   confirmEmail: (token: string) => postJson('/api/utamu/confirm-email', { token }, { token: 'local-session-token', user: null }),
   resendValidation: (email: string) => postJson('/api/utamu/resend-validation', { email }, { sent: true }),
@@ -104,4 +105,6 @@ export const utamuApi = {
   submitVerification: (body: unknown) => postJson('/api/utamu/verification', body, { id: 'v-local', status: 'pending' }),
   submitReview: (body: unknown) => postJson('/api/utamu/reviews', body, { id: 'r-local', status: 'pending' }),
   createMpesaPayment: (body: unknown) => postJson('/api/utamu/payments/mpesa', body, { reference: 'UTAMU-LOCAL', status: 'stk_sent' }),
+  createPaystackPayment: (body: unknown) => postJson('/api/utamu/payments/paystack', body, { reference: 'UTAMU-LOCAL', authorizationUrl: '' }),
+  verifyPaystackPayment: (reference: string) => postJson('/api/utamu/payments/paystack/verify', { reference }, { reference, status: 'pending' }),
 };

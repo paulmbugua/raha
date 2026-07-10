@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   }),
   applicationName: 'Utamu',
   icons: {
-    icon: '/favicon.png',
-    shortcut: '/favicon.png',
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
     apple: '/favicon.png',
   },
   manifest: '/site.webmanifest',

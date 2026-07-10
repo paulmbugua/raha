@@ -1,3 +1,4 @@
+import axios from 'axios';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
@@ -5,6 +6,7 @@ import nodemailer from 'nodemailer';
 import { queryWithRetry } from '../config/db.js';
 import { analytics, bookings, models, reviews, verificationCases } from '../data/utamuSeed.js';
 import { putImageObject } from '../services/r2.js';
+import { getAccessToken, getMpesaConfigHealth, MPESA_BASE, mpesaPassword, mpesaTimestamp, resolveStkCallbackUrl, shortcode } from '../utils/mpesa.js';
 
 const directory = { models, bookings, reviews, verificationCases, analytics };
 const JWT_SECRET = process.env.JWT_SECRET || process.env.UTAMU_JWT_SECRET || 'utamu-local-dev-secret';
@@ -14,7 +16,58 @@ const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Secret Nairobi';
 const MAIL_FROM = process.env.MAIL_FROM || `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRESS}>`;
 const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || MAIL_FROM_ADDRESS;
 const VALIDATION_RESEND_COOLDOWN_MS = Number(process.env.UTAMU_VALIDATION_RESEND_COOLDOWN_MS || 60_000);
+const VIP_VISIBILITY_PRICE_KES = 1000;
+const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || '';
 
+
+let utamuTransactionalSchemaReady = false;
+async function ensureUtamuTransactionalSchema() {
+  if (utamuTransactionalSchemaReady) return;
+  await queryWithRetry("alter table utamu_payments add column if not exists provider_reference text");
+  await queryWithRetry("alter table utamu_payments add column if not exists authorization_url text");
+  await queryWithRetry("alter table utamu_payments add column if not exists purpose text");
+  await queryWithRetry("alter table utamu_payments add column if not exists paid_at timestamptz");
+  await queryWithRetry("alter table utamu_reviews add column if not exists model_name text");
+  await queryWithRetry("alter table utamu_reviews add column if not exists model_image text");
+  await queryWithRetry("alter table utamu_reviews add column if not exists author_name text");
+  utamuTransactionalSchemaReady = true;
+}
+function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
+function normalizeKenyanMsisdn(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.startsWith('254')) return digits;
+  if (digits.startsWith('0')) return '254' + digits.slice(1);
+  if (digits.length === 9) return '254' + digits;
+  return digits;
+}
+async function resolvePaymentModel(body, user) {
+  if (isUuid(body?.modelId)) {
+    const rows = await tryQuery('select * from utamu_models where id = $1 limit 1', [body.modelId]);
+    if (rows?.[0]) return rows[0];
+  }
+  if (body?.modelSlug) {
+    const rows = await tryQuery('select * from utamu_models where slug = $1 limit 1', [body.modelSlug]);
+    if (rows?.[0]) return rows[0];
+  }
+  if (user?.id) {
+    const rows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
+    if (rows?.[0]) return rows[0];
+  }
+  return null;
+}
+async function activateVipVisibility(reference) {
+  const rows = await tryQuery('select model_id from utamu_payments where reference = $1 or provider_reference = $1 limit 1', [reference]);
+  const modelId = rows?.[0]?.model_id;
+  if (!modelId) return null;
+  const updated = await queryWithRetry('update utamu_models set elite = true, status = case when status = $2 then $3 else status end where id = $1 returning *', [modelId, 'pending', 'active']);
+  return updated.rows[0] || null;
+}
+function publicPayment(row, extra = {}) {
+  return { id: row?.id, reference: row?.reference || extra.reference, providerReference: row?.provider_reference || extra.providerReference || null, status: row?.status || extra.status || 'pending', amount: Number(row?.amount_kes || extra.amount || VIP_VISIBILITY_PRICE_KES), method: row?.method || extra.method, authorizationUrl: row?.authorization_url || extra.authorizationUrl || null, instructions: extra.instructions };
+}
+function mapReviewRow(row) {
+  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi model', modelImage: row.model_image || row.image_url || models[0].image, author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
+}
 async function tryQuery(sql, params = []) {
   try {
     const result = await queryWithRetry(sql, params, { retries: 0 });
@@ -208,8 +261,15 @@ async function ensureModelForUser(user, body, profile) {
 
 export async function getDirectory(_req, res) {
   const rows = await tryQuery('select payload from utamu_seed where key = $1', ['directory']);
-  res.json({ data: rows?.[0]?.payload || directory });
+  const payload = rows?.[0]?.payload || directory;
+  const dbRows = await tryQuery("select m.*, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images from utamu_models m left join utamu_profile_images i on i.model_id = m.id where m.status <> 'deleted' group by m.id order by m.elite desc, m.rating desc, m.created_at desc limit 100");
+  const dbModels = (dbRows || []).map((row) => ({
+    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', image: row.images?.[0] || models[0].image, gallery: row.images || [], bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
+  }));
+  const reviewRows = await getReviewRows();
+  res.json({ data: { ...payload, models: [...dbModels, ...(payload.models?.length ? payload.models : models)].sort((a, b) => Number(b.elite) - Number(a.elite) || Number(b.rating || 0) - Number(a.rating || 0)), reviews: reviewRows.length ? reviewRows : payload.reviews || reviews } });
 }
+
 
 export async function searchModels(req, res) {
   const query = String(req.query.query || '').toLowerCase();
@@ -549,17 +609,109 @@ export async function changePassword(req, res) {
 }
 
 export async function createMpesaPayment(req, res) {
-  const reference = 'UTAMU-' + Math.random().toString(36).slice(2, 6).toUpperCase();
-  res.status(201).json({ data: { reference, status: 'stk_sent', amount: Number(req.body.amount || 500), phone: req.body.phone || null, instructions: 'Check your phone and enter M-Pesa PIN.' } });
+  await ensureUtamuTransactionalSchema();
+  const user = await authUser(req);
+  const phone = normalizeKenyanMsisdn(req.body?.phone);
+  if (!/^254(7|1)\d{8}$/.test(phone)) return res.status(400).json({ message: 'Enter a valid Kenyan M-Pesa phone number.' });
+  const amount = Math.max(1, Math.round(Number(req.body?.amount || VIP_VISIBILITY_PRICE_KES)));
+  const callbackUrl = resolveStkCallbackUrl({ product: 'Utamu' });
+  const health = getMpesaConfigHealth();
+  const missing = [...health.missing, !callbackUrl ? 'MPESA_Utamu_CALLBACK_URL' : null].filter(Boolean);
+  if (missing.length) return res.status(503).json({ message: 'M-Pesa is not fully configured.', missing });
+  const model = await resolvePaymentModel(req.body || {}, user);
+  const timestamp = mpesaTimestamp();
+  const payload = { BusinessShortCode: shortcode, Password: mpesaPassword(timestamp), Timestamp: timestamp, TransactionType: 'CustomerPayBillOnline', Amount: amount, PartyA: phone, PartyB: shortcode, PhoneNumber: phone, CallBackURL: callbackUrl, AccountReference: 'SecretNairobiVIP', TransactionDesc: req.body?.description || 'Secret Nairobi VIP visibility' };
+  try {
+    const accessToken = await getAccessToken();
+    const response = await axios.post(MPESA_BASE + '/mpesa/stkpush/v1/processrequest', payload, { headers: { Authorization: 'Bearer ' + accessToken } });
+    const provider = response.data || {};
+    const reference = provider.CheckoutRequestID || provider.MerchantRequestID || 'SNMPESA-' + crypto.randomBytes(6).toString('hex').toUpperCase();
+    const inserted = await queryWithRetry("insert into utamu_payments (model_id, user_id, amount_kes, method, status, reference, provider_reference, purpose) values ($1,$2,$3,'mpesa','pending',$4,$5,$6) returning *", [model?.id || null, user?.id || null, amount, reference, provider.MerchantRequestID || null, req.body?.purpose || 'vip_visibility']);
+    res.status(201).json({ data: publicPayment(inserted.rows[0], { status: 'stk_sent', method: 'mpesa', instructions: 'STK push sent. Enter your PIN on your phone and keep this page open.' }) });
+  } catch (error) {
+    console.error('[utamu:mpesa] stk_failed', error?.response?.data || error?.message || error);
+    res.status(502).json({ message: 'M-Pesa STK push could not be started.' });
+  }
 }
-
+export async function mpesaPaymentCallback(req, res) {
+  await ensureUtamuTransactionalSchema();
+  const callback = req.body?.Body?.stkCallback || {};
+  const reference = callback.CheckoutRequestID;
+  const paid = Number(callback.ResultCode) === 0;
+  if (reference) {
+    await queryWithRetry('update utamu_payments set status = $2, paid_at = case when $2 = $3 then now() else paid_at end where reference = $1', [reference, paid ? 'paid' : 'failed', 'paid']);
+    if (paid) await activateVipVisibility(reference);
+  }
+  res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
+}
+export async function createPaystackPayment(req, res) {
+  await ensureUtamuTransactionalSchema();
+  if (!PAYSTACK_SECRET_KEY) return res.status(503).json({ message: 'Paystack is not configured. Set PAYSTACK_SECRET_KEY.' });
+  const user = await authUser(req);
+  const email = String(req.body?.email || user?.email || '').trim().toLowerCase();
+  if (!email) return res.status(400).json({ message: 'Email address is required for Paystack checkout.' });
+  const amount = Math.max(1, Math.round(Number(req.body?.amount || VIP_VISIBILITY_PRICE_KES)));
+  const model = await resolvePaymentModel(req.body || {}, user);
+  const reference = 'SNPAY-' + crypto.randomBytes(8).toString('hex').toUpperCase();
+  try {
+    const response = await axios.post('https://api.paystack.co/transaction/initialize', { email, amount: amount * 100, currency: 'KES', reference, callback_url: APP_URL + '/paystack/callback', metadata: { purpose: req.body?.purpose || 'vip_visibility', modelId: model?.id || null } }, { headers: { Authorization: 'Bearer ' + PAYSTACK_SECRET_KEY, 'Content-Type': 'application/json' } });
+    const data = response.data?.data || {};
+    const inserted = await queryWithRetry("insert into utamu_payments (model_id, user_id, amount_kes, method, status, reference, provider_reference, authorization_url, purpose) values ($1,$2,$3,'paystack','pending',$4,$5,$6,$7) returning *", [model?.id || null, user?.id || null, amount, reference, data.reference || reference, data.authorization_url || null, req.body?.purpose || 'vip_visibility']);
+    res.status(201).json({ data: publicPayment(inserted.rows[0], { method: 'paystack', authorizationUrl: data.authorization_url }) });
+  } catch (error) {
+    console.error('[utamu:paystack] initialize_failed', error?.response?.data || error?.message || error);
+    res.status(502).json({ message: 'Paystack checkout could not be started.' });
+  }
+}
+export async function verifyPaystackPayment(req, res) {
+  await ensureUtamuTransactionalSchema();
+  if (!PAYSTACK_SECRET_KEY) return res.status(503).json({ message: 'Paystack is not configured. Set PAYSTACK_SECRET_KEY.' });
+  const reference = String(req.body?.reference || req.query?.reference || '').trim();
+  if (!reference) return res.status(400).json({ message: 'Payment reference is required.' });
+  try {
+    const response = await axios.get('https://api.paystack.co/transaction/verify/' + encodeURIComponent(reference), { headers: { Authorization: 'Bearer ' + PAYSTACK_SECRET_KEY } });
+    const status = response.data?.data?.status === 'success' ? 'paid' : 'pending';
+    const updated = await queryWithRetry('update utamu_payments set status = $2, paid_at = case when $2 = $3 then now() else paid_at end where reference = $1 or provider_reference = $1 returning *', [reference, status, 'paid']);
+    if (status === 'paid') await activateVipVisibility(reference);
+    res.json({ data: publicPayment(updated.rows[0], { reference, status, method: 'paystack' }) });
+  } catch (error) {
+    console.error('[utamu:paystack] verify_failed', error?.response?.data || error?.message || error);
+    res.status(502).json({ message: 'Paystack payment could not be verified.' });
+  }
+}
 export async function submitVerification(req, res) {
   res.status(201).json({ data: { id: 'v-' + Date.now(), status: 'pending', submittedAt: new Date().toISOString(), ...req.body } });
 }
 
-export async function submitReview(req, res) {
-  res.status(201).json({ data: { id: 'r-' + Date.now(), status: 'pending', createdAt: new Date().toISOString(), ...req.body } });
+async function getReviewRows() {
+  try {
+    await ensureUtamuTransactionalSchema();
+    const rows = await tryQuery("select r.*, m.display_name, coalesce(pi.url, r.model_image) as image_url, u.full_name from utamu_reviews r left join utamu_models m on m.id = r.model_id left join lateral (select url from utamu_profile_images where model_id = m.id order by sort_order, created_at limit 1) pi on true left join utamu_users u on u.id = r.user_id where r.status in ('approved','pending') order by r.created_at desc limit 100");
+    return (rows || []).map(mapReviewRow);
+  } catch (error) {
+    console.warn('[utamu:reviews] list_failed', error?.message || error);
+    return [];
+  }
 }
+export async function getReviews(_req, res) {
+  const rows = await getReviewRows();
+  res.json({ data: rows.length ? rows : reviews.map((review, index) => ({ ...review, modelImage: models[index % models.length].image })) });
+}
+
+export async function submitReview(req, res) {
+  await ensureUtamuTransactionalSchema();
+  const user = await authUser(req);
+  const rating = Math.max(1, Math.min(5, Number(req.body?.rating || 5)));
+  const body = String(req.body?.body || '').trim();
+  if (!body) return res.status(400).json({ message: 'Review text is required.' });
+  const model = await resolvePaymentModel({ modelId: req.body?.modelId, modelSlug: req.body?.modelSlug }, null);
+  const modelName = req.body?.modelName || model?.display_name || 'Secret Nairobi model';
+  const modelImage = req.body?.modelImage || models.find((item) => item.name === modelName)?.image || models[0].image;
+  const authorName = req.body?.author || user?.full_name || 'Normal user';
+  const inserted = await queryWithRetry("insert into utamu_reviews (model_id, user_id, rating, body, anonymous, status, model_name, model_image, author_name) values ($1,$2,$3,$4,$5,'approved',$6,$7,$8) returning *", [model?.id || null, user?.id || null, rating, body, Boolean(req.body?.anonymous), modelName, modelImage, authorName]);
+  res.status(201).json({ data: mapReviewRow(inserted.rows[0]) });
+}
+
 
 export async function getAdmin(_req, res) {
   res.json({ data: { verificationCases, analytics, pending: verificationCases.filter((item) => item.status === 'pending') } });

@@ -5,6 +5,7 @@ import {
   changePassword,
   confirmEmail,
   createMpesaPayment,
+  createPaystackPayment,
   deleteProfileImage,
   getAdmin,
   getDirectory,
@@ -12,6 +13,7 @@ import {
   getMessages,
   getModel,
   getNotifications,
+  getReviews,
   loginAccount,
   registerAccount,
   resendValidation,
@@ -19,6 +21,8 @@ import {
   sendMessage,
   submitReview,
   submitVerification,
+  mpesaPaymentCallback,
+  verifyPaystackPayment,
   uploadProfileImages,
   updateAccountProfile,
 } from '../controllers/utamuController.js';
@@ -43,7 +47,12 @@ router.get('/messages', getMessages);
 router.post('/messages', sendMessage);
 router.get('/notifications', getNotifications);
 router.post('/payments/mpesa', createMpesaPayment);
+router.post('/payments/mpesa/callback', mpesaPaymentCallback);
+router.post('/payments/paystack', createPaystackPayment);
+router.post('/payments/paystack/verify', verifyPaystackPayment);
+router.get('/payments/paystack/verify', verifyPaystackPayment);
 router.post('/verification', submitVerification);
+router.get('/reviews', getReviews);
 router.post('/reviews', submitReview);
 router.get('/admin', getAdmin);
 

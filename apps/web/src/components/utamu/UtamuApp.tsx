@@ -125,12 +125,13 @@ function Shell({ children }: { children: React.ReactNode }) {
 
 function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) {
   const verified = model.verified || index < 8;
+  const isVip = Boolean(model.elite);
   const isNew = index >= 8;
   return (
     <a href={`/model/${model.slug}`} className="group relative block overflow-hidden rounded-[3px] border border-[#ff6d73] bg-white shadow-sm">
       <div className="relative aspect-[3/4] overflow-hidden">
         <img src={model.image} alt={`${model.name} Nairobi model portfolio`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
-        <div className="absolute right-[-34px] top-3 rotate-45 bg-gradient-to-r from-[#ff8a00] to-[#ffbd00] px-9 py-1 text-[10px] font-bold uppercase text-white shadow">VIP</div>
+        {isVip && <div className="absolute right-[-34px] top-3 rotate-45 bg-gradient-to-r from-[#ff8a00] to-[#ffbd00] px-9 py-1 text-[10px] font-bold uppercase text-white shadow">VIP</div>}
         <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between bg-gradient-to-r from-[#bc3c96]/80 via-[#e86ab7]/75 to-[#bc3c96]/80 px-2 py-1 text-white">
           <span className="truncate text-center text-base font-normal">{model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '')}</span>
           <span className="flex shrink-0 gap-1">
@@ -149,10 +150,11 @@ function DiscoveryHome() {
     const params = new URLSearchParams(window.location.search);
     actions.setQuery(params.get('query') || '');
   }, []);
+  const sortedHomeModels = (filteredModels.length ? filteredModels : models).slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
   const directoryModels = Array.from({ length: 48 }, (_, index) => {
-    const base = filteredModels[index % filteredModels.length] || models[index % models.length];
+    const base = sortedHomeModels[index % sortedHomeModels.length] || models[index % models.length];
     const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Model Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
-    return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: index < 9, elite: true };
+    return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: base.verified || index < 9, elite: Boolean(base.elite) };
   });
 
   return (
@@ -210,7 +212,8 @@ function RegisterScreen() {
       price: 'Free',
       cta: 'Register here',
       ctaHref: '/register/independent-model',
-      features: ['Add a single profile', 'Add portfolio pictures', 'Add contact information', 'Upgrade to VIP visibility', 'Manage blocked clients', 'Profile analytics and messages'],
+      features: ['Add a single profile', 'Add portfolio pictures', 'Add contact information', 'Manage blocked clients', 'Profile analytics and messages'],
+      vipFeature: 'Upgrade to VIP visibility',
       highlight: 'Ksh 1,000 for 1 month',
     },
     {
@@ -218,7 +221,8 @@ function RegisterScreen() {
       price: 'Ksh 5,000 for 1 month',
       cta: 'Register here',
       ctaHref: '/register/agency',
-      features: ['Add multiple profiles', 'Add profile pictures', 'Add contact information', 'Upgrade agency listings to VIP', 'Add internal notes', 'Manage verification workflow'],
+      features: ['Add multiple profiles', 'Add profile pictures', 'Add contact information', 'Add internal notes', 'Manage verification workflow'],
+      vipFeature: 'Upgrade agency listings to VIP',
       highlight: 'Ksh 1,000 for 1 month',
     },
     {
@@ -261,7 +265,7 @@ function RegisterScreen() {
                     </li>
                   ))}
                 </ul>
-                {plan.highlight && <div className="mt-3 text-center"><span className="inline-flex bg-[#1fbfa5] px-2 py-1 text-xs font-bold text-white">{plan.highlight}</span></div>}
+                {plan.vipFeature && <div className="mt-4 rounded-[3px] border border-[#ffb100] bg-[#fff8df] p-3 text-[#3b164b]"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-bold">{plan.vipFeature}</span>{plan.highlight && <span className="rounded-full bg-[#1fbfa5] px-3 py-1 text-xs font-bold text-white">{plan.highlight}</span>}</div><a href="/checkout/mpesa" className="mt-3 inline-flex rounded-full bg-[#e60073] px-4 py-2 text-xs font-bold text-white">Upgrade after registration</a></div>}
                 <div className="mt-6 border-t border-[#eeeeee] pt-4">
                   <p className="mb-4 text-2xl font-normal text-[#555]">{plan.price}</p>
                   <a href={plan.ctaHref} className="inline-flex items-center gap-2 rounded-[3px] bg-[#23b86b] px-5 py-3 text-sm font-bold text-white hover:bg-[#1fa461]">{plan.cta}<ChevronRight className="h-4 w-4" /></a>
@@ -927,18 +931,57 @@ function VerificationScreen({ path }: { path: string }) {
 }
 
 function CheckoutScreen() {
+  const [method, setMethod] = useState<'mpesa' | 'paystack'>('mpesa');
   const [phone, setPhone] = useState('2547');
-  const [sent, setSent] = useState(false);
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState('');
+  const [paying, setPaying] = useState(false);
   async function pay() {
-    await utamuApi.createMpesaPayment({ phone, amount: 500, modelId: 'm-001' });
-    setSent(true);
+    setStatus('');
+    setPaying(true);
+    try {
+      const payload = { amount: 1000, modelSlug: 'amina-w', purpose: 'vip_visibility', description: 'Secret Nairobi VIP visibility - 1 month' };
+      if (method === 'mpesa') {
+        const result: any = await utamuApi.createMpesaPayment({ ...payload, phone });
+        setStatus(result.instructions || 'STK push sent. Enter your PIN on your phone and keep this page open.');
+      } else {
+        const result: any = await utamuApi.createPaystackPayment({ ...payload, email });
+        if (result.authorizationUrl && typeof window !== 'undefined') window.location.href = result.authorizationUrl;
+        setStatus(result.authorizationUrl ? 'Opening Paystack checkout...' : 'Paystack checkout could not be opened.');
+      }
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Payment could not be started.');
+    } finally {
+      setPaying(false);
+    }
   }
-  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="Checkout model" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="green">M-Pesa Express</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Pay with M-Pesa</h1><p className="mt-3 text-[#d0c6ab]">A Ksh 500 verified deposit unlocks secure direct coordination and confirms your account intent.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>Portfolio access deposit</span><strong className="text-[#ffd700]">Ksh 500</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Platform safety fee</span><span>Included</span></div></div><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /><button onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white">Send STK push</button>{sent && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">STK push sent. Enter your PIN on your phone and keep this page open.</p>}</div></section>;
+  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="VIP model visibility" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 1,000 places the selected model in VIP ranking for 1 month after payment confirmation.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 1,000</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
 }
 
+
 function ReviewScreen() {
-  return <section className="mx-auto max-w-2xl px-5 py-10"><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><h1 className="font-display text-2xl font-bold text-[#fff6df] sm:text-3xl">Submit verified review</h1><div className="mt-5 flex gap-2">{[1, 2, 3, 4, 5].map((item) => <Star key={item} className="h-8 w-8 fill-[#ffd700] text-[#ffd700]" />)}</div><textarea placeholder="Describe professionalism, punctuality, communication, and accuracy." className="mt-5 min-h-40 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" /><label className="mt-4 flex items-center gap-2 text-sm text-[#d0c6ab]"><input type="checkbox" />Post anonymously</label><button className="mt-5 rounded-lg bg-[#ffd700] px-6 py-3 font-bold text-[#221b00]">Submit review</button><p className="mt-4 text-sm text-[#999077]">Verified reviews are weighted heavily in Utamu ranking and compliance checks.</p></div></section>;
+  const directory = useUtamuDirectory();
+  const [remoteReviews, setRemoteReviews] = useState<any[]>([]);
+  useEffect(() => {
+    utamuApi.getReviews().then((items: any) => setRemoteReviews(Array.isArray(items) ? items : []));
+  }, []);
+  const sourceReviews = remoteReviews.length ? remoteReviews : directory.reviews;
+  const reviewItems = sourceReviews.map((review: any, index: number) => {
+    const modelName = review.modelName || review.model_name || review.model || models[index % models.length].name;
+    const model = directory.models.find((item) => item.name === modelName || item.slug === review.modelSlug) || models[index % models.length];
+    return {
+      id: review.id || modelName + '-' + index,
+      modelName,
+      modelImage: review.modelImage || review.model_image || model.image,
+      author: review.author || review.author_name || (review.anonymous ? 'Anonymous member' : 'Normal user'),
+      rating: Math.max(1, Math.min(5, Number(review.rating || 5))),
+      body: review.body || 'The profile was reviewed by a registered member.',
+      createdAt: review.createdAt || review.created_at || new Date().toISOString(),
+    };
+  });
+  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex items-center justify-between gap-3"><h1 className="text-xl font-normal text-[#3b164b]">Model Reviews</h1><a href="/reviews/ratings#submit-review" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Agency Reviews</a></div><div className="space-y-8">{reviewItems.map((review) => <article key={review.id} className="grid gap-4 sm:grid-cols-[145px_1fr]"><img src={review.modelImage} alt={review.modelName + ' profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /><div className="pt-1"><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span><a href={'/model/' + review.modelName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')} className="font-bold text-[#e60073]">{review.modelName}</a><span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>)}</div><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelName: form.get('modelName'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelName" className={selectClass}>{directory.models.map((model) => <option key={model.id}>{model.name}</option>)}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit review</button></form></section><RegistrationQuickSearch /></div>;
 }
+
 
 function AdminScreen({ path }: { path: string }) {
   const { verificationCases, analytics } = useUtamuDirectory();

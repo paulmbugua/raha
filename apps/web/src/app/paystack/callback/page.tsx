@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
-import UtamuApp from '../../../components/utamu/UtamuApp';
+import PaystackCallbackPage from '../../../components/utamu/PaystackCallbackPage';
 import { buildPageMetadata } from '../../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Utamu | Verified Kenyan Model and Talent Directory',
-  description: 'Utamu routes are served through the verified Kenyan model and talent directory experience.',
-  path: '/',
+  title: 'Payment Confirmation | Secret Nairobi',
+  description: 'Confirm Paystack payment and activate VIP visibility.',
+  path: '/paystack/callback',
 });
 
 export default function Page() {
-  return <UtamuApp />;
+  return <PaystackCallbackPage />;
 }

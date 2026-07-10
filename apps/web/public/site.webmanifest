@@ -1,11 +1,16 @@
 {
-  "name": "Utamu",
-  "short_name": "Utamu",
+  "name": "Secret Nairobi",
+  "short_name": "Secret Nairobi",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0f172a",
-  "theme_color": "#2563eb",
+  "background_color": "#fff0f6",
+  "theme_color": "#2b0a3d",
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    },
     {
       "src": "/favicon.png",
       "sizes": "192x192",
