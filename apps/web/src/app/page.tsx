@@ -3,16 +3,16 @@ import UtamuApp from '../components/utamu/UtamuApp';
 import { buildFaqSchema, buildPageMetadata } from '../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Utamu | Verified Kenyan Model and Talent Directory',
-  description: 'Discover verified Kenyan models and wellness talent with curated profiles, M-Pesa deposits, reviews, verification workflows, and admin compliance.',
+  title: 'Secret Nairobi | Verified Nairobi Escort Directory',
+  description: 'Discover verified Nairobi escorts with curated profiles, VIP visibility, M-Pesa payments, reviews, messaging, verification workflows, and admin compliance.',
   path: '/',
-  keywords: ['Utamu', 'Kenyan model directory', 'verified talent Kenya', 'M-Pesa booking', 'Nairobi models'],
+  keywords: ['Secret Nairobi', 'Nairobi escort directory', 'verified escorts Kenya', 'M-Pesa booking', 'Nairobi escorts'],
 });
 
 const faq = buildFaqSchema([
-  { question: 'What is Utamu?', answer: 'Utamu is a premium Kenyan directory for verified professional models and wellness talent.' },
+  { question: 'What is Secret Nairobi?', answer: 'Secret Nairobi is a premium Kenyan directory for verified adult escorts and agency-managed profiles.' },
   { question: 'How does verification work?', answer: 'Applicants submit identity, selfie, portfolio, and payout details for admin review before receiving a verified badge.' },
-  { question: 'How are payments handled?', answer: 'Utamu supports M-Pesa deposits for profile access and booking confirmation workflows.' },
+  { question: 'How are payments handled?', answer: 'Secret Nairobi supports M-Pesa deposits for profile access and booking confirmation workflows.' },
 ]);
 
 export default function Page() {

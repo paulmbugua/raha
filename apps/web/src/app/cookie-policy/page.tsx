@@ -3,8 +3,8 @@ import UtamuApp from '../../components/utamu/UtamuApp';
 import { buildPageMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Utamu | Verified Kenyan Model and Talent Directory',
-  description: 'Utamu routes are served through the verified Kenyan model and talent directory experience.',
+  title: 'Secret Nairobi | Verified Nairobi Escort Directory',
+  description: 'Secret Nairobi routes are served through the verified Nairobi escort directory experience.',
   path: '/',
 });
 

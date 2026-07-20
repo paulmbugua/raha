@@ -3,8 +3,8 @@ import UtamuApp from '../../components/utamu/UtamuApp';
 import { buildPageMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Utamu App | Discovery, Profiles, Verification, Payments and Admin',
-  description: 'Explore Utamu discovery, model profiles, model dashboard, verification, M-Pesa checkout, reviews, notifications, and admin analytics.',
+  title: 'Secret Nairobi App | Discovery, Profiles, Verification, Payments and Admin',
+  description: 'Explore Secret Nairobi discovery, escort profiles, account dashboard, verification, M-Pesa checkout, reviews, notifications, and admin analytics.',
   path: '/',
 });
 

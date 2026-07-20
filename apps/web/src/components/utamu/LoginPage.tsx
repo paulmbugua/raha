@@ -41,7 +41,7 @@ export default function LoginPage() {
       console.info('[secret-nairobi:login] submit_success', { login: safeLoginLabel(trimmedLogin), userId: result?.user?.id || null, accountType: result?.user?.accountType || null, elapsedMs: Date.now() - startedAt });
       if (!result?.token) throw new Error('Login succeeded but no session token was returned.');
       window.localStorage.setItem(SESSION_KEY, JSON.stringify({ token: result.token, user: result.user || null }));
-      window.location.href = '/model/profile';
+      window.location.href = '/escort/profile';
     } catch (error) {
       const nextMessage = error instanceof Error ? error.message : 'Login failed. Please try again.';
       console.warn('[secret-nairobi:login] submit_failed', { login: safeLoginLabel(trimmedLogin), message: nextMessage, elapsedMs: Date.now() - startedAt });
@@ -71,7 +71,7 @@ export default function LoginPage() {
             <label className="justify-self-start text-right text-base text-[#003b5c] sm:justify-self-end"><input type="checkbox" name="remember" className="mb-2 block h-4 w-4 rounded border-[#999] sm:ml-auto" />Remember Me</label>
           </div>
         </form>
-        <div className="mt-4 grid w-full gap-4 text-sm font-bold sm:grid-cols-2"><a href="/help" className="text-white">Lost your password?</a><a href="/" className="text-right text-white">&larr; Go to Nairobi Models</a></div>
+        <div className="mt-4 grid w-full gap-4 text-sm font-bold sm:grid-cols-2"><a href="/help" className="text-white">Lost your password?</a><a href="/" className="text-right text-white">&larr; Go to Nairobi Escorts</a></div>
         <a href="/privacy-policy" className="mt-4 text-sm text-[#ff1493]">Privacy Policy</a>
       </section>
     </main>

@@ -66,7 +66,7 @@ function publicPayment(row, extra = {}) {
   return { id: row?.id, reference: row?.reference || extra.reference, providerReference: row?.provider_reference || extra.providerReference || null, status: row?.status || extra.status || 'pending', amount: Number(row?.amount_kes || extra.amount || VIP_VISIBILITY_PRICE_KES), method: row?.method || extra.method, authorizationUrl: row?.authorization_url || extra.authorizationUrl || null, instructions: extra.instructions };
 }
 function mapReviewRow(row) {
-  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi model', modelImage: row.model_image || row.image_url || models[0].image, author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
+  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi escort', modelImage: row.model_image || row.image_url || models[0].image, author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
 }
 async function tryQuery(sql, params = []) {
   try {
@@ -82,8 +82,8 @@ function scoreModel(model) {
 }
 
 function slugify(value) {
-  const base = String(value || 'nairobi-model').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
-  return base || 'nairobi-model';
+  const base = String(value || 'nairobi-escort').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+  return base || 'nairobi-escort';
 }
 
 function signUser(user) {
@@ -145,6 +145,12 @@ function loginFlowLog(event, details = {}, level = 'log') {
   });
 }
 
+function displayAccountType(accountType) {
+  if (accountType === 'independent-model') return 'independent escort';
+  if (accountType === 'member') return 'normal user';
+  return accountType || 'account';
+}
+
 function smtpDiagnostics() {
   return {
     hasSmtpHost: Boolean(process.env.SMTP_HOST),
@@ -162,14 +168,15 @@ function smtpDiagnostics() {
 }
 
 async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
+  const accountTypeDisplay = displayAccountType(user.account_type);
   const baseLog = { userId: user.id, accountType: user.account_type, to: maskEmail(user.email) };
-  emailFlowLog('validation_email_prepare', { ...baseLog, ...smtpDiagnostics() });
+  emailFlowLog('validation_email_prepare', { ...baseLog, accountTypeDisplay, ...smtpDiagnostics() });
   const html = '<p>Hello ' + user.full_name + '</p>' +
     '<p>Before you can use the site you will need to validate your email address.</p>' +
     '<p>If you do not validate your email in the next 3 days your account will be deleted.</p>' +
     '<p>Please validate your email address by clicking the link below:<br><a href="' + confirmationUrl + '">' + confirmationUrl + '</a></p>' +
-    '<p>Account information:<br>type: <strong>' + user.account_type + '</strong><br>username: <strong>' + (user.username || user.email) + '</strong><br>password: <strong>' + (passwordWasProvided ? '(hidden)' : '(set during registration)') + '</strong></p>' +
-    '<p>You can view your account here:<br><a href="' + APP_URL + '/model/dashboard">' + APP_URL + '/model/dashboard</a></p><p>Secret Nairobi - Models in Nairobi</p>';
+    '<p>Account information:<br>type: <strong>' + accountTypeDisplay + '</strong><br>username: <strong>' + (user.username || user.email) + '</strong><br>password: <strong>' + (passwordWasProvided ? '(hidden)' : '(set during registration)') + '</strong></p>' +
+    '<p>You can view your account here:<br><a href="' + APP_URL + '/escort/dashboard">' + APP_URL + '/escort/dashboard</a></p><p>Secret Nairobi - Escorts in Nairobi</p>';
 
   if (!process.env.SMTP_HOST) {
     emailFlowLog('validation_email_preview_only', { ...baseLog, reason: 'SMTP_HOST is not configured. Email was not sent to the recipient; validation link is only in backend logs.', confirmationUrl }, 'warn');
@@ -212,8 +219,8 @@ async function sendValidationEmail(user, confirmationUrl, passwordWasProvided) {
         `Hello ${user.full_name}`,
         'Before you can use the site you will need to validate your email address.',
         `Please validate your email address by opening this link: ${confirmationUrl}`,
-        `Account information: type: ${user.account_type}; username: ${user.username || user.email}; password: (hidden)`,
-        'Secret Nairobi - Models in Nairobi',
+        `Account information: type: ${accountTypeDisplay}; username: ${user.username || user.email}; password: (hidden)`,
+        'Secret Nairobi - Escorts in Nairobi',
       ].join('\n\n'),
     });
     const result = {
@@ -257,7 +264,7 @@ async function ensureModelForUser(user, body, profile) {
   const baseSlug = slugify(displayName);
   const slug = baseSlug + '-' + String(user.id).slice(0, 6);
   const city = body.city || profile.city || 'Nairobi';
-  const category = user.account_type === 'agency' ? 'Agency Managed Models' : 'Independent Model';
+  const category = user.account_type === 'agency' ? 'Agency Managed Escorts' : 'Independent Escort';
   const rows = await queryWithRetry(
     `insert into utamu_models (user_id, display_name, slug, city, county, category, age, height, bio, status, verified, elite, online, response_time)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',false,false,true,'New account')
@@ -617,7 +624,7 @@ export async function sendMessage(req, res) {
   const inserted = await queryWithRetry(
     `insert into utamu_messages (sender_user_id, recipient_user_id, model_id, model_slug, model_name, sender_name, sender_email, subject, body)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *`,
-    [user.id, model?.user_id || null, model?.id || null, req.body?.modelSlug || null, req.body?.modelName || model?.display_name || 'Seed model', user.full_name, user.email, req.body?.subject || 'Profile enquiry', body]
+    [user.id, model?.user_id || null, model?.id || null, req.body?.modelSlug || null, req.body?.modelName || model?.display_name || 'Seed escort', user.full_name, user.email, req.body?.subject || 'Profile enquiry', body]
   );
   res.status(201).json({ data: inserted.rows[0] });
 }
@@ -743,7 +750,7 @@ export async function submitReview(req, res) {
   const body = String(req.body?.body || '').trim();
   if (!body) return res.status(400).json({ message: 'Review text is required.' });
   const model = await resolvePaymentModel({ modelId: req.body?.modelId, modelSlug: req.body?.modelSlug }, null);
-  const modelName = req.body?.modelName || model?.display_name || 'Secret Nairobi model';
+  const modelName = req.body?.modelName || model?.display_name || 'Secret Nairobi escort';
   const modelImage = req.body?.modelImage || models.find((item) => item.name === modelName)?.image || models[0].image;
   const authorName = req.body?.author || user?.full_name || 'Normal user';
   const inserted = await queryWithRetry("insert into utamu_reviews (model_id, user_id, rating, body, anonymous, status, model_name, model_image, author_name) values ($1,$2,$3,$4,$5,'approved',$6,$7,$8) returning *", [model?.id || null, user?.id || null, rating, body, Boolean(req.body?.anonymous), modelName, modelImage, authorName]);

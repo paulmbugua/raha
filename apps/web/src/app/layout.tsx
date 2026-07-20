@@ -11,13 +11,13 @@ import {
 export const metadata: Metadata = {
   metadataBase: new URL(getSiteUrl()),
   ...buildPageMetadata({
-    title: 'Utamu | Verified Kenyan Model and Talent Directory',
+    title: 'Secret Nairobi | Verified Nairobi Escort Directory',
     description:
-      'Premium dark-elegance directory for verified Kenyan models, talent bookings, M-Pesa deposits, reviews, and admin compliance.',
+      'Premium Nairobi escort directory for verified profiles, VIP visibility, M-Pesa payments, reviews, messaging, and admin compliance.',
     path: '/',
-    keywords: ['Utamu', 'Kenyan models', 'verified talent', 'M-Pesa booking', 'model directory'],
+    keywords: ['Secret Nairobi', 'Nairobi escorts', 'verified escorts Kenya', 'M-Pesa booking', 'escort directory'],
   }),
-  applicationName: 'Utamu',
+  applicationName: 'Secret Nairobi',
   icons: {
     icon: '/favicon.svg',
     shortcut: '/favicon.svg',

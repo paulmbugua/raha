@@ -38,10 +38,10 @@ const routeLinks = [
   '/register/member',
   '/register/confirm-email',
   '/messages',
-  '/model/amina-w',
-  '/model/profile',
-  '/model/dashboard',
-  '/model/dashboard-pending-verification',
+  '/escort/amina-w',
+  '/escort/profile',
+  '/escort/dashboard',
+  '/escort/dashboard-pending-verification',
   '/verification/step-1',
   '/verification/submitted',
   '/verification/rejected',
@@ -61,14 +61,14 @@ function viewFor(slug?: string[]): View {
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
   if (path.startsWith('register/')) return 'registration';
   if (path === 'messages') return 'messages';
-  if (['model/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
+  if (['model/profile', 'escort/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
   if (path.startsWith('notifications')) return 'notification';
   if (path.startsWith('verification')) return 'verification';
   if (path.includes('dashboard')) return 'dashboard';
-  if (path.startsWith('model')) return 'profile';
+  if (path.startsWith('model') || path.startsWith('escort')) return 'profile';
   return 'home';
 }
 
@@ -95,22 +95,22 @@ function Shell({ children }: { children: React.ReactNode }) {
     if (next?.token) utamuApi.getNotifications(next.token).then((data: any) => setUnread(Number(data.unreadMessages || 0)));
   }, []);
   return (
-    <main className="min-h-screen overflow-x-hidden bg-[#101010] font-serif text-[#2b1037] selection:bg-[#ec2aa0] selection:text-white">
-      <div className="mx-auto w-full max-w-[1180px] bg-[#fff0f6] shadow-2xl shadow-black/40">
-        <header className="bg-[#2b0a3d] text-white">
+    <main className="min-h-screen overflow-x-hidden bg-[#070707] font-serif text-[#21102b] selection:bg-[#e60073] selection:text-white">
+      <div className="mx-auto w-full max-w-[1180px] bg-[#fff7fb] shadow-2xl shadow-black/50 ring-1 ring-[#f0b323]/20">
+        <header className="border-t-4 border-[#f0b323] bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] text-white shadow-lg shadow-black/30">
           <div className="flex min-h-[72px] flex-col items-stretch gap-3 px-3 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
-            <a href="/" className="text-center font-serif text-3xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#8b6a9b] sm:text-4xl lg:text-left lg:text-5xl">Secret Nairobi</a>
+            <a href="/" className="text-center font-serif text-3xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#7f6a90,0_0_22px_rgba(240,179,35,.22)] sm:text-4xl lg:text-left lg:text-5xl">Secret Nairobi</a>
             <nav className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:flex-1 lg:justify-start">
-              <a href="/" className="rounded-full bg-[#ec4eb8] px-3 py-2 text-white shadow-sm sm:px-4">All Nairobi Models</a>
-              <a href="/admin/verification-review" className="hover:text-[#ffb7df]">Agencies</a>
-              <a href="/reviews/ratings" className="hover:text-[#ffb7df]">Reviews</a>
-              <a href="/register" className="uppercase hover:text-[#ffb7df]">Advertise here</a>
+              <a href="/" className="rounded-full bg-gradient-to-r from-[#e60073] to-[#ff57b8] px-3 py-2 text-white shadow-sm shadow-[#e60073]/30 ring-1 ring-white/15 sm:px-4">All Nairobi Escorts</a>
+              <a href="/admin/verification-review" className="hover:text-[#f0b323]">Agencies</a>
+              <a href="/reviews/ratings" className="hover:text-[#f0b323]">Reviews</a>
+              <a href="/register" className="uppercase hover:text-[#f0b323]">Advertise here</a>
             </nav>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:justify-end">
-              {!session && <a href="/register" className="rounded-full bg-[#ec4eb8] px-3 py-2">Register</a>}
-              {!session ? <a href="/login" className="rounded-full bg-[#ec4eb8] px-3 py-2">Login</a> : <a href="/model/dashboard" className="rounded-full bg-[#ec4eb8] px-3 py-2">My Account</a>}
+              {!session && <a href="/register" className="rounded-full bg-gradient-to-r from-[#e60073] to-[#ff57b8] px-3 py-2 shadow-sm shadow-[#e60073]/30">Register</a>}
+              {!session ? <a href="/login" className="rounded-full bg-gradient-to-r from-[#e60073] to-[#ff57b8] px-3 py-2 shadow-sm shadow-[#e60073]/30">Login</a> : <a href="/escort/dashboard" className="rounded-full bg-gradient-to-r from-[#006b3f] to-[#10a66a] px-3 py-2 shadow-sm shadow-[#006b3f]/30">My Account</a>}
               <form action="/discover" className="flex items-center overflow-hidden rounded-full bg-white/10">
-                <input name="query" aria-label="Search models" placeholder="Search" className="h-8 w-24 bg-transparent px-3 text-xs text-white outline-none placeholder:text-white/70 sm:w-36" />
+                <input name="query" aria-label="Search escorts" placeholder="Search" className="h-8 w-24 bg-transparent px-3 text-xs text-white outline-none placeholder:text-white/70 sm:w-36" />
                 <button className="grid h-8 w-8 place-items-center" type="submit"><Search className="h-4 w-4" /></button>
               </form>
               <a href="/messages" className="relative grid h-8 w-8 place-items-center rounded-full hover:bg-white/10"><Mail className="h-5 w-5" />{unread > 0 && <span className="absolute -right-1 -top-1 grid h-4 min-w-4 place-items-center rounded-full bg-[#e60073] px-1 text-[10px]">{unread}</span>}</a>
@@ -128,11 +128,11 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
   const isVip = Boolean(model.elite);
   const isNew = index >= 8;
   return (
-    <a href={`/model/${model.slug}`} className="group relative block overflow-hidden rounded-[3px] border border-[#ff6d73] bg-white shadow-sm">
+    <a href={`/escort/${model.slug}`} className="group relative block overflow-hidden rounded-[3px] border border-[#f0b323]/70 bg-white shadow-md shadow-[#2b0a3d]/10 ring-1 ring-[#e60073]/10">
       <div className="relative aspect-[3/4] overflow-hidden">
-        <img src={model.image} alt={`${model.name} Nairobi model portfolio`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
+        <img src={model.image} alt={`${model.name} Nairobi escort profile`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
         {isVip && <div className="absolute right-[-34px] top-3 rotate-45 bg-gradient-to-r from-[#ff8a00] to-[#ffbd00] px-9 py-1 text-[10px] font-bold uppercase text-white shadow">VIP</div>}
-        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between bg-gradient-to-r from-[#bc3c96]/80 via-[#e86ab7]/75 to-[#bc3c96]/80 px-2 py-1 text-white">
+        <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between bg-gradient-to-r from-[#2b0a3d]/85 via-[#e60073]/75 to-[#006b3f]/80 px-2 py-1 text-white">
           <span className="truncate text-center text-base font-normal">{model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '')}</span>
           <span className="flex shrink-0 gap-1">
             {isNew && <span className="rounded-sm bg-[#ff3bbd] px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none">New</span>}
@@ -153,18 +153,18 @@ function DiscoveryHome() {
   const sortedHomeModels = (filteredModels.length ? filteredModels : models).slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
   const directoryModels = Array.from({ length: 48 }, (_, index) => {
     const base = sortedHomeModels[index % sortedHomeModels.length] || models[index % models.length];
-    const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Model Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
+    const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
     return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: base.verified || index < 9, elite: Boolean(base.elite) };
   });
 
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
-        <section className="bg-[#fff0f6] px-4 py-5 md:px-5">
+        <section className="bg-[#fff7fb] px-4 py-5 md:px-5">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-xl font-normal text-[#3b164b]">All models</h1>
+            <h1 className="text-xl font-normal text-[#3b164b]">All escorts</h1>
             <div className="flex flex-wrap gap-2 text-sm">
-              {['Female', 'Independent', 'VIP', 'New'].map((item) => <a key={item} href="/discover" className="rounded-full border border-[#d3e8f4] bg-[#eef9ff] px-4 py-2 text-[#ec2aa0]">{item}</a>)}
+              {['Female', 'Independent', 'VIP', 'New'].map((item) => <a key={item} href="/discover" className="rounded-full border border-[#f0b323]/40 bg-white px-4 py-2 text-[#e60073] shadow-sm hover:border-[#006b3f]/50 hover:text-[#006b3f]">{item}</a>)}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
@@ -175,7 +175,7 @@ function DiscoveryHome() {
           </div>
         </section>
         <aside className="bg-[#101010] text-white">
-          <div className="bg-[#e60073] px-4 py-5">
+          <div className="bg-gradient-to-b from-[#e60073] via-[#d90065] to-[#2b0a3d] px-4 py-5 shadow-inner">
             <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
             <div className="space-y-3 text-sm">
               <select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select>
@@ -189,16 +189,16 @@ function DiscoveryHome() {
           <div className="hidden min-h-[760px] bg-[#101010] lg:block" />
         </aside>
       </div>
-      <section className="border-t border-[#ffd7e6] bg-[#fff0f6] px-4 py-6 text-[#111] md:px-5">
-        <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">Secret Nairobi Models - Home Of The Most Alluring Talent</h2>
-        <p className="mb-3 text-[15px] leading-7">Entertainment, events, fashion, and lifestyle productions across Nairobi need dependable talent with polished presentation and professional communication. Secret Nairobi Models gives clients a simple way to browse verified profiles, compare styles, review availability, and connect with models suited for campaigns, hospitality, launches, brand shoots, and private creative bookings.</p>
-        <p className="mb-3 text-[15px] leading-7">Our directory focuses on elegant presentation, quick discovery, and transparent profile signals. You can explore independent models, VIP profiles, new listings, and verified members from one place. Nairobi offers a deep pool of creative talent ready to bring your concept to life.</p>
-        <h3 className="mb-2 text-2xl font-bold">We Serve The Best Model Directory Experience In Kenya</h3>
-        <p className="text-[15px] leading-7">At Secret Nairobi, our listed models are presented with clear photos, verification labels, review flows, and profile details so clients can make informed decisions. Whether you prefer studio talent, event hosts, commercial faces, runway profiles, or lifestyle creators, our goal is to make discovery fast, attractive, and easy to navigate.</p>
+      <section className="border-t-4 border-[#006b3f] bg-[#fff7fb] px-4 py-7 text-[#111] md:px-5">
+        <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">Secret Nairobi Escorts - Nairobi's Premium Companion Directory</h2>
+        <p className="mb-3 text-[15px] leading-7">Across Nairobi, adults need a discreet and organized way to discover verified escorts with polished presentation, clear communication, and reliable profile details. Secret Nairobi Escorts gives members a simple way to browse listings, compare styles, review availability, and connect with companions suited for private bookings, hospitality, travel-ready arrangements, and premium social experiences.</p>
+        <p className="mb-3 text-[15px] leading-7">Our directory focuses on elegant presentation, quick discovery, and visible trust signals. You can explore independent escorts, VIP profiles, new listings, and verified members from one place, with Nairobi neighborhoods and Kenyan payment flows designed into the experience.</p>
+        <h3 className="mb-2 text-2xl font-bold">We Serve The Best Escort Directory Experience In Kenya</h3>
+        <p className="text-[15px] leading-7">At Secret Nairobi, listed escorts are presented with clear photos, verification labels, review flows, and profile details so adults can make informed choices. Whether you prefer VIP visibility, independent listings, agency-managed profiles, or discreet Nairobi bookings, the goal is to make discovery fast, attractive, and easy to navigate.</p>
       </section>
-      <footer className="bg-[#2b0a3d] px-5 py-5 text-center text-sm text-white">
+      <footer className="bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] px-5 py-5 text-center text-sm text-white">
         <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
-        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Models</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
+        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Escorts</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
       </footer>
     </>
   );
@@ -208,7 +208,7 @@ function DiscoveryHome() {
 function RegisterScreen() {
   const plans = [
     {
-      title: 'Register as Independent Model',
+      title: 'Register as Independent Escort',
       price: 'Free',
       cta: 'Register here',
       ctaHref: '/register/independent-model',
@@ -230,21 +230,21 @@ function RegisterScreen() {
       price: 'Free',
       cta: 'Register here',
       ctaHref: '/register/member',
-      features: ['Mark favorite profiles', 'See profile photos', 'Contact verified models', 'Add reviews to models you rate', 'Save Nairobi searches', 'Receive profile updates'],
+      features: ['Mark favorite profiles', 'See profile photos', 'Contact verified escorts', 'Add reviews to escorts you rate', 'Save Nairobi searches', 'Receive profile updates'],
     },
   ];
   const infoBlocks = [
     {
-      title: 'Why Choose Our Models In Nairobi?',
-      body: 'Secret Nairobi makes model discovery direct, attractive, and organized. Clients can compare verified profiles, browse portfolio images, review availability signals, and choose talent suited for campaigns, launches, hospitality, shoots, and lifestyle events across Nairobi.',
+      title: 'Why Choose Our Escorts In Nairobi?',
+      body: 'Secret Nairobi makes escort discovery direct, attractive, and organized. Members can compare verified profiles, browse images, review availability signals, and choose companions suited for discreet Nairobi bookings, hospitality, travel, and premium social time.',
     },
     {
       title: 'The Gratifying Professional Services',
-      body: 'Every profile flow is built around presentation quality and trust. Independent models can manage their own listing, agencies can coordinate multiple profiles, and clients get a familiar directory experience with clear account paths and visible verification cues.',
+      body: 'Every profile flow is built around presentation quality and trust. Independent escorts can manage their own listing, agencies can coordinate multiple profiles, and members get a familiar directory experience with clear account paths and visible verification cues.',
     },
     {
-      title: 'Affordable Models Make Life Enjoyable',
-      body: 'The platform keeps discovery simple for everyone. Free user accounts support favorites and reviews, while model and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.',
+      title: 'Affordable Escorts Make Life Enjoyable',
+      body: 'The platform keeps discovery simple for adults. Free user accounts support favorites and reviews, while escort and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.',
     },
   ];
 
@@ -286,12 +286,12 @@ function RegisterScreen() {
         </div>
       </section>
       <section className="bg-[#fff0f6] px-4 pb-8 text-center text-[13px] leading-6 text-[#b3a7af] md:px-5">
-        <p>This platform is intended for adults creating or browsing professional model profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
+        <p>This platform is intended for adults creating or browsing professional escort profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
         <div className="mt-5 font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
       </section>
       <footer className="bg-[#fff0f6] px-4 pb-5 text-center text-xs text-[#e60073] md:px-5">
         <div className="mb-4 flex flex-wrap justify-center gap-2"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
-        <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">(c) 2026 SecretNairobi.com - Models in Nairobi</div>
+        <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">(c) 2026 SecretNairobi.com - Escorts in Nairobi</div>
       </footer>
     </>
   );
@@ -301,7 +301,7 @@ function RegisterScreen() {
 function RegistrationQuickSearch() {
   return (
     <aside className="bg-[#101010] text-white">
-      <div className="bg-[#e60073] px-4 py-5">
+      <div className="bg-gradient-to-b from-[#e60073] via-[#d90065] to-[#2b0a3d] px-4 py-5 shadow-inner">
         <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
         <div className="space-y-3 text-sm">
           <select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select>
@@ -320,17 +320,17 @@ function RegistrationQuickSearch() {
 function RegistrationFooter() {
   return (
     <>
-      <section className="bg-[#fff0f6] px-5 py-16 text-[#111] md:py-20">
+      <section className="border-t-4 border-[#f0b323]/70 bg-[#fff7fb] px-5 py-16 text-[#111] md:py-20">
         <div className="grid gap-10 md:grid-cols-3">
-          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Models In Nairobi?</h2><p className="text-[15px] leading-8">Secret Nairobi makes registration clear for models, agencies, and members. Every account path is organized around profile quality, communication, verification, and safe discovery.</p></article>
-          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2><p className="text-[15px] leading-8">Independent models can prepare a complete public profile, agencies can coordinate multiple listings, and members can create lightweight accounts for favorites, reviews, and saved browsing.</p></article>
-          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Models Make Life Enjoyable</h2><p className="text-[15px] leading-8">The platform keeps Nairobi discovery simple while giving premium accounts stronger visibility through VIP placement, profile completeness, and trusted account signals.</p></article>
+          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Escorts In Nairobi?</h2><p className="text-[15px] leading-8">Secret Nairobi makes registration clear for escorts, agencies, and members. Every account path is organized around profile quality, communication, verification, and discreet discovery.</p></article>
+          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2><p className="text-[15px] leading-8">Independent escorts can prepare a complete public profile, agencies can coordinate multiple listings, and members can create lightweight accounts for favorites, reviews, and saved browsing.</p></article>
+          <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Escorts Make Life Enjoyable</h2><p className="text-[15px] leading-8">The platform keeps Nairobi discovery simple while giving premium accounts stronger visibility through VIP placement, profile completeness, and trusted account signals.</p></article>
         </div>
-        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional model profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
+        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional escort profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
         <div className="mt-6 text-center font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
         <div className="mt-10 flex flex-wrap justify-center gap-2 text-center text-xs text-[#e60073]"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
       </section>
-      <footer className="bg-[#101010] px-5 py-2 text-center text-xs font-bold text-white">(c) 2026 SecretNairobi.com - Models in Nairobi</footer>
+      <footer className="bg-[#070707] px-5 py-3 text-center text-xs font-bold text-white ring-1 ring-[#f0b323]/20">(c) 2026 SecretNairobi.com - Escorts in Nairobi</footer>
     </>
   );
 }
@@ -379,11 +379,11 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const isIndependent = kind === 'independent-model';
   const isAgency = kind === 'agency';
   const isMember = kind === 'member';
-  const title = isIndependent ? 'Independent Model Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
+  const title = isIndependent ? 'Independent Escort Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
   const formMinHeight = isIndependent ? 'lg:min-h-[2080px]' : isAgency ? 'lg:min-h-[980px]' : 'lg:min-h-[720px]';
   const services = modelServices;
-  const agencyServices = ['Independent model management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Model onboarding', 'Brand partnerships'];
-  const memberPreferences = ['Save favorite profiles', 'Compare model profiles', 'Request booking details', 'Follow verified models', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
+  const agencyServices = ['Independent escort management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Escort onboarding', 'Brand partnerships'];
+  const memberPreferences = ['Save favorite profiles', 'Compare escort profiles', 'Request booking details', 'Follow verified escorts', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const [registrationResult, setRegistrationResult] = useState<any>(null);
@@ -428,7 +428,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
         <section className={'min-w-0 bg-[#fff0f6] px-4 py-5 text-[#003b5c] sm:px-5 ' + formMinHeight}>
           <h1 className="text-2xl font-normal text-[#3b164b]">{title}</h1>
-          {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Models should register here</div>}
+          {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Escorts should register here</div>}
           <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
           <form className="mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
             <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
@@ -437,7 +437,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {isMember && <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="Email" required><input name="email" type="email" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="City"><select className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select></FormRow>}
-            {isMember && <FormRow label="Browsing interest"><select className={selectClass + ' w-full'}><option>Verified Nairobi models</option><option>VIP models</option><option>Agency represented models</option><option>Portfolio and campaign talent</option></select></FormRow>}
+            {isMember && <FormRow label="Browsing interest"><select className={selectClass + ' w-full'}><option>Verified Nairobi escorts</option><option>VIP escorts</option><option>Agency represented escorts</option><option>Discreet Nairobi companions</option></select></FormRow>}
             {isMember && <FormRow label="Member preferences"><div className="grid gap-2 md:grid-cols-2">{memberPreferences.map((item) => <label key={item} className={checkboxCardClass}><input name="preferences" value={item} type="checkbox" /> {item}</label>)}</div></FormRow>}
             {isIndependent && <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} /></FormRow>}
             {isAgency && <FormRow label="Agency Name" required><input name="agencyName" className={fieldClass} /></FormRow>}
@@ -542,7 +542,7 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
       if (!result?.token) { setMessage('The validation link could not be confirmed.'); return; }
       saveSession(result);
       window.localStorage.removeItem(PENDING_REGISTRATION_KEY);
-      window.location.href = '/model/profile';
+      window.location.href = '/escort/profile';
     } catch (error) {
       const fallback = 'Validation link is invalid or already used. If you already confirmed this account, please login.';
       setMessage(error instanceof Error ? error.message || fallback : fallback);
@@ -581,7 +581,7 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
 }
 
 function ProfileScreen({ path }: { path: string }) {
-  const slug = path.replace(/^model\/?/, '') || 'amina-w';
+  const slug = path.replace(/^(model|escort)\/?/, '') || 'amina-w';
   const model = models.find((item) => item.slug === slug) || models[0];
   const displayName = model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '') || 'Sara';
   const phone = '+254710474716';
@@ -618,7 +618,7 @@ function ProfileScreen({ path }: { path: string }) {
     const session = readSession();
     if (!session?.token) { setLoginPrompt(true); return; }
     await utamuApi.sendMessage({ modelSlug: model.slug, modelName: displayName, message: messageBody, subject: 'Profile enquiry' }, session.token);
-    setMessageStatus('Message sent. The model will see it in their account notifications.');
+    setMessageStatus('Message sent. The escort will see it in their account notifications.');
     setMessageBody('');
   }
 
@@ -638,13 +638,13 @@ function ProfileScreen({ path }: { path: string }) {
           </div>
           <section className="mt-6 bg-white p-5">
             <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">About me:</h2>
-            <p className="mt-4 text-[14px] leading-7"><strong>{model.age} years old {model.category} - Independent Nairobi Model.</strong></p>
-            <p className="mt-2 text-[14px] leading-7">Hello, my name is {displayName}. I am based around {model.city}, {model.county}, and available for polished model bookings, portfolio shoots, campaigns, brand appearances, hospitality hosting, and creative productions. I keep communication clear, arrive prepared, and work with clients who value professionalism and privacy.</p>
+            <p className="mt-4 text-[14px] leading-7"><strong>{model.age} years old {model.category} - Independent Nairobi Escort.</strong></p>
+            <p className="mt-2 text-[14px] leading-7">Hello, my name is {displayName}. I am based around {model.city}, {model.county}, and available for discreet Nairobi bookings, premium companionship, hospitality hosting, travel-ready arrangements, and private social time. I keep communication clear, arrive prepared, and work with clients who value professionalism and privacy.</p>
             <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="mt-4 inline-flex font-bold text-[#ff1d9b]">WhatsApp Me</a>
           </section>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <section className="bg-white p-5">
-              <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Model rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
+              <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Escort rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
                 {facts.map(([label, value]) => <div key={label}><dt className="mb-1 font-bold uppercase text-[#ff4eb8]">{label}</dt><dd>{value}</dd></div>)}
               </dl>
@@ -674,12 +674,12 @@ function ProfileScreen({ path }: { path: string }) {
             <p className="mt-4 text-sm">No reviews yet</p>
           </section>
           <section className="mt-6">
-            <h2 className="mb-4 text-xl font-normal text-[#3b164b]">Top Rated Models</h2>
+            <h2 className="mb-4 text-xl font-normal text-[#3b164b]">Top Rated Escorts</h2>
             <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div>
           </section>
         </section>
         <aside className="bg-[#101010] text-white">
-          <div className="bg-[#e60073] px-4 py-5">
+          <div className="bg-gradient-to-b from-[#e60073] via-[#d90065] to-[#2b0a3d] px-4 py-5 shadow-inner">
             <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
             <div className="space-y-3 text-sm"><select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select><select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select><label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label><label className="flex items-center gap-2"><input type="checkbox" />Only independent</label><div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div><a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a></div>
           </div>
@@ -690,23 +690,23 @@ function ProfileScreen({ path }: { path: string }) {
       <section className="bg-[#fff0f6] px-5 py-10 text-[#111]">
         <div className="grid gap-10 md:grid-cols-3">
           <article>
-            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Models In Nairobi?</h2>
-            <p className="text-[15px] leading-8">Secret Nairobi makes model discovery direct, attractive, and organized. Clients can compare verified profiles, browse portfolio images, review availability signals, and choose talent suited for campaigns, launches, hospitality, shoots, and lifestyle events across Nairobi.</p>
+            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Escorts In Nairobi?</h2>
+            <p className="text-[15px] leading-8">Secret Nairobi makes escort discovery direct, attractive, and organized. Members can compare verified profiles, browse images, review availability signals, and choose companions suited for discreet Nairobi bookings, hospitality, travel, and premium social time.</p>
           </article>
           <article>
             <h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2>
-            <p className="text-[15px] leading-8">Every profile flow is built around presentation quality and trust. Independent models can manage their own listing, agencies can coordinate multiple profiles, and clients get a familiar directory experience with clear account paths and visible verification cues.</p>
+            <p className="text-[15px] leading-8">Every profile flow is built around presentation quality and trust. Independent escorts can manage their own listing, agencies can coordinate multiple profiles, and members get a familiar directory experience with clear account paths and visible verification cues.</p>
           </article>
           <article>
-            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Models Make Life Enjoyable</h2>
-            <p className="text-[15px] leading-8">The platform keeps discovery simple for everyone. Free user accounts support favorites and reviews, while model and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.</p>
+            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Escorts Make Life Enjoyable</h2>
+            <p className="text-[15px] leading-8">The platform keeps discovery simple for adults. Free user accounts support favorites and reviews, while escort and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.</p>
           </article>
         </div>
-        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional model profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
+        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional escort profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
         <div className="mt-6 text-center font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
         <div className="mt-10 flex flex-wrap justify-center gap-2 text-center text-xs text-[#e60073]"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
       </section>
-      <footer className="bg-[#101010] px-5 py-2 text-center text-xs font-bold text-white">(c) 2026 SecretNairobi.com - Models in Nairobi</footer>
+      <footer className="bg-[#070707] px-5 py-3 text-center text-xs font-bold text-white ring-1 ring-[#f0b323]/20">(c) 2026 SecretNairobi.com - Escorts in Nairobi</footer>
     </>
   );
 }
@@ -781,11 +781,11 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
 }
 
 function AccountSidebar({ active }: { active: string }) {
-  const links = [['View my Profile', '/model/profile'], ['Edit my Profile', '/edit-profile'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
+  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
   return <aside className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold text-[#ff1d9b]">My Account</h2><div className="mt-4 grid gap-2">{links.map(([label, href]) => <a key={href} href={href} className={'rounded-[3px] px-3 py-2 text-sm font-bold ' + (active === href.slice(1) ? 'bg-[#e60073] text-white' : 'bg-[#fff0f6] text-[#3b164b] hover:bg-[#ffd6ec]')}>{label}</a>)}</div></aside>;
 }
 
-function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
+function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   const [session, setSession] = useState<UtamuSession | null>(null);
   const [account, setAccount] = useState<any>(null);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
@@ -891,7 +891,7 @@ function DashboardScreen({ path = 'model/dashboard' }: { path?: string }) {
   const images = account?.images || [];
   const profile = account?.user?.profile || {};
   const model = account?.model || {};
-  const isViewProfile = path === 'model/profile' || path === 'model/dashboard';
+  const isViewProfile = ['model/profile', 'model/dashboard', 'escort/profile', 'escort/dashboard'].includes(path);
   const isEditProfile = path === 'edit-profile';
   const showFirstUpload = isViewProfile && images.length === 0;
   const profileRows = [
@@ -927,7 +927,7 @@ function VerificationScreen({ path }: { path: string }) {
   const rejected = path.includes('rejected');
   const resubmitted = path.includes('resubmission');
   const submitted = path.includes('submitted') || resubmitted;
-  return <section className="mx-auto max-w-3xl px-5 py-10"><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#ffd700]/10 text-[#ffd700]">{rejected ? <X className="h-8 w-8" /> : submitted ? <Check className="h-8 w-8" /> : <Upload className="h-8 w-8" />}</div><h1 className="mt-5 text-center font-display text-3xl font-bold text-[#fff6df]">{rejected ? 'Verification rejected' : submitted ? 'Application submitted' : 'Verification step 1'}</h1><p className="mx-auto mt-3 max-w-xl text-center text-[#d0c6ab]">{rejected ? 'Your documents need a clearer upload before your Utamu profile can go live.' : submitted ? 'Your identity verification is in the admin queue. You will receive a notification after review.' : 'Upload ID, selfie proof, service categories, rate card, and M-Pesa payout number for review.'}</p><div className="mt-6 grid gap-3">{['Legal name', 'National ID or passport', 'Live selfie', 'Portfolio images', 'M-Pesa payout phone'].map((field) => <input key={field} placeholder={field} className="rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" />)}</div><a href="/verification/submitted" className="mt-5 flex items-center justify-center rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]">Submit for review</a>{rejected && <a href="/verification/re-apply" className="mt-3 flex items-center justify-center rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Re-apply</a>}</div></section>;
+  return <section className="mx-auto max-w-3xl px-5 py-10"><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-[#ffd700]/10 text-[#ffd700]">{rejected ? <X className="h-8 w-8" /> : submitted ? <Check className="h-8 w-8" /> : <Upload className="h-8 w-8" />}</div><h1 className="mt-5 text-center font-display text-3xl font-bold text-[#fff6df]">{rejected ? 'Verification rejected' : submitted ? 'Application submitted' : 'Verification step 1'}</h1><p className="mx-auto mt-3 max-w-xl text-center text-[#d0c6ab]">{rejected ? 'Your documents need a clearer upload before your Secret Nairobi profile can go live.' : submitted ? 'Your identity verification is in the admin queue. You will receive a notification after review.' : 'Upload ID, selfie proof, service categories, rate card, and M-Pesa payout number for review.'}</p><div className="mt-6 grid gap-3">{['Legal name', 'National ID or passport', 'Live selfie', 'Portfolio images', 'M-Pesa payout phone'].map((field) => <input key={field} placeholder={field} className="rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df] placeholder:text-[#999077]" />)}</div><a href="/verification/submitted" className="mt-5 flex items-center justify-center rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]">Submit for review</a>{rejected && <a href="/verification/re-apply" className="mt-3 flex items-center justify-center rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Re-apply</a>}</div></section>;
 }
 
 function CheckoutScreen() {
@@ -955,7 +955,7 @@ function CheckoutScreen() {
       setPaying(false);
     }
   }
-  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="VIP model visibility" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 1,000 places the selected model in VIP ranking for 1 month after payment confirmation.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 1,000</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
+  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="VIP escort visibility" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 1,000 places the selected escort in VIP ranking for 1 month after payment confirmation.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 1,000</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
 }
 
 
@@ -979,14 +979,14 @@ function ReviewScreen() {
       createdAt: review.createdAt || review.created_at || new Date().toISOString(),
     };
   });
-  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex items-center justify-between gap-3"><h1 className="text-xl font-normal text-[#3b164b]">Model Reviews</h1><a href="/reviews/ratings#submit-review" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Agency Reviews</a></div><div className="space-y-8">{reviewItems.map((review) => <article key={review.id} className="grid gap-4 sm:grid-cols-[145px_1fr]"><img src={review.modelImage} alt={review.modelName + ' profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /><div className="pt-1"><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span><a href={'/model/' + review.modelName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')} className="font-bold text-[#e60073]">{review.modelName}</a><span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>)}</div><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelName: form.get('modelName'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelName" className={selectClass}>{directory.models.map((model) => <option key={model.id}>{model.name}</option>)}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit review</button></form></section><RegistrationQuickSearch /></div>;
+  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex items-center justify-between gap-3"><h1 className="text-xl font-normal text-[#3b164b]">Escort Reviews</h1><a href="/reviews/ratings#submit-review" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Agency Reviews</a></div><div className="space-y-8">{reviewItems.map((review) => <article key={review.id} className="grid gap-4 sm:grid-cols-[145px_1fr]"><img src={review.modelImage} alt={review.modelName + ' escort profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /><div className="pt-1"><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span><a href={'/escort/' + review.modelName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')} className="font-bold text-[#e60073]">{review.modelName}</a><span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>)}</div><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelName: form.get('modelName'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelName" className={selectClass}>{directory.models.map((model) => <option key={model.id}>{model.name}</option>)}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit review</button></form></section><RegistrationQuickSearch /></div>;
 }
 
 
 function AdminScreen({ path }: { path: string }) {
   const { verificationCases, analytics } = useUtamuDirectory();
   if (path.includes('analytics')) {
-    return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Admin analytics</h1><div className="mt-6 grid gap-4 md:grid-cols-4">{[['Revenue', kes(analytics.revenue)], ['Bookings', analytics.bookings], ['Approval rate', `${analytics.approvalRate}%`], ['Active models', analytics.activeModels]].map(([label, value]) => <div key={String(label)} className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-5"><p className="text-xs uppercase tracking-widest text-[#999077]">{String(label)}</p><strong className="mt-3 block font-display text-2xl text-[#fff6df]">{String(value)}</strong></div>)}</div><div className="mt-6 grid h-64 grid-cols-8 items-end gap-2 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:h-72 sm:gap-3 sm:p-6">{analytics.chart.map((height, index) => <div key={index} className="rounded-t-lg bg-[#ffd700]" style={{ height: `${height}%` }} />)}</div></section>;
+    return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Admin analytics</h1><div className="mt-6 grid gap-4 md:grid-cols-4">{[['Revenue', kes(analytics.revenue)], ['Bookings', analytics.bookings], ['Approval rate', `${analytics.approvalRate}%`], ['Active escorts', analytics.activeModels]].map(([label, value]) => <div key={String(label)} className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-5"><p className="text-xs uppercase tracking-widest text-[#999077]">{String(label)}</p><strong className="mt-3 block font-display text-2xl text-[#fff6df]">{String(value)}</strong></div>)}</div><div className="mt-6 grid h-64 grid-cols-8 items-end gap-2 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:h-72 sm:gap-3 sm:p-6">{analytics.chart.map((height, index) => <div key={index} className="rounded-t-lg bg-[#ffd700]" style={{ height: `${height}%` }} />)}</div></section>;
   }
   return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Verification review</h1><div className="mt-6 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]"><aside className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4">{verificationCases.map((item) => <div key={item.id} className="mb-3 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><p className="font-semibold text-[#fff6df]">{item.modelName}</p><p className="text-xs text-[#999077]">{item.id} - {item.submittedAt}</p><StatusBadge tone={item.status === 'rejected' ? 'red' : item.status === 'pending' ? 'gold' : 'green'}>{item.status}</StatusBadge></div>)}</aside><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Amina W. compliance packet</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{['ID document', 'Selfie match', 'M-Pesa owner'].map((item) => <div key={item} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><FileCheck2 className="mb-8 h-6 w-6 text-[#ffd700]" /><p className="font-semibold">{item}</p><p className="text-xs text-[#999077]">Ready for review</p></div>)}</div><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg bg-[#61f595] px-5 py-3 font-bold text-[#00210c]">Approve</button><button className="rounded-lg bg-[#93000a] px-5 py-3 font-bold text-[#ffdad6]">Reject</button><button className="rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Request changes</button></div></div></div></section>;
 }
@@ -1004,7 +1004,7 @@ function MessagesScreen() {
 }
 
 function NotificationScreen() {
-  return <section className="grid min-h-[calc(100vh-80px)] place-items-center bg-[#0e0e0e] px-5 py-10"><div className="w-full max-w-sm rounded-[2rem] border border-[#353534] bg-black p-4 shadow-2xl"><div className="rounded-[1.5rem] bg-[#131313] p-5"><p className="text-center text-xs text-[#999077]">Monday, 29 June</p><div className="mt-8 rounded-2xl border border-[#4d4732] bg-[#201f1f]/90 p-4 backdrop-blur"><div className="flex items-center gap-3"><Bell className="h-6 w-6 text-[#ffd700]" /><div><p className="font-semibold text-[#fff6df]">Utamu Verification</p><p className="text-xs text-[#999077]">Now</p></div></div><p className="mt-3 text-sm text-[#d0c6ab]">Your application needs clearer documents. Tap to review and re-submit.</p></div><a href="/verification/rejected" className="mt-8 flex items-center justify-center gap-2 rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]"><Lock className="h-4 w-4" />Open Utamu</a></div></div></section>;
+  return <section className="grid min-h-[calc(100vh-80px)] place-items-center bg-[#0e0e0e] px-5 py-10"><div className="w-full max-w-sm rounded-[2rem] border border-[#353534] bg-black p-4 shadow-2xl"><div className="rounded-[1.5rem] bg-[#131313] p-5"><p className="text-center text-xs text-[#999077]">Monday, 29 June</p><div className="mt-8 rounded-2xl border border-[#4d4732] bg-[#201f1f]/90 p-4 backdrop-blur"><div className="flex items-center gap-3"><Bell className="h-6 w-6 text-[#ffd700]" /><div><p className="font-semibold text-[#fff6df]">Secret Nairobi Verification</p><p className="text-xs text-[#999077]">Now</p></div></div><p className="mt-3 text-sm text-[#d0c6ab]">Your application needs clearer documents. Tap to review and re-submit.</p></div><a href="/verification/rejected" className="mt-8 flex items-center justify-center gap-2 rounded-lg bg-[#ffd700] px-5 py-3 font-bold text-[#221b00]"><Lock className="h-4 w-4" />Open Secret Nairobi</a></div></div></section>;
 }
 
 function Panel({ title, icon: Icon, items }: { title: string; icon: typeof Gauge; items: string[] }) {
@@ -1012,7 +1012,7 @@ function Panel({ title, icon: Icon, items }: { title: string; icon: typeof Gauge
 }
 
 function RouteIndex() {
-  return <section className="mx-auto max-w-7xl px-4 py-10 pb-28 sm:px-5"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Connected Utamu routes</h2><div className="mt-4 flex flex-wrap gap-2">{routeLinks.map((route) => <a key={route} href={route} className="rounded-full border border-[#4d4732] bg-[#1e1e1e] px-4 py-2 text-sm text-[#d0c6ab] hover:border-[#ffd700]">{route}</a>)}</div></section>;
+  return <section className="mx-auto max-w-7xl px-4 py-10 pb-28 sm:px-5"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Connected Secret Nairobi routes</h2><div className="mt-4 flex flex-wrap gap-2">{routeLinks.map((route) => <a key={route} href={route} className="rounded-full border border-[#4d4732] bg-[#1e1e1e] px-4 py-2 text-sm text-[#d0c6ab] hover:border-[#ffd700]">{route}</a>)}</div></section>;
 }
 
 export default function UtamuApp({ slug }: UtamuAppProps) {
