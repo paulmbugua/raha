@@ -5,12 +5,14 @@ import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { queryWithRetry } from '../config/db.js';
 import { analytics, bookings, models, reviews, verificationCases } from '../data/utamuSeed.js';
-import { putImageObject } from '../services/r2.js';
+import { getImageObject, putImageObject } from '../services/r2.js';
 import { getAccessToken, getMpesaConfigHealth, MPESA_BASE, mpesaPassword, mpesaTimestamp, resolveStkCallbackUrl, shortcode } from '../utils/mpesa.js';
 
 const directory = { models, bookings, reviews, verificationCases, analytics };
 const JWT_SECRET = process.env.JWT_SECRET || process.env.UTAMU_JWT_SECRET || 'utamu-local-dev-secret';
 const APP_URL = (process.env.WEB_APP_URL || process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
+const BACKEND_PUBLIC_URL = (process.env.WEB_BACKEND_URL || process.env.BACKEND_PUBLIC_URL || process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4008}`).replace(/\/$/, '');
+const LOCAL_R2_IMAGE_PROXY = process.env.UTAMU_PROXY_R2_IMAGES === 'true' || (process.env.UTAMU_PROXY_R2_IMAGES !== 'false' && process.env.NODE_ENV !== 'production');
 const MAIL_FROM_ADDRESS = process.env.MAIL_FROM_ADDRESS || process.env.SMTP_FROM || 'noreply@secretnairobi.co.ke';
 const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Secret Nairobi';
 const MAIL_FROM = process.env.MAIL_FROM || `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRESS}>`;
@@ -677,10 +679,32 @@ function imagePublicBase() {
   return `https://${raw.replace(/^\/+/, '')}`;
 }
 
+function profileImageKeyFromUrl(value) {
+  const url = String(value || '').trim();
+  if (!url) return '';
+  const publicBase = imagePublicBase();
+  const baseHost = publicBase ? new URL(publicBase).hostname : '';
+  const normalized = /^\/\//.test(url) ? `https:${url}` : /^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url) ? `https://${url}` : url;
+  try {
+    const parsed = new URL(normalized);
+    if (baseHost && parsed.hostname === baseHost) return decodeURIComponent(parsed.pathname.replace(/^\/+/, ''));
+    return '';
+  } catch {
+    if (/^profiles\//i.test(url)) return url.replace(/^\/+/, '');
+    return '';
+  }
+}
+
+function profileImageProxyUrl(key) {
+  return `${BACKEND_PUBLIC_URL}/api/utamu/images/proxy/${encodeURIComponent(key).replace(/%2F/g, '/')}`;
+}
+
 function normalizeProfileImageUrl(value) {
   const url = String(value || '').trim();
   const publicBase = imagePublicBase();
   if (!url) return '';
+  const key = profileImageKeyFromUrl(url);
+  if (LOCAL_R2_IMAGE_PROXY && key) return profileImageProxyUrl(key);
   if (/^\/\//.test(url)) return `https:${url}`;
   if (/^https?:\/\//i.test(url)) return url;
   if (/^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url)) return `https://${url.replace(/^\/+/, '')}`;
@@ -785,6 +809,24 @@ export async function uploadProfileImages(req, res) {
   }
 
   res.status(201).json({ data: inserted });
+}
+
+export async function proxyProfileImage(req, res) {
+  const key = decodeURIComponent(String(req.params?.[0] || '')).replace(/^\/+/, '');
+  if (!key || key.includes('..')) return res.status(400).json({ message: 'Invalid image key.' });
+  try {
+    const object = await getImageObject(key);
+    res.setHeader('Content-Type', object.ContentType || 'application/octet-stream');
+    if (object.ContentLength) res.setHeader('Content-Length', String(object.ContentLength));
+    res.setHeader('Cache-Control', 'public, max-age=3600');
+    if (object.Body?.pipe) return object.Body.pipe(res);
+    const chunks = [];
+    for await (const chunk of object.Body) chunks.push(Buffer.from(chunk));
+    return res.end(Buffer.concat(chunks));
+  } catch (error) {
+    console.error('[utamu:image-proxy] fetch_failed', { key, name: error?.name || null, code: error?.Code || error?.code || null, message: error?.message || 'Unknown R2 image proxy error' });
+    return res.status(error?.$metadata?.httpStatusCode === 404 || error?.name === 'NoSuchKey' ? 404 : 502).json({ message: 'Image could not be loaded.' });
+  }
 }
 
 export async function deleteProfileImage(req, res) {

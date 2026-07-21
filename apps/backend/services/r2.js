@@ -118,6 +118,13 @@ export async function putImageObject({ key, body, contentType }) {
   };
 }
 
+export async function getImageObject(key) {
+  if (!endpoint || !imageBucket) {
+    throw new Error('R2 image storage is not configured. Set R2_ENDPOINT and R2_BUCKET_IMAGES.');
+  }
+  return r2Client.send(new GetObjectCommand({ Bucket: imageBucket, Key: key }));
+}
+
 export async function putDocObject({ key, body, contentType }) {
   const bytes = Buffer.isBuffer(body) ? body.byteLength : Buffer.byteLength(body);
   assertAllowedDoc({ bytes, contentType });

@@ -28,6 +28,7 @@ import {
   submitReview,
   submitVerification,
   mpesaPaymentCallback,
+  proxyProfileImage,
   verifyPaystackPayment,
   uploadProfileImages,
   updateAccountProfile,
@@ -37,6 +38,7 @@ const router = express.Router();
 
 router.get('/directory', getDirectory);
 router.get('/models', searchModels);
+router.get(/^\/images\/proxy\/(.+)$/, proxyProfileImage);
 router.get('/models/:slug', getModel);
 router.post('/register', registerAccount);
 router.post('/login', loginAccount);
