@@ -194,7 +194,7 @@ function publicPayment(row, extra = {}) {
   return { id: row?.id, reference: row?.reference || extra.reference, providerReference: row?.provider_reference || extra.providerReference || null, status: row?.status || extra.status || 'pending', amount: Number(row?.amount_kes || extra.amount || VIP_VISIBILITY_PRICE_KES), method: row?.method || extra.method, authorizationUrl: row?.authorization_url || extra.authorizationUrl || null, instructions: extra.instructions };
 }
 function mapReviewRow(row) {
-  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi escort', modelImage: row.model_image || row.image_url || models[0].image, author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
+  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi escort', modelImage: normalizeProfileImageUrl(row.model_image || row.image_url) || models[0].image, author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
 }
 async function tryQuery(sql, params = []) {
   try {
@@ -417,7 +417,7 @@ export async function getDirectory(_req, res) {
   const payload = rows?.[0]?.payload || directory;
   const dbRows = await tryQuery("select m.*, max(u.profile->>'gender') as gender, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images from utamu_models m left join utamu_profile_images i on i.model_id = m.id left join utamu_users u on u.id = m.user_id where m.status <> 'deleted' group by m.id order by m.elite desc, m.rating desc, m.created_at desc limit 100");
   const dbModels = (dbRows || []).map((row) => ({
-    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad, image: row.images?.[0] || models[0].image, gallery: row.images || [], bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
+    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad, image: normalizeProfileImageUrl(row.images?.[0]) || models[0].image, gallery: (row.images || []).map(normalizeProfileImageUrl), bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
   }));
   const reviewRows = await getReviewRows();
   res.json({ data: { ...payload, models: [...dbModels, ...(payload.models?.length ? payload.models : models)].sort((a, b) => scoreModel(b) - scoreModel(a)), reviews: reviewRows.length ? reviewRows : payload.reviews || reviews } });
@@ -457,8 +457,8 @@ export async function searchModels(req, res) {
     verified: row.verified,
     elite: row.elite,
     responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad,
-    image: row.images?.[0] || models[0].image,
-    gallery: row.images || [],
+    image: normalizeProfileImageUrl(row.images?.[0]) || models[0].image,
+    gallery: (row.images || []).map(normalizeProfileImageUrl),
     bio: row.bio || '',
     specialties: [row.category],
     stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 },
@@ -488,7 +488,7 @@ export async function getModel(req, res) {
   const dbRows = await tryQuery("select m.*, u.profile->>'gender' as gender from utamu_models m left join utamu_users u on u.id = m.user_id where m.slug = $1 limit 1", [req.params.slug]);
   if (dbRows?.[0]) {
     const imageRows = await tryQuery('select url from utamu_profile_images where model_id = $1 order by sort_order, created_at', [dbRows[0].id]);
-    return res.json({ data: { ...dbRows[0], name: dbRows[0].display_name, slug: dbRows[0].slug, image: imageRows?.[0]?.url || models[0].image, gallery: imageRows?.map((i) => i.url) || [], rankingScore: 0 } });
+    return res.json({ data: { ...dbRows[0], name: dbRows[0].display_name, slug: dbRows[0].slug, image: normalizeProfileImageUrl(imageRows?.[0]?.url) || models[0].image, gallery: imageRows?.map((i) => normalizeProfileImageUrl(i.url)) || [], rankingScore: 0 } });
   }
   const model = models.find((item) => item.slug === req.params.slug) || models[0];
   res.json({ data: { ...model, rankingScore: scoreModel(model) } });
@@ -667,14 +667,33 @@ export async function getMe(req, res) {
   const modelRows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
   const imageRows = await tryQuery('select * from utamu_profile_images where user_id = $1 order by sort_order, created_at', [user.id]);
   const unread = await tryQuery('select count(*)::int as count from utamu_messages where recipient_user_id = $1 and read_at is null', [user.id]);
-  res.json({ data: { user: publicUser(user), model: modelRows?.[0] || null, images: imageRows || [], unreadMessages: unread?.[0]?.count || 0 } });
+  res.json({ data: { user: publicUser(user), model: modelRows?.[0] || null, images: normalizeProfileImageRows(imageRows), unreadMessages: unread?.[0]?.count || 0 } });
+}
+
+function imagePublicBase() {
+  const raw = String(process.env.R2_PUBLIC_BASE_URL_IMAGES || 'https://images.secretnairobi.co.ke').trim().replace(/\/+$/, '');
+  if (!raw) return '';
+  if (/^https?:\/\//i.test(raw)) return raw;
+  return `https://${raw.replace(/^\/+/, '')}`;
 }
 
 function normalizeProfileImageUrl(value) {
   const url = String(value || '').trim();
-  const publicBase = (process.env.R2_PUBLIC_BASE_URL_IMAGES || '').replace(/\/$/, '');
-  if (!url || /^https?:\/\//i.test(url) || !publicBase) return url;
+  const publicBase = imagePublicBase();
+  if (!url) return '';
+  if (/^\/\//.test(url)) return `https:${url}`;
+  if (/^https?:\/\//i.test(url)) return url;
+  if (/^[a-z0-9.-]+\.[a-z]{2,}(\/|$)/i.test(url)) return `https://${url.replace(/^\/+/, '')}`;
+  if (!publicBase) return url;
   return `${publicBase}/${encodeURIComponent(url).replace(/%2F/g, '/')}`;
+}
+
+function normalizeProfileImageRow(row) {
+  return row ? { ...row, url: normalizeProfileImageUrl(row.url) } : row;
+}
+
+function normalizeProfileImageRows(rows) {
+  return (rows || []).map(normalizeProfileImageRow);
 }
 
 function safeUploadName(name = 'profile-image') {
@@ -744,7 +763,7 @@ export async function addProfileImage(req, res) {
   if (!url) return res.status(400).json({ message: 'Image URL is required.' });
   const modelRows = await tryQuery('select id from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
   const inserted = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, modelRows?.[0]?.id || null, url, req.body?.alt || user.full_name, Number(req.body?.sortOrder || 0)]);
-  res.status(201).json({ data: inserted.rows[0] });
+  res.status(201).json({ data: normalizeProfileImageRow(inserted.rows[0]) });
 }
 
 export async function uploadProfileImages(req, res) {
@@ -762,7 +781,7 @@ export async function uploadProfileImages(req, res) {
     const key = ['profiles', user.id, unique + '-' + safeUploadName(file.originalname) + '.' + ext].join('/');
     const uploaded = await putImageObject({ key, body: file.buffer, contentType: file.mimetype });
     const row = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, modelId, uploaded.url, file.originalname || user.full_name, Number(req.body?.sortOrder || 0) + index]);
-    inserted.push(row.rows[0]);
+    inserted.push(normalizeProfileImageRow(row.rows[0]));
   }
 
   res.status(201).json({ data: inserted });
@@ -1036,7 +1055,7 @@ export async function getClientPortal(req, res) {
   const portal = await tryQuery("select * from utamu_client_portal_subscriptions where user_id = $1 and status = 'active' and (expires_at is null or expires_at > now()) order by created_at desc limit 1", [user.id]);
   if (!portal?.[0]) return res.status(402).json({ message: 'Upgrade to the vetted client portal to access this section.', products: MONETIZATION_PRODUCTS.filter((item) => item.category === 'client_portal') });
   const rows = await tryQuery("select m.*, coalesce(pi.url, '') as image_url from utamu_models m left join lateral (select url from utamu_profile_images where model_id = m.id order by sort_order, created_at limit 1) pi on true where (m.verified = true or m.trusted_badge = true or m.elite = true) and m.status <> 'deleted' order by m.trusted_badge desc, m.elite desc, m.rating desc limit 50");
-  res.json({ data: { subscription: portal[0], profiles: rows || [] } });
+  res.json({ data: { subscription: portal[0], profiles: (rows || []).map((row) => ({ ...row, image_url: normalizeProfileImageUrl(row.image_url) })) } });
 }
 
 export async function getAdmin(_req, res) {

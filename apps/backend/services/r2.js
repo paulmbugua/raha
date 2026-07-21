@@ -9,11 +9,18 @@ import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 const endpoint = process.env.R2_ENDPOINT;
 const region = process.env.R2_REGION || 'auto';
 const bucket = process.env.R2_BUCKET_DOCS || process.env.R2_BUCKET_IMAGES;
-const publicBase = (process.env.R2_PUBLIC_BASE_URL_DOCS || process.env.R2_PUBLIC_BASE_URL_IMAGES || '').replace(/\/$/, '');
+function normalizePublicBase(value) {
+  const trimmed = String(value || '').trim().replace(/\/+$/, '');
+  if (!trimmed) return '';
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed.replace(/^\/+/, '')}`;
+}
+
+const publicBase = normalizePublicBase(process.env.R2_PUBLIC_BASE_URL_DOCS || process.env.R2_PUBLIC_BASE_URL_IMAGES || '');
 const imageBucket = process.env.R2_BUCKET_IMAGES || bucket;
-const imagePublicBase = (process.env.R2_PUBLIC_BASE_URL_IMAGES || publicBase || '').replace(/\/$/, '');
+const imagePublicBase = normalizePublicBase(process.env.R2_PUBLIC_BASE_URL_IMAGES || publicBase || '');
 const previewBucket = process.env.R2_BUCKET_PREVIEWS || imageBucket;
-const previewPublicBase = (process.env.R2_PUBLIC_BASE_URL_PREVIEWS || imagePublicBase || '').replace(/\/$/, '');
+const previewPublicBase = normalizePublicBase(process.env.R2_PUBLIC_BASE_URL_PREVIEWS || imagePublicBase || '');
 const maxDocBytes = Number(process.env.R2_MAX_DOC_BYTES || 50 * 1024 * 1024);
 const maxImageBytes = Number(process.env.R2_MAX_IMAGE_BYTES || 8 * 1024 * 1024);
 const signedExpiry = Number(process.env.R2_DOWNLOAD_EXPIRES_SEC || 900);
