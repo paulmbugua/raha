@@ -3,7 +3,7 @@
 import { Bell, Check, ChevronRight, FileCheck2, Gauge, Lock, Mail, MessageCircle, Search, ShieldCheck, Star, Upload, Wallet, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { UtamuModel } from '../../data/utamu';
-import { cities, models } from '../../data/utamu';
+import { cities } from '../../data/utamu';
 import { utamuApi } from '../../lib/utamuApi';
 import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 
@@ -41,7 +41,6 @@ const routeLinks = [
   '/messages',
   '/monetization',
   '/client-portal',
-  '/escort/amina-w',
   '/escort/profile',
   '/escort/dashboard',
   '/escort/dashboard-pending-verification',
@@ -196,9 +195,9 @@ function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:
 }
 
 function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) {
-  const verified = model.verified || index < 8;
-  const isVip = Boolean(model.elite);
-  const isNew = index >= 8;
+  const verified = Boolean(model.verified || model.trustedBadge);
+  const isVip = Boolean(model.elite || model.listingTier === 'vip');
+  const isNew = Boolean((model as UtamuModel & { isNew?: boolean }).isNew);
   return (
     <a href={`/escort/${model.slug}`} className="group relative block overflow-hidden rounded-[3px] border border-[#f0b323]/70 bg-white shadow-md shadow-[#2b0a3d]/10 ring-1 ring-[#e60073]/10">
       <div className="relative aspect-[3/4] overflow-hidden">
@@ -223,14 +222,8 @@ function DiscoveryHome() {
     actions.applySearchParams(params);
   }, []);
   const hasActiveFilters = Boolean(filters.query || filters.city !== 'All' || filters.category !== 'All' || filters.gender !== 'All' || filters.listingType !== 'All' || filters.service !== 'All' || filters.minPrice || filters.maxPrice || filters.verifiedOnly || filters.eliteOnly);
-  const sortedHomeModels = (hasActiveFilters ? filteredModels : (filteredModels.length ? filteredModels : models)).slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
-  const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
-  const directoryModels = sortedHomeModels.length === 0 ? [] : hasActiveFilters
-    ? sortedHomeModels.map((base, index) => ({ ...base, id: `filtered-${base.id}-${index}`, verified: base.verified || index < 9, elite: Boolean(base.elite) }))
-    : Array.from({ length: 48 }, (_, index) => {
-      const base = sortedHomeModels[index % sortedHomeModels.length] || models[index % models.length];
-      return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: base.verified || index < 9, elite: Boolean(base.elite) };
-    });
+  const sortedHomeModels = filteredModels.slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
+  const directoryModels = sortedHomeModels;
 
   return (
     <>
@@ -250,10 +243,8 @@ function DiscoveryHome() {
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {directoryModels.map((model, index) => <ModelCard key={model.id} model={model} index={index} />)}
           </div>
-          {directoryModels.length === 0 && <div className="mt-6 rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#3b164b]">No escorts match those filters. Try a wider gender, city, or listing type.</div>}
-          {!hasActiveFilters && <div className="mt-8 flex justify-center gap-1 text-sm font-bold text-white">
-            {['1', '2', '...', '9', '10'].map((page) => <a key={page} href="/discover" className="grid h-7 min-w-7 place-items-center rounded-full bg-[#ec2aa0] px-2">{page}</a>)}
-          </div>}
+          {directoryModels.length === 0 && <div className="mt-6 rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#3b164b]">No real escort profiles are available for those filters yet.</div>}
+
         </section>
         <QuickSearchPanel />
       </div>
@@ -697,30 +688,11 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
 }
 
 function ProfileScreen({ path }: { path: string }) {
-  const slug = path.replace(/^(model|escort)\/?/, '') || 'amina-w';
-  const model = models.find((item) => item.slug === slug) || models[0];
-  const displayName = model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '') || 'Sara';
-  const phone = '+254710474716';
-  const gallery = Array.from({ length: 10 }, (_, index) => model.gallery[index % model.gallery.length] || model.image);
-  const topRated = Array.from({ length: 8 }, (_, index) => {
-    const base = models[index % models.length];
-    const names = ['Jenny Nairobi', 'Miss Anna', 'Evelyn', 'Selena no.1 Nairobi', 'Mia', 'Hellen', 'Emma', 'Ivy'];
-    return { ...base, id: `top-${index}`, name: names[index] || base.name, verified: true, elite: true };
-  });
-  const facts = [
-    ['Availability', 'Incall, Outcall'],
-    ['Ethnicity', 'Kenyan'],
-    ['Hair color', 'Blonde'],
-    ['Hair length', 'Long'],
-    ['Bust size', 'Regular'],
-    ['Height', model.height],
-    ['Weight', '48kg'],
-    ['Build', 'Regular'],
-    ['Looks', 'Ultra polished'],
-    ['Smoker', 'No'],
-    ['Professional style', 'Calm, reliable and polished'],
-  ];
-  const services = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings'];
+  const slug = path.replace(/^(model|escort)\/?/, '');
+  const directory = useUtamuDirectory();
+  const [remoteModel, setRemoteModel] = useState<UtamuModel | null>(null);
+  const [loadingProfile, setLoadingProfile] = useState(true);
+  const [profileError, setProfileError] = useState('');
   const [loginPrompt, setLoginPrompt] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [messageBody, setMessageBody] = useState('');
@@ -730,7 +702,53 @@ function ProfileScreen({ path }: { path: string }) {
   const [bookingStatus, setBookingStatus] = useState('');
   const [bookingMessage, setBookingMessage] = useState('');
   const [bookingDate, setBookingDate] = useState('');
-  const [bookingLocation, setBookingLocation] = useState(model.city);
+  const [bookingLocation, setBookingLocation] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    setLoadingProfile(true);
+    setProfileError('');
+    utamuApi.getModel(slug).then((next: any) => {
+      if (!mounted) return;
+      setRemoteModel(next?.id ? next : null);
+      if (!next?.id) setProfileError('Profile not found.');
+    }).catch((error) => {
+      if (!mounted) return;
+      setProfileError(error instanceof Error ? error.message : 'Profile could not be loaded.');
+      setRemoteModel(null);
+    }).finally(() => {
+      if (mounted) setLoadingProfile(false);
+    });
+    return () => { mounted = false; };
+  }, [slug]);
+
+  const model = remoteModel || directory.models.find((item) => item.slug === slug) || null;
+  const modelProfile = (model as any)?.profile || {};
+  const displayName = model?.name || modelProfile.name || 'Profile';
+  const phone = String((model as any)?.phone || modelProfile.phone || '').trim();
+  const gallery = model ? ((model.gallery?.length ? model.gallery : model.image ? [model.image] : []).filter(Boolean)) : [];
+  const topRated = directory.filteredModels.filter((item) => item.slug !== slug).slice(0, 8);
+  const services = Array.isArray(modelProfile.services) && modelProfile.services.length ? modelProfile.services : model?.specialties || [];
+  const languageRows = Array.isArray(modelProfile.languages) ? modelProfile.languages.filter((item: any) => item?.language) : [];
+  const priceFrom = Number(model?.priceFrom || 0);
+  const facts = [
+    ['Availability', Array.isArray(modelProfile.availability) ? modelProfile.availability.join(', ') : 'Not specified'],
+    ['Ethnicity', modelProfile.ethnicity || 'Not specified'],
+    ['Hair color', modelProfile.hairColor || 'Not specified'],
+    ['Hair length', modelProfile.hairLength || 'Not specified'],
+    ['Bust size', modelProfile.bustSize || 'Not specified'],
+    ['Height', model?.height || modelProfile.height || 'Not specified'],
+    ['Weight', modelProfile.weight || 'Not specified'],
+    ['Build', modelProfile.build || 'Not specified'],
+    ['Looks', modelProfile.looks || 'Not specified'],
+    ['Smoker', modelProfile.smoker || 'Not specified'],
+    ['Professional style', modelProfile.orientation || modelProfile.professionalOrientation || 'Not specified'],
+  ];
+
+  useEffect(() => {
+    if (model?.city && !bookingLocation) setBookingLocation(model.city);
+  }, [model?.city, bookingLocation]);
+
   async function startMessage() {
     const session = readSession();
     if (!session?.token) { setLoginPrompt(true); return; }
@@ -738,7 +756,7 @@ function ProfileScreen({ path }: { path: string }) {
   }
   async function sendProfileMessage() {
     const session = readSession();
-    if (!session?.token) { setLoginPrompt(true); return; }
+    if (!session?.token || !model) { setLoginPrompt(true); return; }
     try {
       await utamuApi.sendMessage({ modelSlug: model.slug, modelName: displayName, message: messageBody, subject: 'Profile enquiry' }, session.token);
       setMessageStatus('Message sent. The escort will see it in their account notifications.');
@@ -749,7 +767,7 @@ function ProfileScreen({ path }: { path: string }) {
   }
   async function sendProfileTip() {
     const session = readSession();
-    if (!session?.token) { setLoginPrompt(true); return; }
+    if (!session?.token || !model) { setLoginPrompt(true); return; }
     try {
       await utamuApi.sendTip({ modelSlug: model.slug, amountTokens: Number(tipTokens || 0), message: 'Profile appreciation tip' }, session.token);
       setMessageStatus('Tip sent successfully.');
@@ -759,7 +777,7 @@ function ProfileScreen({ path }: { path: string }) {
   }
   async function submitBookingLead() {
     const session = readSession();
-    if (!session?.token) { setLoginPrompt(true); return; }
+    if (!session?.token || !model) { setLoginPrompt(true); return; }
     try {
       await utamuApi.createBookingLead({ modelSlug: model.slug, modelName: displayName, requestedDate: bookingDate || null, location: bookingLocation, message: bookingMessage }, session.token);
       setBookingStatus('Booking request sent to the dashboard.');
@@ -769,6 +787,13 @@ function ProfileScreen({ path }: { path: string }) {
     }
   }
 
+  if (loadingProfile && !model) {
+    return <div className="grid gap-0 lg:grid-cols-[1fr_220px]"><section className="min-h-[520px] bg-[#fff0f6] px-5 py-10 text-[#3b164b]"><div className="rounded-[4px] bg-white p-6 shadow-sm">Loading real profile...</div></section><QuickSearchPanel spacerClass="hidden min-h-[520px] bg-[#101010] lg:block" /></div>;
+  }
+  if (!model) {
+    return <div className="grid gap-0 lg:grid-cols-[1fr_220px]"><section className="min-h-[520px] bg-[#fff0f6] px-5 py-10 text-[#3b164b]"><div className="rounded-[4px] bg-white p-6 shadow-sm"><h1 className="text-2xl font-bold text-[#e60073]">Profile not available</h1><p className="mt-2 text-sm text-[#7b6e78]">{profileError || 'This escort profile is not available.'}</p><a href="/register" className="mt-4 inline-flex rounded-full bg-[#e60073] px-5 py-2 text-sm font-bold text-white">Create a real profile</a></div></section><QuickSearchPanel spacerClass="hidden min-h-[520px] bg-[#101010] lg:block" /></div>;
+  }
+
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
@@ -776,82 +801,42 @@ function ProfileScreen({ path }: { path: string }) {
           <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="text-3xl font-normal text-[#ff4eb8]">{displayName}</h1>
-              <div className="mt-2 flex gap-2 text-[11px] font-bold uppercase text-white"><span className="rounded-full bg-[#ff8a00] px-2 py-1">VIP</span><span className="rounded-full bg-[#18c26a] px-2 py-1">Verified</span></div>
+              <div className="mt-2 flex gap-2 text-[11px] font-bold uppercase text-white">{(model.elite || model.listingTier === 'vip') && <span className="rounded-full bg-[#ff8a00] px-2 py-1">VIP</span>}{(model.verified || model.trustedBadge) && <span className="rounded-full bg-[#18c26a] px-2 py-1">Verified</span>}</div>
             </div>
-            <div className="text-right text-[#ff4eb8]"><div className="text-xs text-[#8d7a88]">call me</div><a href={`tel:${phone}`} className="text-2xl font-bold">{phone}</a></div>
+            {phone && <div className="text-right text-[#ff4eb8]"><div className="text-xs text-[#8d7a88]">call me</div><a href={`tel:${phone}`} className="text-2xl font-bold">{phone}</a></div>}
           </div>
-          <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">
-            {gallery.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${displayName} portfolio ${index + 1}`} className="aspect-[4/5] w-full object-cover" />)}
-          </div>
+          {gallery.length > 0 ? <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">{gallery.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${displayName} portfolio ${index + 1}`} className="aspect-[4/5] w-full object-cover" />)}</div> : <div className="rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#7b6e78]">This real profile has not added public images yet.</div>}
           <section className="mt-6 bg-white p-5">
             <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">About me:</h2>
-            <p className="mt-4 text-[14px] leading-7"><strong>{model.age} years old {model.category} - Independent Nairobi Escort.</strong></p>
-            <p className="mt-2 text-[14px] leading-7">Hello, my name is {displayName}. I am based around {model.city}, {model.county}, and available for discreet Nairobi bookings, premium companionship, hospitality hosting, travel-ready arrangements, and private social time. I keep communication clear, arrive prepared, and work with clients who value professionalism and privacy.</p>
-            <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="mt-4 inline-flex font-bold text-[#ff1d9b]">WhatsApp Me</a>
+            <p className="mt-4 text-[14px] leading-7"><strong>{model.age} years old {model.category}.</strong></p>
+            <p className="mt-2 text-[14px] leading-7">{model.bio || modelProfile.about || `${displayName} is based around ${model.city}, ${model.county}.`}</p>
+            {phone && <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="mt-4 inline-flex font-bold text-[#ff1d9b]">WhatsApp Me</a>}
           </section>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <section className="bg-white p-5">
               <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Escort rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
-              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">
-                {facts.map(([label, value]) => <div key={label}><dt className="mb-1 font-bold uppercase text-[#ff4eb8]">{label}</dt><dd>{value}</dd></div>)}
-              </dl>
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">{facts.map(([label, value]) => <div key={label}><dt className="mb-1 font-bold uppercase text-[#ff4eb8]">{label}</dt><dd>{value}</dd></div>)}</dl>
             </section>
-            <section className="bg-white p-5">
-              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Services:</h2>
-              <ul className="mt-4 space-y-2 text-[14px]">{services.map((service) => <li key={service} className="flex gap-2"><Check className="h-4 w-4 text-[#25b86b]" /><span>{service}</span></li>)}</ul>
-            </section>
-            <section className="bg-white p-5">
-              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Languages spoken:</h2>
-              <p className="mt-4 text-[13px]"><strong className="uppercase text-[#ff4eb8]">English:</strong><br />Fluent</p>
-              <p className="mt-3 text-[13px]"><strong className="uppercase text-[#ff4eb8]">Swahili:</strong><br />Fluent</p>
-            </section>
-            <section className="bg-white p-5">
-              <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Rates:</h2>
-              <div className="mt-5 grid grid-cols-[1fr_1fr_1fr] text-center text-[13px]"><strong></strong><strong className="bg-[#ff4eb8] py-1 text-white">Studio</strong><strong className="bg-[#ff4eb8] py-1 text-white">Event</strong><strong className="py-3 text-left">1 hour</strong><span className="py-3">{kes(model.priceFrom)}</span><span className="py-3">{kes(model.priceFrom + 2500)}</span></div>
-            </section>
+            <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Services:</h2>{services.length ? <ul className="mt-4 space-y-2 text-[14px]">{services.map((service: string) => <li key={service} className="flex gap-2"><Check className="h-4 w-4 text-[#25b86b]" /><span>{service}</span></li>)}</ul> : <p className="mt-4 text-sm text-[#7b6e78]">Services have not been listed yet.</p>}</section>
+            <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Languages spoken:</h2>{languageRows.length ? <div className="mt-4 space-y-3 text-[13px]">{languageRows.map((item: any, index: number) => <p key={`${item.language}-${index}`}><strong className="uppercase text-[#ff4eb8]">{item.language}:</strong><br />{item.level || 'Conversational'}</p>)}</div> : <p className="mt-4 text-sm text-[#7b6e78]">Languages have not been listed yet.</p>}</section>
+            <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Rates:</h2>{priceFrom ? <div className="mt-5 grid grid-cols-[1fr_1fr_1fr] text-center text-[13px]"><strong></strong><strong className="bg-[#ff4eb8] py-1 text-white">Studio</strong><strong className="bg-[#ff4eb8] py-1 text-white">Event</strong><strong className="py-3 text-left">1 hour</strong><span className="py-3">{kes(priceFrom)}</span><span className="py-3">{kes(priceFrom + 2500)}</span></div> : <p className="mt-4 text-sm text-[#7b6e78]">Rates have not been listed yet.</p>}</section>
             <section className="bg-white p-5">
               <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Contact info:</h2>
-              <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-[13px]"><dt className="font-bold">Phone:</dt><dd className="text-[#ff4eb8]">{phone}</dd><dt className="font-bold">WhatsApp:</dt><dd><a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="text-[#ff4eb8]">WhatsApp</a></dd></dl>
+              {phone ? <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-[13px]"><dt className="font-bold">Phone:</dt><dd className="text-[#ff4eb8]">{phone}</dd><dt className="font-bold">WhatsApp:</dt><dd><a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="text-[#ff4eb8]">WhatsApp</a></dd></dl> : <p className="mt-4 text-sm text-[#7b6e78]">Contact details are available after login or direct enquiry.</p>}
               <p className="mt-4 text-[13px] leading-6">Tell us you found this profile on <strong>Secret Nairobi</strong> to improve response handling and platform safety.</p>
               <div className="mt-4 flex flex-wrap gap-2"><button onClick={startMessage} className="inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white"><Mail className="mr-1 h-4 w-4" />Email Me</button><button onClick={() => setBookingOpen((value) => !value)} className="inline-flex rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">Request booking</button><button onClick={sendProfileTip} className="inline-flex rounded-full bg-[#f0b323] px-4 py-2 text-xs font-bold text-[#211000]">Tip {tipTokens} tokens</button><input value={tipTokens} onChange={(event) => setTipTokens(event.target.value)} className="w-20 rounded-full border border-[#ffd0e8] px-3 text-xs" /></div>{loginPrompt && <div className="mt-4 flex items-center justify-between rounded-[3px] bg-[#d70032] px-4 py-3 text-sm font-bold text-white"><span>You need to register or login to send messages, tips, or booking requests</span><button onClick={() => setLoginPrompt(false)} className="rounded-full bg-white px-2 py-1 text-xs text-[#d70032]">Close x</button></div>}{composerOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><p className="mb-2 text-xs text-[#7b6e78]">Private messages cost wallet tokens. Buy bundles from My Account - Monetization.</p><textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="Write your message" className="min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={sendProfileMessage} className="mt-2 rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Send message</button>{messageStatus && <p className="mt-2 text-xs text-[#168a4a]">{messageStatus}</p>}</div>}{bookingOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><div className="grid gap-2 sm:grid-cols-2"><input type="datetime-local" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} className={fieldClass} /><input value={bookingLocation} onChange={(event) => setBookingLocation(event.target.value)} placeholder="Preferred location" className={fieldClass} /></div><textarea value={bookingMessage} onChange={(event) => setBookingMessage(event.target.value)} placeholder="Share timing, area, screening details, and what you want confirmed" className="mt-2 min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={submitBookingLead} className="mt-2 rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">Send booking request</button>{bookingStatus && <p className="mt-2 text-xs text-[#168a4a]">{bookingStatus}</p>}</div>}
             </section>
           </div>
-          <section className="mt-3 bg-white p-5">
-            <div className="flex items-center justify-between"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Reviews:</h2><a href="/reviews/ratings" className="rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Add Review</a></div>
-            <p className="mt-4 text-sm">No reviews yet</p>
-          </section>
-          <section className="mt-6">
-            <h2 className="mb-4 text-xl font-normal text-[#3b164b]">Top Rated Escorts</h2>
-            <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div>
-          </section>
+          <section className="mt-3 bg-white p-5"><div className="flex items-center justify-between"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Reviews:</h2><a href="/reviews/ratings" className="rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Add Review</a></div><p className="mt-4 text-sm">No reviews yet</p></section>
+          {topRated.length > 0 && <section className="mt-6"><h2 className="mb-4 text-xl font-normal text-[#3b164b]">Other Real Escorts</h2><div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div></section>}
         </section>
         <QuickSearchPanel spacerClass="hidden min-h-[1800px] bg-[#101010] lg:block" />
       </div>
 
-      <section className="bg-[#fff0f6] px-5 py-10 text-[#111]">
-        <div className="grid gap-10 md:grid-cols-3">
-          <article>
-            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Escorts In Nairobi?</h2>
-            <p className="text-[15px] leading-8">Secret Nairobi makes escort discovery direct, attractive, and organized. Members can compare verified profiles, browse images, review availability signals, and choose companions suited for discreet Nairobi bookings, hospitality, travel, and premium social time.</p>
-          </article>
-          <article>
-            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2>
-            <p className="text-[15px] leading-8">Every profile flow is built around presentation quality and trust. Independent escorts can manage their own listing, agencies can coordinate multiple profiles, and members get a familiar directory experience with clear account paths and visible verification cues.</p>
-          </article>
-          <article>
-            <h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Escorts Make Life Enjoyable</h2>
-            <p className="text-[15px] leading-8">The platform keeps discovery simple for adults. Free user accounts support favorites and reviews, while escort and agency accounts can upgrade visibility through VIP placement when they need stronger exposure in the Nairobi directory.</p>
-          </article>
-        </div>
-        <p className="mx-auto mt-12 max-w-5xl text-center text-[14px] leading-7 text-[#b3a7af]">This platform is intended for adults creating or browsing professional escort profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
-        <div className="mt-6 text-center font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
-        <div className="mt-10 flex flex-wrap justify-center gap-2 text-center text-xs text-[#e60073]"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
-      </section>
-      <footer className="bg-[#070707] px-5 py-3 text-center text-xs font-bold text-white ring-1 ring-[#f0b323]/20">(c) 2026 SecretNairobi.com - Escorts in Nairobi</footer>
+      <RegistrationFooter />
     </>
   );
 }
-
 
 function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (event: React.FormEvent<HTMLFormElement>) => void; saving: boolean }) {
   const profile = account?.user?.profile || {};
@@ -1126,7 +1111,7 @@ function ClientPortalScreen() {
     if (next?.token) utamuApi.getClientPortal(next.token).then(setPortal).catch((error) => setNotice(error instanceof Error ? error.message : 'Upgrade required.'));
   }, []);
   if (!session?.token) return <section className="bg-[#fff7fb] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">Login to access the vetted client portal.</div></section>;
-  return <section className="grid gap-4 bg-[#fff7fb] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">Vetted client portal</h1><p className="mt-2 text-sm text-[#7b6e78]">Premium matching for verified, trusted, and VIP profiles.</p>{notice && <p className="mt-3 rounded bg-[#fff0d0] p-3 text-sm text-[#7a4d00]">{notice} <a href="/monetization" className="font-bold text-[#e60073]">Activate access</a></p>}</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">{(portal.profiles || []).map((profile: any) => <a key={profile.id} href={`/escort/${profile.slug}`} className="overflow-hidden rounded border border-[#f0b323]/70 bg-white shadow-sm"><img src={profile.image_url || models[0].image} alt={profile.display_name} className="aspect-[3/4] w-full object-cover" /><div className="p-3"><strong className="text-[#2b0a3d]">{profile.display_name}</strong><p className="text-xs text-[#7b6e78]">{profile.city} - {profile.listing_tier || 'trusted'}</p></div></a>)}</div></div><AccountSidebar active="client-portal" /></section>;
+  return <section className="grid gap-4 bg-[#fff7fb] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">Vetted client portal</h1><p className="mt-2 text-sm text-[#7b6e78]">Premium matching for verified, trusted, and VIP profiles.</p>{notice && <p className="mt-3 rounded bg-[#fff0d0] p-3 text-sm text-[#7a4d00]">{notice} <a href="/monetization" className="font-bold text-[#e60073]">Activate access</a></p>}</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">{(portal.profiles || []).map((profile: any) => <a key={profile.id} href={`/escort/${profile.slug}`} className="overflow-hidden rounded border border-[#f0b323]/70 bg-white shadow-sm">{profile.image_url ? <img src={profile.image_url} alt={profile.display_name} className="aspect-[3/4] w-full object-cover" /> : <div className="grid aspect-[3/4] place-items-center bg-[#fff0f6] p-4 text-center text-xs font-bold uppercase tracking-wide text-[#9b8090]">Real profile image pending</div>}<div className="p-3"><strong className="text-[#2b0a3d]">{profile.display_name}</strong><p className="text-xs text-[#7b6e78]">{profile.city} - {profile.listing_tier || 'trusted'}</p></div></a>)}</div></div><AccountSidebar active="client-portal" /></section>;
 }
 
 
@@ -1162,7 +1147,7 @@ function CheckoutScreen() {
       setPaying(false);
     }
   }
-  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="VIP escort visibility" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 5 places the selected escort in VIP ranking for 1 month during testing.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 5</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
+  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="grid min-h-[280px] place-items-center rounded-2xl border border-[#2a2a2a] bg-[radial-gradient(circle_at_top,#5c1746,#161016_62%)] p-6 text-center sm:min-h-[440px]"><div><StatusBadge tone="gold">Featured placement</StatusBadge><p className="mt-5 font-display text-4xl font-bold text-[#fff6df]">Real escorts first</p><p className="mx-auto mt-3 max-w-xs text-sm text-[#d0c6ab]">VIP upgrades boost approved profiles without showing sample listings.</p></div></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 5 places the selected escort in VIP ranking for 1 month during testing.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 5</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
 }
 
 
@@ -1174,19 +1159,20 @@ function ReviewScreen() {
   }, []);
   const sourceReviews = remoteReviews.length ? remoteReviews : directory.reviews;
   const reviewItems = sourceReviews.map((review: any, index: number) => {
-    const modelName = review.modelName || review.model_name || review.model || models[index % models.length].name;
-    const model = directory.models.find((item) => item.name === modelName || item.slug === review.modelSlug) || models[index % models.length];
+    const modelName = review.modelName || review.model_name || review.model || 'Secret Nairobi escort';
+    const model = directory.models.find((item) => item.name === modelName || item.slug === review.modelSlug || item.slug === review.model_slug);
     return {
       id: review.id || modelName + '-' + index,
       modelName,
-      modelImage: review.modelImage || review.model_image || model.image,
+      modelSlug: model?.slug || review.modelSlug || review.model_slug || '',
+      modelImage: review.modelImage || review.model_image || model?.image || '',
       author: review.author || review.author_name || (review.anonymous ? 'Anonymous member' : 'Normal user'),
       rating: Math.max(1, Math.min(5, Number(review.rating || 5))),
       body: review.body || 'The profile was reviewed by a registered member.',
       createdAt: review.createdAt || review.created_at || new Date().toISOString(),
     };
   });
-  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex items-center justify-between gap-3"><h1 className="text-xl font-normal text-[#3b164b]">Escort Reviews</h1><a href="/reviews/ratings#submit-review" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Agency Reviews</a></div><div className="space-y-8">{reviewItems.map((review) => <article key={review.id} className="grid gap-4 sm:grid-cols-[145px_1fr]"><img src={review.modelImage} alt={review.modelName + ' escort profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /><div className="pt-1"><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span><a href={'/escort/' + review.modelName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')} className="font-bold text-[#e60073]">{review.modelName}</a><span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>)}</div><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelName: form.get('modelName'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelName" className={selectClass}>{directory.models.map((model) => <option key={model.id}>{model.name}</option>)}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit review</button></form></section><RegistrationQuickSearch /></div>;
+  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex items-center justify-between gap-3"><h1 className="text-xl font-normal text-[#3b164b]">Escort Reviews</h1><a href="/reviews/ratings#submit-review" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Agency Reviews</a></div><div className="space-y-8">{reviewItems.length === 0 && <p className="bg-white p-5 text-sm text-[#7b6e78]">No real profile reviews have been submitted yet.</p>}{reviewItems.map((review) => <article key={review.id} className="grid gap-4 sm:grid-cols-[145px_1fr]">{review.modelImage ? <img src={review.modelImage} alt={review.modelName + ' escort profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /> : <div className="grid h-[210px] place-items-center rounded-[3px] bg-white p-4 text-center text-xs font-bold uppercase tracking-wide text-[#9b8090] sm:w-[145px]">Real image pending</div>}<div className="pt-1"><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span>{review.modelSlug ? <a href={'/escort/' + review.modelSlug} className="font-bold text-[#e60073]">{review.modelName}</a> : <strong className="text-[#e60073]">{review.modelName}</strong>}<span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>)}</div><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelSlug: form.get('modelSlug'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelSlug" className={selectClass} disabled={!directory.models.length}>{directory.models.length ? directory.models.map((model) => <option key={model.id} value={model.slug}>{model.name}</option>) : <option>No real profiles yet</option>}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button disabled={!directory.models.length} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">Submit review</button></form></section><RegistrationQuickSearch /></div>;
 }
 
 
@@ -1195,7 +1181,7 @@ function AdminScreen({ path }: { path: string }) {
   if (path.includes('analytics')) {
     return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Admin analytics</h1><div className="mt-6 grid gap-4 md:grid-cols-4">{[['Revenue', kes(analytics.revenue)], ['Bookings', analytics.bookings], ['Approval rate', `${analytics.approvalRate}%`], ['Active escorts', analytics.activeModels]].map(([label, value]) => <div key={String(label)} className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-5"><p className="text-xs uppercase tracking-widest text-[#999077]">{String(label)}</p><strong className="mt-3 block font-display text-2xl text-[#fff6df]">{String(value)}</strong></div>)}</div><div className="mt-6 grid h-64 grid-cols-8 items-end gap-2 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:h-72 sm:gap-3 sm:p-6">{analytics.chart.map((height, index) => <div key={index} className="rounded-t-lg bg-[#ffd700]" style={{ height: `${height}%` }} />)}</div></section>;
   }
-  return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Verification review</h1><div className="mt-6 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]"><aside className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4">{verificationCases.map((item) => <div key={item.id} className="mb-3 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><p className="font-semibold text-[#fff6df]">{item.modelName}</p><p className="text-xs text-[#999077]">{item.id} - {item.submittedAt}</p><StatusBadge tone={item.status === 'rejected' ? 'red' : item.status === 'pending' ? 'gold' : 'green'}>{item.status}</StatusBadge></div>)}</aside><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Amina W. compliance packet</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{['ID document', 'Selfie match', 'M-Pesa owner'].map((item) => <div key={item} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><FileCheck2 className="mb-8 h-6 w-6 text-[#ffd700]" /><p className="font-semibold">{item}</p><p className="text-xs text-[#999077]">Ready for review</p></div>)}</div><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg bg-[#61f595] px-5 py-3 font-bold text-[#00210c]">Approve</button><button className="rounded-lg bg-[#93000a] px-5 py-3 font-bold text-[#ffdad6]">Reject</button><button className="rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Request changes</button></div></div></div></section>;
+  return <section className="mx-auto max-w-7xl px-4 py-8 sm:px-5"><h1 className="font-display text-3xl font-bold text-[#fff6df] sm:text-4xl">Verification review</h1><div className="mt-6 grid gap-5 lg:grid-cols-[320px_minmax(0,1fr)]"><aside className="rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4">{verificationCases.map((item) => <div key={item.id} className="mb-3 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><p className="font-semibold text-[#fff6df]">{item.modelName}</p><p className="text-xs text-[#999077]">{item.id} - {item.submittedAt}</p><StatusBadge tone={item.status === 'rejected' ? 'red' : item.status === 'pending' ? 'gold' : 'green'}>{item.status}</StatusBadge></div>)}</aside><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><h2 className="font-display text-2xl font-bold text-[#fff6df]">{verificationCases[0]?.modelName ? `${verificationCases[0].modelName} compliance packet` : 'Real verification packet'}</h2><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{['ID document', 'Selfie match', 'M-Pesa owner'].map((item) => <div key={item} className="rounded-xl border border-[#353534] bg-[#201f1f] p-4"><FileCheck2 className="mb-8 h-6 w-6 text-[#ffd700]" /><p className="font-semibold">{item}</p><p className="text-xs text-[#999077]">Ready for review</p></div>)}</div><div className="mt-6 flex flex-wrap gap-3"><button className="rounded-lg bg-[#61f595] px-5 py-3 font-bold text-[#00210c]">Approve</button><button className="rounded-lg bg-[#93000a] px-5 py-3 font-bold text-[#ffdad6]">Reject</button><button className="rounded-lg border border-[#4d4732] px-5 py-3 font-semibold text-[#fff6df]">Request changes</button></div></div></div></section>;
 }
 
 function MessagesScreen() {

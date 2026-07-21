@@ -1,4 +1,4 @@
-import { analytics, bookings, models, reviews, verificationCases } from '../data/utamu';
+import { analytics } from '../data/utamu';
 import { logResolvedBackendUrl, resolveBackendUrl } from './backendUrl';
 
 const API_BASE = resolveBackendUrl(process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL);
@@ -85,10 +85,10 @@ async function getJsonAuth<T>(path: string, token: string | undefined, fallback:
 }
 
 export const utamuApi = {
-  getDirectory: () => getJson('/api/utamu/directory', { models, bookings, reviews, verificationCases, analytics }),
-  getModels: (query = '') => getJson(`/api/utamu/models?query=${encodeURIComponent(query)}`, models),
-  getModel: (slug: string) => getJson(`/api/utamu/models/${slug}`, models.find((model) => model.slug === slug) ?? models[0]),
-  getReviews: () => getJson('/api/utamu/reviews', reviews),
+  getDirectory: () => getJson('/api/utamu/directory', { models: [], bookings: [], reviews: [], verificationCases: [], analytics }),
+  getModels: (query = '') => getJson(`/api/utamu/models?query=${encodeURIComponent(query)}`, []),
+  getModel: (slug: string) => getJson(`/api/utamu/models/${slug}`, null),
+  getReviews: () => getJson('/api/utamu/reviews', []),
   registerAccount: (body: unknown) => postJson('/api/utamu/register', body, { registrationComplete: true, validationToken: 'local-token', confirmationUrl: '/register/confirm-email?token=local-token' }),
   confirmEmail: (token: string) => postJson('/api/utamu/confirm-email', { token }, { token: 'local-session-token', user: null }),
   resendValidation: (email: string) => postJson('/api/utamu/resend-validation', { email }, { sent: true }),

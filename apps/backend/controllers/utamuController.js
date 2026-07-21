@@ -4,11 +4,11 @@ import crypto from 'crypto';
 import jwt from 'jsonwebtoken';
 import nodemailer from 'nodemailer';
 import { queryWithRetry } from '../config/db.js';
-import { analytics, bookings, models, reviews, verificationCases } from '../data/utamuSeed.js';
+import { analytics } from '../data/utamuSeed.js';
 import { getImageObject, putImageObject } from '../services/r2.js';
 import { getAccessToken, getMpesaConfigHealth, MPESA_BASE, mpesaPassword, mpesaTimestamp, resolveStkCallbackUrl, shortcode } from '../utils/mpesa.js';
 
-const directory = { models, bookings, reviews, verificationCases, analytics };
+const directory = { models: [], bookings: [], reviews: [], verificationCases: [], analytics };
 const JWT_SECRET = process.env.JWT_SECRET || process.env.UTAMU_JWT_SECRET || 'utamu-local-dev-secret';
 const APP_URL = (process.env.WEB_APP_URL || process.env.FRONTEND_URL || process.env.APP_URL || 'http://localhost:3000').replace(/\/$/, '');
 const BACKEND_PUBLIC_URL = (process.env.WEB_BACKEND_URL || process.env.BACKEND_PUBLIC_URL || process.env.BACKEND_URL || `http://localhost:${process.env.PORT || 4008}`).replace(/\/$/, '');
@@ -196,7 +196,52 @@ function publicPayment(row, extra = {}) {
   return { id: row?.id, reference: row?.reference || extra.reference, providerReference: row?.provider_reference || extra.providerReference || null, status: row?.status || extra.status || 'pending', amount: Number(row?.amount_kes || extra.amount || VIP_VISIBILITY_PRICE_KES), method: row?.method || extra.method, authorizationUrl: row?.authorization_url || extra.authorizationUrl || null, instructions: extra.instructions };
 }
 function mapReviewRow(row) {
-  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi escort', modelImage: normalizeProfileImageUrl(row.model_image || row.image_url) || models[0].image, author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
+  return { id: row.id, modelName: row.model_name || row.display_name || 'Secret Nairobi escort', modelImage: normalizeProfileImageUrl(row.model_image || row.image_url) || '', author: row.anonymous ? 'Anonymous member' : row.author_name || row.full_name || 'Normal user', rating: Number(row.rating || 5), body: row.body || '', createdAt: row.created_at };
+}
+
+function profileFromRow(row) {
+  if (!row?.profile) return {};
+  if (typeof row.profile === 'object') return row.profile;
+  try { return JSON.parse(row.profile); } catch { return {}; }
+}
+
+function publicModelFromRow(row) {
+  const profile = profileFromRow(row);
+  const images = (row.images || []).map(normalizeProfileImageUrl).filter(Boolean);
+  const services = Array.isArray(profile.services) ? profile.services.filter(Boolean) : [];
+  const rates = Array.isArray(profile.rates) ? profile.rates : [];
+  return {
+    id: row.id,
+    userId: row.user_id,
+    name: row.display_name,
+    slug: row.slug,
+    city: row.city || profile.city || 'Nairobi',
+    county: row.county || profile.country || 'Kenya',
+    category: row.category || 'Independent Escort',
+    gender: row.gender || profile.gender || 'Female',
+    phone: profile.phone || row.phone || null,
+    age: row.age || Number(profile.age || 0) || 24,
+    height: row.height || profile.height || '165 cm',
+    rating: Number(row.rating || 0),
+    reviews: Number(row.review_count || 0),
+    priceFrom: Number(row.price_from_kes || profile.priceFrom || 0),
+    online: Boolean(row.online),
+    verified: Boolean(row.verified),
+    elite: Boolean(row.elite),
+    responseTime: row.response_time || 'New account',
+    trustedBadge: Boolean(row.trusted_badge),
+    listingTier: row.listing_tier || 'free',
+    galleryLimit: Number(row.gallery_limit || 8),
+    sidebarAd: Boolean(row.sidebar_ad),
+    image: images[0] || '',
+    gallery: images,
+    bio: row.bio || profile.about || '',
+    specialties: services.length ? services : [row.category || 'Independent Escort'],
+    profile,
+    stats: { bookings: 0, profileViews: 0, completion: images.length ? 70 : 40, earnings: 0 },
+    rates,
+    createdAt: row.created_at,
+  };
 }
 async function tryQuery(sql, params = []) {
   try {
@@ -415,14 +460,20 @@ async function ensureModelForUser(user, body, profile) {
 }
 
 export async function getDirectory(_req, res) {
-  const rows = await tryQuery('select payload from utamu_seed where key = $1', ['directory']);
-  const payload = rows?.[0]?.payload || directory;
-  const dbRows = await tryQuery("select m.*, max(u.profile->>'gender') as gender, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images from utamu_models m left join utamu_profile_images i on i.model_id = m.id left join utamu_users u on u.id = m.user_id where m.status <> 'deleted' group by m.id order by m.elite desc, m.rating desc, m.created_at desc limit 100");
-  const dbModels = (dbRows || []).map((row) => ({
-    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad, image: normalizeProfileImageUrl(row.images?.[0]) || models[0].image, gallery: (row.images || []).map(normalizeProfileImageUrl), bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
-  }));
+  const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
+    from utamu_models m
+    left join utamu_users u on u.id = m.user_id
+    left join lateral (
+      select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
+      from utamu_profile_images
+      where model_id = m.id
+    ) i on true
+    where m.status <> 'deleted'
+    order by m.elite desc, m.rating desc, m.created_at desc limit 100`);
+  const dbModels = (dbRows || []).map(publicModelFromRow);
   const reviewRows = await getReviewRows();
-  res.json({ data: { ...payload, models: [...dbModels, ...(payload.models?.length ? payload.models : models)].sort((a, b) => scoreModel(b) - scoreModel(a)), reviews: reviewRows.length ? reviewRows : payload.reviews || reviews } });
+  const nextAnalytics = { ...analytics, activeModels: dbModels.length };
+  res.json({ data: { ...directory, models: dbModels.sort((a, b) => scoreModel(b) - scoreModel(a)), reviews: reviewRows, analytics: nextAnalytics } });
 }
 
 
@@ -436,37 +487,18 @@ export async function searchModels(req, res) {
   const maxPrice = Number(req.query.maxPrice || 0);
   const verified = String(req.query.verified || '') === 'true';
   const vip = String(req.query.vip || '') === 'true';
-  const dbRows = await tryQuery(`select m.*, max(u.profile->>'gender') as gender, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images
+  const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
     from utamu_models m
-    left join utamu_profile_images i on i.model_id = m.id
     left join utamu_users u on u.id = m.user_id
+    left join lateral (
+      select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
+      from utamu_profile_images
+      where model_id = m.id
+    ) i on true
     where m.status <> 'deleted'
-    group by m.id
     order by m.created_at desc limit 100`);
-  const dbModels = (dbRows || []).map((row) => ({
-    id: row.id,
-    name: row.display_name,
-    slug: row.slug,
-    city: row.city,
-    county: row.county,
-    category: row.category,
-    age: row.age || 24,
-    height: row.height || '165 cm',
-    rating: Number(row.rating || 0),
-    reviews: Number(row.review_count || 0),
-    priceFrom: Number(row.price_from_kes || 0),
-    online: row.online,
-    verified: row.verified,
-    elite: row.elite,
-    responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad,
-    image: normalizeProfileImageUrl(row.images?.[0]) || models[0].image,
-    gallery: (row.images || []).map(normalizeProfileImageUrl),
-    bio: row.bio || '',
-    specialties: [row.category],
-    stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 },
-    rates: [],
-  }));
-  const data = [...dbModels, ...models]
+  const dbModels = (dbRows || []).map(publicModelFromRow);
+  const data = dbModels
     .filter((model) => !query || [model.name, model.city, model.county, model.category, model.specialties.join(' '), model.gender, model.listingTier].join(' ').toLowerCase().includes(query))
     .filter((model) => city === 'All' || model.county === city || model.city === city)
     .filter((model) => gender === 'All' || String(model.gender || 'Female').toLowerCase() === gender.toLowerCase())
@@ -487,12 +519,19 @@ export async function searchModels(req, res) {
 }
 
 export async function getModel(req, res) {
-  const dbRows = await tryQuery("select m.*, u.profile->>'gender' as gender from utamu_models m left join utamu_users u on u.id = m.user_id where m.slug = $1 limit 1", [req.params.slug]);
-  if (dbRows?.[0]) {
-    const imageRows = await tryQuery('select url from utamu_profile_images where model_id = $1 order by sort_order, created_at', [dbRows[0].id]);
-    return res.json({ data: { ...dbRows[0], name: dbRows[0].display_name, slug: dbRows[0].slug, image: normalizeProfileImageUrl(imageRows?.[0]?.url) || models[0].image, gallery: imageRows?.map((i) => normalizeProfileImageUrl(i.url)) || [], rankingScore: 0 } });
-  }
-  const model = models.find((item) => item.slug === req.params.slug) || models[0];
+  const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
+    from utamu_models m
+    left join utamu_users u on u.id = m.user_id
+    left join lateral (
+      select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
+      from utamu_profile_images
+      where model_id = m.id
+    ) i on true
+    where m.status <> 'deleted'
+    and m.slug = $1
+    limit 1`, [req.params.slug]);
+  if (!dbRows?.[0]) return res.status(404).json({ message: 'Profile not found.' });
+  const model = publicModelFromRow(dbRows[0]);
   res.json({ data: { ...model, rankingScore: scoreModel(model) } });
 }
 
@@ -989,7 +1028,7 @@ async function getReviewRows() {
 }
 export async function getReviews(_req, res) {
   const rows = await getReviewRows();
-  res.json({ data: rows.length ? rows : reviews.map((review, index) => ({ ...review, modelImage: models[index % models.length].image })) });
+  res.json({ data: rows });
 }
 
 export async function submitReview(req, res) {
@@ -1000,7 +1039,7 @@ export async function submitReview(req, res) {
   if (!body) return res.status(400).json({ message: 'Review text is required.' });
   const model = await resolvePaymentModel({ modelId: req.body?.modelId, modelSlug: req.body?.modelSlug }, null);
   const modelName = req.body?.modelName || model?.display_name || 'Secret Nairobi escort';
-  const modelImage = req.body?.modelImage || models.find((item) => item.name === modelName)?.image || models[0].image;
+  const modelImage = req.body?.modelImage || '';
   const authorName = req.body?.author || user?.full_name || 'Normal user';
   const inserted = await queryWithRetry("insert into utamu_reviews (model_id, user_id, rating, body, anonymous, status, model_name, model_image, author_name) values ($1,$2,$3,$4,$5,'approved',$6,$7,$8) returning *", [model?.id || null, user?.id || null, rating, body, Boolean(req.body?.anonymous), modelName, modelImage, authorName]);
   res.status(201).json({ data: mapReviewRow(inserted.rows[0]) });
@@ -1110,5 +1149,5 @@ export async function getClientPortal(req, res) {
 }
 
 export async function getAdmin(_req, res) {
-  res.json({ data: { verificationCases, analytics, pending: verificationCases.filter((item) => item.status === 'pending') } });
+  res.json({ data: { verificationCases: [], analytics, pending: [] } });
 }

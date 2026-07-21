@@ -1,11 +1,20 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { analytics as fallbackAnalytics, bookings as fallbackBookings, categories, cities, models as fallbackModels, reviews as fallbackReviews, verificationCases as fallbackCases } from '../data/utamu';
+import type { UtamuModel } from '../data/utamu';
+import { analytics as fallbackAnalytics, categories, cities } from '../data/utamu';
 import { utamuApi } from '../lib/utamuApi';
 
+type UtamuDirectoryState = {
+  models: UtamuModel[];
+  bookings: any[];
+  reviews: any[];
+  verificationCases: any[];
+  analytics: typeof fallbackAnalytics;
+};
+
 export function useUtamuDirectory() {
-  const [data, setData] = useState({ models: fallbackModels, bookings: fallbackBookings, reviews: fallbackReviews, verificationCases: fallbackCases, analytics: fallbackAnalytics });
+  const [data, setData] = useState<UtamuDirectoryState>({ models: [], bookings: [], reviews: [], verificationCases: [], analytics: fallbackAnalytics });
   const [query, setQuery] = useState('');
   const [city, setCity] = useState('All');
   const [category, setCategory] = useState('All');
