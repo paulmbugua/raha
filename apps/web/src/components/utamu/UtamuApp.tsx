@@ -282,16 +282,16 @@ function RegisterScreen() {
       ctaHref: '/register/independent-model',
       features: ['Add a single profile', 'Add portfolio pictures', 'Add contact information', 'Manage blocked clients', 'Profile analytics and messages'],
       vipFeature: 'Upgrade to VIP visibility',
-      highlight: 'Ksh 1,000 for 1 month',
+      highlight: 'Ksh 5 for 1 month',
     },
     {
       title: 'Register as Agency',
-      price: 'Ksh 5,000 for 1 month',
+      price: 'Ksh 5 for 1 month',
       cta: 'Register here',
       ctaHref: '/register/agency',
       features: ['Add multiple profiles', 'Add profile pictures', 'Add contact information', 'Add internal notes', 'Manage verification workflow'],
       vipFeature: 'Upgrade agency listings to VIP',
-      highlight: 'Ksh 1,000 for 1 month',
+      highlight: 'Ksh 5 for 1 month',
     },
     {
       title: 'Register as Normal User',
@@ -1147,7 +1147,7 @@ function CheckoutScreen() {
     setStatus('');
     setPaying(true);
     try {
-      const payload = { amount: 1000, modelSlug: 'amina-w', purpose: 'vip_visibility', description: 'Secret Nairobi VIP visibility - 1 month' };
+      const payload = { amount: 5, modelSlug: 'amina-w', purpose: 'vip_visibility', description: 'Secret Nairobi VIP visibility - 1 month' };
       if (method === 'mpesa') {
         const result: any = await utamuApi.createMpesaPayment({ ...payload, phone });
         setStatus(result.instructions || 'STK push sent. Enter your PIN on your phone and keep this page open.');
@@ -1162,7 +1162,7 @@ function CheckoutScreen() {
       setPaying(false);
     }
   }
-  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="VIP escort visibility" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 1,000 places the selected escort in VIP ranking for 1 month after payment confirmation.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 1,000</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
+  return <section className="mx-auto grid max-w-5xl gap-6 px-4 py-8 sm:px-5 lg:grid-cols-[0.9fr_1.1fr] lg:py-10"><div className="overflow-hidden rounded-2xl border border-[#2a2a2a]"><img src={models[0].image} alt="VIP escort visibility" className="h-full min-h-[280px] w-full object-cover sm:min-h-[440px]" /></div><div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><StatusBadge tone="gold">VIP Visibility</StatusBadge><h1 className="mt-4 font-display text-4xl font-bold text-[#fff6df]">Upgrade to VIP visibility</h1><p className="mt-3 text-[#d0c6ab]">Ksh 5 places the selected escort in VIP ranking for 1 month during testing.</p><div className="mt-6 rounded-xl border border-[#353534] bg-[#201f1f] p-4"><div className="flex justify-between"><span>VIP visibility</span><strong className="text-[#ffd700]">Ksh 5</strong></div><div className="mt-3 flex justify-between text-sm text-[#999077]"><span>Duration</span><span>1 month</span></div></div><div className="mt-5 grid grid-cols-2 gap-2 rounded-xl bg-[#201f1f] p-1">{(['mpesa', 'paystack'] as const).map((item) => <button key={item} onClick={() => setMethod(item)} className={'rounded-lg px-4 py-3 text-sm font-bold ' + (method === item ? 'bg-[#ff4eb8] text-white' : 'text-[#d0c6ab] hover:bg-white/5')}>{item === 'mpesa' ? 'M-Pesa' : 'Paystack'}</button>)}</div>{method === 'mpesa' ? <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">M-Pesa phone number</label><input value={phone} onChange={(event) => setPhone(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" /></> : <><label className="mt-5 block text-sm font-semibold text-[#d0c6ab]">Email address</label><input value={email} onChange={(event) => setEmail(event.target.value)} className="mt-2 w-full rounded-lg border border-[#353534] bg-[#201f1f] p-4 text-[#fff6df]" placeholder="name@example.com" /></>}<button disabled={paying} onClick={pay} className="mt-5 w-full rounded-lg bg-[#25d366] px-5 py-4 font-bold text-white disabled:opacity-60">{paying ? 'Starting payment...' : method === 'mpesa' ? 'Send STK push' : 'Continue to Paystack'}</button>{status && <p className="mt-4 rounded-lg border border-[#61f595]/30 bg-[#61f595]/10 p-4 text-sm text-[#6bfe9c]">{status}</p>}</div></section>;
 }
 
 

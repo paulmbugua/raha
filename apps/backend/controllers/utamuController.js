@@ -16,19 +16,19 @@ const MAIL_FROM_NAME = process.env.MAIL_FROM_NAME || 'Secret Nairobi';
 const MAIL_FROM = process.env.MAIL_FROM || `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRESS}>`;
 const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || MAIL_FROM_ADDRESS;
 const VALIDATION_RESEND_COOLDOWN_MS = Number(process.env.UTAMU_VALIDATION_RESEND_COOLDOWN_MS || 60_000);
-const VIP_VISIBILITY_PRICE_KES = 1000;
+const VIP_VISIBILITY_PRICE_KES = 5;
 const MESSAGE_TOKEN_COST = Number(process.env.UTAMU_MESSAGE_TOKEN_COST || 5);
 const TIP_COMMISSION_RATE = Number(process.env.UTAMU_TIP_COMMISSION_RATE || 0.15);
 const MONETIZATION_PRODUCTS = [
-  { id: 'verification-trusted', category: 'verification', name: 'Trusted verification badge', description: 'Paid ID/document review with a Trusted badge after approval.', amountKes: 1500, tokenAmount: 0, durationDays: 365, sortOrder: 10 },
-  { id: 'tier-bronze', category: 'listing', name: 'Bronze featured listing', description: 'Monthly profile bumping, 12 photo slots, and stronger ranking.', amountKes: 1500, tokenAmount: 0, durationDays: 30, sortOrder: 20 },
-  { id: 'tier-silver', category: 'listing', name: 'Silver featured listing', description: 'Faster bumping, 20 photo slots, and search priority.', amountKes: 3000, tokenAmount: 0, durationDays: 30, sortOrder: 30 },
-  { id: 'tier-gold', category: 'listing', name: 'Gold featured listing', description: 'Top ranking, 30 photo slots, and sidebar ad eligibility.', amountKes: 6000, tokenAmount: 0, durationDays: 30, sortOrder: 40 },
-  { id: 'tier-vip', category: 'listing', name: 'VIP featured listing', description: 'VIP homepage priority, 40 photo slots, sidebar ad spot, and strongest bumping.', amountKes: 10000, tokenAmount: 0, durationDays: 30, sortOrder: 50 },
-  { id: 'tokens-100', category: 'wallet', name: '100 message tokens', description: 'Credits for paid messages, private unlocks, and tips.', amountKes: 500, tokenAmount: 100, durationDays: null, sortOrder: 60 },
-  { id: 'tokens-300', category: 'wallet', name: '300 message tokens', description: 'Best-value client credits for active messaging and tips.', amountKes: 1200, tokenAmount: 300, durationDays: null, sortOrder: 70 },
-  { id: 'ai-assistant-monthly', category: 'ai', name: 'AI assistant monthly add-on', description: '24/7 assistant that handles common questions and filters weak leads.', amountKes: 6500, tokenAmount: 0, durationDays: 30, sortOrder: 80 },
-  { id: 'client-portal-monthly', category: 'client_portal', name: 'Vetted client portal', description: 'Monthly access to vetted-client-only discovery and matchmaking.', amountKes: 2500, tokenAmount: 0, durationDays: 30, sortOrder: 90 },
+  { id: 'verification-trusted', category: 'verification', name: 'Trusted verification badge', description: 'Paid ID/document review with a Trusted badge after approval.', amountKes: 1, tokenAmount: 0, durationDays: 365, sortOrder: 10 },
+  { id: 'tier-bronze', category: 'listing', name: 'Bronze featured listing', description: 'Monthly profile bumping, 12 photo slots, and stronger ranking.', amountKes: 1, tokenAmount: 0, durationDays: 30, sortOrder: 20 },
+  { id: 'tier-silver', category: 'listing', name: 'Silver featured listing', description: 'Faster bumping, 20 photo slots, and search priority.', amountKes: 2, tokenAmount: 0, durationDays: 30, sortOrder: 30 },
+  { id: 'tier-gold', category: 'listing', name: 'Gold featured listing', description: 'Top ranking, 30 photo slots, and sidebar ad eligibility.', amountKes: 3, tokenAmount: 0, durationDays: 30, sortOrder: 40 },
+  { id: 'tier-vip', category: 'listing', name: 'VIP featured listing', description: 'VIP homepage priority, 40 photo slots, sidebar ad spot, and strongest bumping.', amountKes: 5, tokenAmount: 0, durationDays: 30, sortOrder: 50 },
+  { id: 'tokens-100', category: 'wallet', name: '100 message tokens', description: 'Credits for paid messages, private unlocks, and tips.', amountKes: 1, tokenAmount: 100, durationDays: null, sortOrder: 60 },
+  { id: 'tokens-300', category: 'wallet', name: '300 message tokens', description: 'Best-value client credits for active messaging and tips.', amountKes: 3, tokenAmount: 300, durationDays: null, sortOrder: 70 },
+  { id: 'ai-assistant-monthly', category: 'ai', name: 'AI assistant monthly add-on', description: '24/7 assistant that handles common questions and filters weak leads.', amountKes: 4, tokenAmount: 0, durationDays: 30, sortOrder: 80 },
+  { id: 'client-portal-monthly', category: 'client_portal', name: 'Vetted client portal', description: 'Monthly access to vetted-client-only discovery and matchmaking.', amountKes: 5, tokenAmount: 0, durationDays: 30, sortOrder: 90 },
 ];
 const LISTING_TIER_SETTINGS = {
   bronze: { galleryLimit: 12, bumpIntervalHours: 168, sidebarAd: false, elite: false },
