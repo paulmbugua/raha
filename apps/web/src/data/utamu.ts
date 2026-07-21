@@ -5,6 +5,11 @@ export type UtamuModel = {
   city: string;
   county: string;
   category: string;
+  gender?: 'Female' | 'Male' | string;
+  listingTier?: string;
+  trustedBadge?: boolean;
+  galleryLimit?: number;
+  sidebarAd?: boolean;
   age: number;
   height: string;
   rating: number;
@@ -45,16 +50,16 @@ export const modelImages = [
 
 export const models: UtamuModel[] = [
   {
-    id: 'm-001', name: 'Amina W.', slug: 'amina-w', city: 'Westlands', county: 'Nairobi', category: 'Premium Escort', age: 24, height: '5ft 8in', rating: 4.96, reviews: 128, priceFrom: 8500, online: true, verified: true, elite: true, responseTime: 'Usually replies in 7 minutes', image: modelImages[0], gallery: [modelImages[6], modelImages[7], modelImages[8], modelImages[1], modelImages[2]], bio: 'Premium Nairobi escort with polished presentation, discreet communication, and availability for private bookings, hospitality, and curated social time.', specialties: ['Editorial', 'Luxury events', 'Beauty campaigns', 'Lifestyle content'], stats: { bookings: 84, profileViews: 18400, completion: 96, earnings: 482000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Brand shoot booking', price: 18500, duration: 'Half day' }, { label: 'Event appearance', price: 32000, duration: 'Evening' }]
+    id: 'm-001', name: 'Amina W.', slug: 'amina-w', city: 'Westlands', county: 'Nairobi', category: 'Premium Escort', gender: 'Female', age: 24, height: '5ft 8in', rating: 4.96, reviews: 128, priceFrom: 8500, online: true, verified: true, elite: true, responseTime: 'Usually replies in 7 minutes', image: modelImages[0], gallery: [modelImages[6], modelImages[7], modelImages[8], modelImages[1], modelImages[2]], bio: 'Premium Nairobi escort with polished presentation, discreet communication, and availability for private bookings, hospitality, and curated social time.', specialties: ['Editorial', 'Luxury events', 'Beauty campaigns', 'Lifestyle content'], stats: { bookings: 84, profileViews: 18400, completion: 96, earnings: 482000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Brand shoot booking', price: 18500, duration: 'Half day' }, { label: 'Event appearance', price: 32000, duration: 'Evening' }]
   },
   {
-    id: 'm-002', name: 'Nia K.', slug: 'nia-k', city: 'Kilimani', county: 'Nairobi', category: 'VIP Companion', age: 22, height: '5ft 6in', rating: 4.91, reviews: 94, priceFrom: 6500, online: false, verified: true, elite: false, responseTime: 'Usually replies in 18 minutes', image: modelImages[1], gallery: [modelImages[1], modelImages[3], modelImages[4]], bio: 'VIP companion based around Kilimani with clear availability, verified profile details, and discreet booking communication.', specialties: ['Commercial shoots', 'Hospitality', 'Wellness', 'UGC'], stats: { bookings: 61, profileViews: 12100, completion: 91, earnings: 318000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Commercial shoot', price: 14500, duration: 'Half day' }]
+    id: 'm-002', name: 'Nia K.', slug: 'nia-k', city: 'Kilimani', county: 'Nairobi', category: 'VIP Companion', gender: 'Female', age: 22, height: '5ft 6in', rating: 4.91, reviews: 94, priceFrom: 6500, online: false, verified: true, elite: false, responseTime: 'Usually replies in 18 minutes', image: modelImages[1], gallery: [modelImages[1], modelImages[3], modelImages[4]], bio: 'VIP companion based around Kilimani with clear availability, verified profile details, and discreet booking communication.', specialties: ['Commercial shoots', 'Hospitality', 'Wellness', 'UGC'], stats: { bookings: 61, profileViews: 12100, completion: 91, earnings: 318000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Commercial shoot', price: 14500, duration: 'Half day' }]
   },
   {
-    id: 'm-003', name: 'Talia M.', slug: 'talia-m', city: 'Nyali', county: 'Mombasa', category: 'Elite Escort', age: 25, height: '5ft 10in', rating: 4.88, reviews: 76, priceFrom: 7200, online: true, verified: true, elite: true, responseTime: 'Usually replies in 12 minutes', image: modelImages[2], gallery: [modelImages[2], modelImages[5], modelImages[8]], bio: 'Elite coastal escort with luxury hospitality experience, travel-ready availability, and polished presentation.', specialties: ['Runway', 'Resort campaigns', 'Luxury hosting', 'Swimwear'], stats: { bookings: 48, profileViews: 9900, completion: 89, earnings: 276000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Runway booking', price: 22000, duration: 'Event' }]
+    id: 'm-003', name: 'Talia M.', slug: 'talia-m', city: 'Nyali', county: 'Mombasa', category: 'Elite Escort', gender: 'Female', age: 25, height: '5ft 10in', rating: 4.88, reviews: 76, priceFrom: 7200, online: true, verified: true, elite: true, responseTime: 'Usually replies in 12 minutes', image: modelImages[2], gallery: [modelImages[2], modelImages[5], modelImages[8]], bio: 'Elite coastal escort with luxury hospitality experience, travel-ready availability, and polished presentation.', specialties: ['Runway', 'Resort campaigns', 'Luxury hosting', 'Swimwear'], stats: { bookings: 48, profileViews: 9900, completion: 89, earnings: 276000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Runway booking', price: 22000, duration: 'Event' }]
   },
   {
-    id: 'm-004', name: 'Zuri A.', slug: 'zuri-a', city: 'Milimani', county: 'Kisumu', category: 'Verified Escort', age: 23, height: '5ft 7in', rating: 4.84, reviews: 58, priceFrom: 5900, online: false, verified: false, elite: false, responseTime: 'Usually replies in 30 minutes', image: modelImages[4], gallery: [modelImages[4], modelImages[7]], bio: 'Verified escort with a polished look, friendly communication, and flexible private booking availability.', specialties: ['Beauty', 'Skincare', 'Content shoots'], stats: { bookings: 31, profileViews: 7600, completion: 74, earnings: 146000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Beauty campaign', price: 12000, duration: 'Half day' }]
+    id: 'm-004', name: 'Zuri A.', slug: 'zuri-a', city: 'Milimani', county: 'Kisumu', category: 'Verified Escort', gender: 'Female', age: 23, height: '5ft 7in', rating: 4.84, reviews: 58, priceFrom: 5900, online: false, verified: false, elite: false, responseTime: 'Usually replies in 30 minutes', image: modelImages[4], gallery: [modelImages[4], modelImages[7]], bio: 'Verified escort with a polished look, friendly communication, and flexible private booking availability.', specialties: ['Beauty', 'Skincare', 'Content shoots'], stats: { bookings: 31, profileViews: 7600, completion: 74, earnings: 146000 }, rates: [{ label: 'Portfolio access deposit', price: 500, duration: 'Instant unlock' }, { label: 'Beauty campaign', price: 12000, duration: 'Half day' }]
   },
 ];
 
@@ -75,5 +80,5 @@ export const reviews = [
 ];
 
 export const analytics = { revenue: 1840000, bookings: 964, approvalRate: 82, activeModels: 418, chart: [45, 62, 58, 74, 88, 71, 96, 84] };
-export const cities = ['All', 'Nairobi', 'Mombasa', 'Kisumu', 'Nakuru', 'Diani'];
+export const cities = ['All', 'Nairobi', 'Westlands', 'Kilimani', 'Kileleshwa', 'Lavington', 'Karen', 'Runda', 'Gigiri', 'Parklands', 'South B', 'South C', 'Eastleigh', 'Embakasi', 'Kasarani', 'Rongai', 'Thika', 'Kiambu', 'Ruaka', 'Athi River', 'Machakos', 'Mombasa', 'Nyali', 'Diani', 'Malindi', 'Kisumu', 'Nakuru', 'Naivasha', 'Eldoret', 'Kericho', 'Kakamega', 'Kisii', 'Meru', 'Nanyuki', 'Nyeri', 'Embu', 'Garissa'];
 export const categories = ['All', 'Premium Escort', 'VIP Companion', 'Elite Escort', 'Verified Escort'];

@@ -3,14 +3,14 @@
 import { Bell, Check, ChevronRight, FileCheck2, Gauge, Lock, Mail, MessageCircle, Search, ShieldCheck, Star, Upload, Wallet, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import type { UtamuModel } from '../../data/utamu';
-import { models } from '../../data/utamu';
+import { cities, models } from '../../data/utamu';
 import { utamuApi } from '../../lib/utamuApi';
 import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 
 type UtamuAppProps = { slug?: string[] };
 
 type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; phone?: string; fullName?: string; accountType?: string; emailVerified?: boolean } | null };
-type View = 'home' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type View = 'home' | 'advancedSearch' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
 
 const SESSION_KEY = 'utamu.session';
 const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
@@ -32,6 +32,7 @@ function clearSession() {
 const routeLinks = [
   '/',
   '/discover',
+  '/advanced-search',
   '/register',
   '/register/independent-model',
   '/register/agency',
@@ -59,6 +60,7 @@ const routeLinks = [
 function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
+  if (path === 'advanced-search') return 'advancedSearch';
   if (path === 'register') return 'register';
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
   if (path.startsWith('register/')) return 'registration';
@@ -127,6 +129,72 @@ function Shell({ children }: { children: React.ReactNode }) {
   );
 }
 
+
+function buildSearchUrl(params: Record<string, string | boolean | undefined>) {
+  const search = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value === undefined || value === false || value === '' || value === 'All') return;
+    search.set(key, String(value));
+  });
+  const query = search.toString();
+  return query ? `/discover?${query}` : '/discover';
+}
+
+function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:block' }: { spacerClass?: string }) {
+  const [query, setQuery] = useState('');
+  const [country, setCountry] = useState('Kenya');
+  const [gender, setGender] = useState('All');
+  const [listing, setListing] = useState('All');
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    setQuery(params.get('query') || '');
+    setGender(params.get('gender') || 'All');
+    setListing(params.get('listing') || (params.get('vip') === 'true' ? 'VIP' : params.get('verified') === 'true' ? 'Trusted' : 'All'));
+  }, []);
+  const listingOptions = [
+    { label: 'All escorts', value: 'All' },
+    { label: 'Only VIP', value: 'VIP' },
+    { label: 'Only independent', value: 'Independent' },
+    { label: 'Trusted badge', value: 'Trusted' },
+  ];
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (typeof window !== 'undefined') {
+      window.location.href = buildSearchUrl({ query, country, gender, listing, vip: listing === 'VIP', verified: listing === 'Trusted' });
+    }
+  }
+  return (
+    <aside className="bg-[#101010] text-white">
+      <form onSubmit={submit} className="bg-gradient-to-b from-[#e60073] via-[#cf0065] to-[#3b0d42] px-4 py-5 shadow-inner">
+        <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
+        <div className="space-y-3 text-sm">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, area, service" className="w-full rounded-[3px] border border-white bg-white px-2 py-2 text-[#35213f] outline-none focus:ring-2 focus:ring-[#f0b323]" />
+          <select value={country} onChange={(event) => setCountry(event.target.value)} className="w-full rounded-[3px] border border-white bg-white px-2 py-2 text-[#35213f] outline-none focus:ring-2 focus:ring-[#f0b323]">
+            <option>Kenya</option>
+          </select>
+          <select value={gender} onChange={(event) => setGender(event.target.value)} className="w-full rounded-[3px] border border-white bg-white px-2 py-2 text-[#35213f] outline-none focus:ring-2 focus:ring-[#f0b323]">
+            <option value="All">Any gender</option>
+            <option value="Female">Female</option>
+            <option value="Male">Male</option>
+          </select>
+          <div className="space-y-2">
+            {listingOptions.map((option) => (
+              <label key={option.value} className="flex cursor-pointer items-center gap-2 font-semibold">
+                <input type="radio" name="quick-listing" value={option.value} checked={listing === option.value} onChange={() => setListing(option.value)} className="h-4 w-4 accent-[#f0b323]" />
+                <span>{option.label}</span>
+              </label>
+            ))}
+          </div>
+          <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073] shadow-sm transition hover:bg-[#f0b323] hover:text-[#2b0a3d]">Search</button></div>
+          <a href="/advanced-search" className="block text-center font-semibold text-[#ffe4f3] hover:text-white"><Search className="mr-1 inline h-3.5 w-3.5" />Advanced search</a>
+        </div>
+      </form>
+      <div className={spacerClass} />
+    </aside>
+  );
+}
+
 function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) {
   const verified = model.verified || index < 8;
   const isVip = Boolean(model.elite);
@@ -149,17 +217,20 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
 }
 
 function DiscoveryHome() {
-  const { filteredModels, actions } = useUtamuDirectory();
+  const { filteredModels, filters, actions } = useUtamuDirectory();
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    actions.setQuery(params.get('query') || '');
+    actions.applySearchParams(params);
   }, []);
-  const sortedHomeModels = (filteredModels.length ? filteredModels : models).slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
-  const directoryModels = Array.from({ length: 48 }, (_, index) => {
-    const base = sortedHomeModels[index % sortedHomeModels.length] || models[index % models.length];
-    const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
-    return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: base.verified || index < 9, elite: Boolean(base.elite) };
-  });
+  const hasActiveFilters = Boolean(filters.query || filters.city !== 'All' || filters.category !== 'All' || filters.gender !== 'All' || filters.listingType !== 'All' || filters.service !== 'All' || filters.minPrice || filters.maxPrice || filters.verifiedOnly || filters.eliteOnly);
+  const sortedHomeModels = (hasActiveFilters ? filteredModels : (filteredModels.length ? filteredModels : models)).slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
+  const names = ['Sara', 'Mila', 'Emma', 'Sofia', 'Fiona', 'Evelyn', 'Susi', 'Neha', 'Elexx', 'Lussia', 'Bela', 'Eisha', 'Nadia', 'Ivy', 'Renee', 'Tasha'];
+  const directoryModels = sortedHomeModels.length === 0 ? [] : hasActiveFilters
+    ? sortedHomeModels.map((base, index) => ({ ...base, id: `filtered-${base.id}-${index}`, verified: base.verified || index < 9, elite: Boolean(base.elite) }))
+    : Array.from({ length: 48 }, (_, index) => {
+      const base = sortedHomeModels[index % sortedHomeModels.length] || models[index % models.length];
+      return { ...base, id: `home-${index}`, name: names[index] || base.name, verified: base.verified || index < 9, elite: Boolean(base.elite) };
+    });
 
   return (
     <>
@@ -168,30 +239,23 @@ function DiscoveryHome() {
           <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <h1 className="text-xl font-normal text-[#3b164b]">All escorts</h1>
             <div className="flex flex-wrap gap-2 text-sm">
-              {['Female', 'Independent', 'VIP', 'New'].map((item) => <a key={item} href="/discover" className="rounded-full border border-[#f0b323]/40 bg-white px-4 py-2 text-[#e60073] shadow-sm hover:border-[#006b3f]/50 hover:text-[#006b3f]">{item}</a>)}
+              {[
+                { label: 'Female', href: '/discover?gender=Female' },
+                { label: 'Independent', href: '/discover?listing=Independent' },
+                { label: 'VIP', href: '/discover?listing=VIP&vip=true' },
+                { label: 'New', href: '/discover?query=new' },
+              ].map((item) => <a key={item.label} href={item.href} className="rounded-full border border-[#f0b323]/40 bg-white px-4 py-2 text-[#e60073] shadow-sm hover:border-[#006b3f]/50 hover:text-[#006b3f]">{item.label}</a>)}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {directoryModels.map((model, index) => <ModelCard key={model.id} model={model} index={index} />)}
           </div>
-          <div className="mt-8 flex justify-center gap-1 text-sm font-bold text-white">
+          {directoryModels.length === 0 && <div className="mt-6 rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#3b164b]">No escorts match those filters. Try a wider gender, city, or listing type.</div>}
+          {!hasActiveFilters && <div className="mt-8 flex justify-center gap-1 text-sm font-bold text-white">
             {['1', '2', '...', '9', '10'].map((page) => <a key={page} href="/discover" className="grid h-7 min-w-7 place-items-center rounded-full bg-[#ec2aa0] px-2">{page}</a>)}
-          </div>
+          </div>}
         </section>
-        <aside className="bg-[#101010] text-white">
-          <div className="bg-gradient-to-b from-[#e60073] via-[#d90065] to-[#2b0a3d] px-4 py-5 shadow-inner">
-            <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
-            <div className="space-y-3 text-sm">
-              <select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select>
-              <select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select>
-              <label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label>
-              <label className="flex items-center gap-2"><input type="checkbox" />Only independent</label>
-              <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div>
-              <a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a>
-            </div>
-          </div>
-          <div className="hidden min-h-[760px] bg-[#101010] lg:block" />
-        </aside>
+        <QuickSearchPanel />
       </div>
       <section className="border-t-4 border-[#006b3f] bg-[#fff7fb] px-4 py-7 text-[#111] md:px-5">
         <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">Secret Nairobi Escorts - Nairobi's Premium Companion Directory</h2>
@@ -303,22 +367,7 @@ function RegisterScreen() {
 
 
 function RegistrationQuickSearch() {
-  return (
-    <aside className="bg-[#101010] text-white">
-      <div className="bg-gradient-to-b from-[#e60073] via-[#d90065] to-[#2b0a3d] px-4 py-5 shadow-inner">
-        <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
-        <div className="space-y-3 text-sm">
-          <select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select>
-          <select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select>
-          <label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label>
-          <label className="flex items-center gap-2"><input type="checkbox" />Only independent</label>
-          <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div>
-          <a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a>
-        </div>
-      </div>
-      <div className="min-h-full bg-[#101010]" />
-    </aside>
-  );
+  return <QuickSearchPanel spacerClass="min-h-full bg-[#101010]" />;
 }
 
 function RegistrationFooter() {
@@ -377,6 +426,69 @@ const orientationOptions = ['Fashion and runway', 'Commercial modeling', 'Beauty
 const spokenLanguages = ['English', 'Kiswahili', 'Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Somali', 'Kisii', 'Meru', 'Maasai', 'Arabic', 'French', 'German', 'Spanish', 'Chinese'];
 const languageLevels = ['Basic', 'Conversational', 'Fluent', 'Native'];
 const modelServices = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
+
+
+function AdvancedSearchScreen() {
+  const [query, setQuery] = useState('');
+  const [city, setCity] = useState('All');
+  const [gender, setGender] = useState('All');
+  const [listing, setListing] = useState('All');
+  const [service, setService] = useState('All');
+  const [minPrice, setMinPrice] = useState('');
+  const [maxPrice, setMaxPrice] = useState('');
+  const [verified, setVerified] = useState(false);
+  const townOptions = cities.filter((item) => item !== 'All');
+  function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (typeof window !== 'undefined') {
+      window.location.href = buildSearchUrl({ query, city, gender, listing, service, minPrice, maxPrice, verified, vip: listing === 'VIP' });
+    }
+  }
+  return (
+    <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]">
+      <section className="px-4 py-8 text-[#003b5c] md:px-6 lg:py-10">
+        <div className="mb-6 max-w-3xl">
+          <h1 className="text-3xl font-bold text-[#3b164b]">Advanced Search</h1>
+          <p className="mt-2 text-sm leading-6 text-[#7b6e78]">Refine Nairobi escort discovery by gender, city, verification, services, and budget.</p>
+        </div>
+        <form onSubmit={submit} className="max-w-5xl rounded-[4px] border border-[#ffd1e8] bg-white p-4 shadow-sm sm:p-6">
+          <div className="grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-semibold">Keyword<input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, area, service" className={fieldClass + ' mt-2'} /></label>
+            <label className="text-sm font-semibold">City<select value={city} onChange={(event) => setCity(event.target.value)} className={selectClass + ' mt-2 w-full'}><option value="All">All Kenya</option>{townOptions.map((town) => <option key={town}>{town}</option>)}</select></label>
+            <label className="text-sm font-semibold">Gender<select value={gender} onChange={(event) => setGender(event.target.value)} className={selectClass + ' mt-2 w-full'}><option value="All">Any gender</option><option>Female</option><option>Male</option></select></label>
+            <label className="text-sm font-semibold">Service<select value={service} onChange={(event) => setService(event.target.value)} className={selectClass + ' mt-2 w-full'}><option value="All">All services</option>{modelServices.map((item) => <option key={item}>{item}</option>)}</select></label>
+          </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2">
+            <label className="text-sm font-semibold">Minimum budget<input inputMode="numeric" value={minPrice} onChange={(event) => setMinPrice(event.target.value)} placeholder="Ksh" className={fieldClass + ' mt-2'} /></label>
+            <label className="text-sm font-semibold">Maximum budget<input inputMode="numeric" value={maxPrice} onChange={(event) => setMaxPrice(event.target.value)} placeholder="Ksh" className={fieldClass + ' mt-2'} /></label>
+          </div>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            {[
+              ['All', 'All escorts'],
+              ['VIP', 'Only VIP'],
+              ['Independent', 'Only independent'],
+              ['Trusted', 'Trusted badge'],
+            ].map(([value, label]) => (
+              <label key={value} className={'flex cursor-pointer items-center gap-3 rounded-[4px] border px-4 py-3 text-sm font-bold transition ' + (listing === value ? 'border-[#e60073] bg-[#ffe3f1] text-[#e60073]' : 'border-[#ffd1e8] bg-[#fff7fb] text-[#3b164b]')}>
+                <input type="radio" name="advanced-listing" checked={listing === value} onChange={() => setListing(value)} className="h-4 w-4 accent-[#e60073]" />
+                <span>{label}</span>
+              </label>
+            ))}
+          </div>
+          <label className="mt-5 flex cursor-pointer items-center gap-3 rounded-[4px] border border-[#ffd1e8] bg-[#fff7fb] px-4 py-3 text-sm font-bold text-[#3b164b]">
+            <input type="checkbox" checked={verified} onChange={(event) => setVerified(event.target.checked)} className="h-4 w-4 accent-[#006b3f]" />
+            <span>Verified profiles only</span>
+          </label>
+          <div className="mt-6 flex flex-wrap gap-3">
+            <button className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 font-bold text-white shadow-sm">Search escorts</button>
+            <a href="/discover" className="rounded-full border border-[#e60073] px-8 py-3 font-bold text-[#e60073]">Reset</a>
+          </div>
+        </form>
+      </section>
+      <RegistrationQuickSearch />
+    </div>
+  );
+}
 
 function RegistrationFormScreen({ path }: { path: string }) {
   const kind = path.split('/')[1] || 'member';
@@ -713,13 +825,7 @@ function ProfileScreen({ path }: { path: string }) {
             <div className="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 md:grid-cols-4">{topRated.map((item, index) => <ModelCard key={item.id} model={item} index={index} />)}</div>
           </section>
         </section>
-        <aside className="bg-[#101010] text-white">
-          <div className="bg-gradient-to-b from-[#e60073] via-[#d90065] to-[#2b0a3d] px-4 py-5 shadow-inner">
-            <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
-            <div className="space-y-3 text-sm"><select className="w-full rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Country</option><option>Kenya</option></select><select className="w-20 rounded-none border border-white bg-white px-2 py-2 text-[#6b5c6b]"><option>Fem...</option><option>Female</option></select><label className="flex items-center gap-2"><input type="checkbox" />Only VIP</label><label className="flex items-center gap-2"><input type="checkbox" />Only independent</label><div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073]">Search</button></div><a href="/discover" className="block text-center text-[#ffd6ec]">Advanced search</a></div>
-          </div>
-          <div className="hidden min-h-[1800px] bg-[#101010] lg:block" />
-        </aside>
+        <QuickSearchPanel spacerClass="hidden min-h-[1800px] bg-[#101010] lg:block" />
       </div>
 
       <section className="bg-[#fff0f6] px-5 py-10 text-[#111]">
@@ -1119,5 +1225,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
 }

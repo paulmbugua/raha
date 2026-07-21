@@ -415,9 +415,9 @@ async function ensureModelForUser(user, body, profile) {
 export async function getDirectory(_req, res) {
   const rows = await tryQuery('select payload from utamu_seed where key = $1', ['directory']);
   const payload = rows?.[0]?.payload || directory;
-  const dbRows = await tryQuery("select m.*, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images from utamu_models m left join utamu_profile_images i on i.model_id = m.id where m.status <> 'deleted' group by m.id order by m.elite desc, m.rating desc, m.created_at desc limit 100");
+  const dbRows = await tryQuery("select m.*, max(u.profile->>'gender') as gender, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images from utamu_models m left join utamu_profile_images i on i.model_id = m.id left join utamu_users u on u.id = m.user_id where m.status <> 'deleted' group by m.id order by m.elite desc, m.rating desc, m.created_at desc limit 100");
   const dbModels = (dbRows || []).map((row) => ({
-    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad, image: row.images?.[0] || models[0].image, gallery: row.images || [], bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
+    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad, image: row.images?.[0] || models[0].image, gallery: row.images || [], bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
   }));
   const reviewRows = await getReviewRows();
   res.json({ data: { ...payload, models: [...dbModels, ...(payload.models?.length ? payload.models : models)].sort((a, b) => scoreModel(b) - scoreModel(a)), reviews: reviewRows.length ? reviewRows : payload.reviews || reviews } });
@@ -426,9 +426,18 @@ export async function getDirectory(_req, res) {
 
 export async function searchModels(req, res) {
   const query = String(req.query.query || '').toLowerCase();
-  const dbRows = await tryQuery(`select m.*, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images
+  const city = String(req.query.city || 'All');
+  const gender = String(req.query.gender || 'All');
+  const listing = String(req.query.listing || 'All');
+  const service = String(req.query.service || 'All');
+  const minPrice = Number(req.query.minPrice || 0);
+  const maxPrice = Number(req.query.maxPrice || 0);
+  const verified = String(req.query.verified || '') === 'true';
+  const vip = String(req.query.vip || '') === 'true';
+  const dbRows = await tryQuery(`select m.*, max(u.profile->>'gender') as gender, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images
     from utamu_models m
     left join utamu_profile_images i on i.model_id = m.id
+    left join utamu_users u on u.id = m.user_id
     where m.status <> 'deleted'
     group by m.id
     order by m.created_at desc limit 100`);
@@ -447,7 +456,7 @@ export async function searchModels(req, res) {
     online: row.online,
     verified: row.verified,
     elite: row.elite,
-    responseTime: row.response_time || 'New account', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad,
+    responseTime: row.response_time || 'New account', gender: row.gender || 'Female', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad,
     image: row.images?.[0] || models[0].image,
     gallery: row.images || [],
     bio: row.bio || '',
@@ -456,14 +465,27 @@ export async function searchModels(req, res) {
     rates: [],
   }));
   const data = [...dbModels, ...models]
-    .filter((model) => !query || [model.name, model.city, model.county, model.category, model.specialties.join(' ')].join(' ').toLowerCase().includes(query))
+    .filter((model) => !query || [model.name, model.city, model.county, model.category, model.specialties.join(' '), model.gender, model.listingTier].join(' ').toLowerCase().includes(query))
+    .filter((model) => city === 'All' || model.county === city || model.city === city)
+    .filter((model) => gender === 'All' || String(model.gender || 'Female').toLowerCase() === gender.toLowerCase())
+    .filter((model) => service === 'All' || model.specialties.some((item) => item.toLowerCase().includes(service.toLowerCase())) || model.category.toLowerCase().includes(service.toLowerCase()))
+    .filter((model) => !minPrice || Number(model.priceFrom || 0) >= minPrice)
+    .filter((model) => !maxPrice || Number(model.priceFrom || 0) <= maxPrice)
+    .filter((model) => {
+      if (listing === 'VIP') return model.elite || model.listingTier === 'vip';
+      if (listing === 'Independent') return [model.category, model.specialties.join(' '), model.listingTier].join(' ').toLowerCase().includes('independent');
+      if (listing === 'Trusted') return model.verified || Boolean(model.trustedBadge);
+      return true;
+    })
+    .filter((model) => !verified || model.verified)
+    .filter((model) => !vip || model.elite)
     .map((model) => ({ ...model, rankingScore: scoreModel(model) }))
     .sort((a, b) => b.rankingScore - a.rankingScore);
   res.json({ data });
 }
 
 export async function getModel(req, res) {
-  const dbRows = await tryQuery('select * from utamu_models where slug = $1 limit 1', [req.params.slug]);
+  const dbRows = await tryQuery("select m.*, u.profile->>'gender' as gender from utamu_models m left join utamu_users u on u.id = m.user_id where m.slug = $1 limit 1", [req.params.slug]);
   if (dbRows?.[0]) {
     const imageRows = await tryQuery('select url from utamu_profile_images where model_id = $1 order by sort_order, created_at', [dbRows[0].id]);
     return res.json({ data: { ...dbRows[0], name: dbRows[0].display_name, slug: dbRows[0].slug, image: imageRows?.[0]?.url || models[0].image, gallery: imageRows?.map((i) => i.url) || [], rankingScore: 0 } });
