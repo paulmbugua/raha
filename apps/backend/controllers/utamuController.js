@@ -136,6 +136,10 @@ function emailFlowLog(event, details = {}, level = 'log') {
   });
 }
 
+function allowsUnverifiedLoginInDevelopment() {
+  return process.env.NODE_ENV !== 'production' && process.env.UTAMU_DISABLE_DEV_UNVERIFIED_LOGIN !== 'true';
+}
+
 function loginFlowLog(event, details = {}, level = 'log') {
   const logger = level === 'error' ? console.error : level === 'warn' ? console.warn : console.log;
   logger('[utamu:login]', {
@@ -487,13 +491,18 @@ export async function loginAccount(req, res) {
   const passwordMatches = await bcrypt.compare(password, user.password_hash);
   loginFlowLog('login_password_checked', { requestId, userId: user.id, passwordMatches }, passwordMatches ? 'log' : 'warn');
   if (!passwordMatches) return res.status(401).json({ message: 'Password is incorrect.' });
-  if (!user.email_verified || user.status === 'pending_email') {
-    loginFlowLog('login_blocked_pending_email', { requestId, userId: user.id, status: user.status, emailVerified: user.email_verified }, 'warn');
+  const pendingEmailVerification = !user.email_verified || user.status === 'pending_email';
+  const devBypassEmailVerification = pendingEmailVerification && allowsUnverifiedLoginInDevelopment();
+  if (pendingEmailVerification && !devBypassEmailVerification) {
+    loginFlowLog('login_blocked_pending_email', { requestId, userId: user.id, status: user.status, emailVerified: user.email_verified, nodeEnv: process.env.NODE_ENV || 'development' }, 'warn');
     return res.status(403).json({ message: 'Please confirm your email before logging in.' });
   }
+  if (devBypassEmailVerification) {
+    loginFlowLog('login_dev_email_confirmation_bypassed', { requestId, userId: user.id, status: user.status, emailVerified: user.email_verified, nodeEnv: process.env.NODE_ENV || 'development' }, 'warn');
+  }
   await queryWithRetry('update utamu_users set last_login_at = now() where id = $1', [user.id]);
-  loginFlowLog('login_success', { requestId, userId: user.id, accountType: user.account_type });
-  res.json({ data: { token: signUser(user), user: publicUser(user) } });
+  loginFlowLog('login_success', { requestId, userId: user.id, accountType: user.account_type, devBypassEmailVerification });
+  res.json({ data: { token: signUser(user), user: publicUser(user), devBypassEmailVerification } });
 }
 
 
