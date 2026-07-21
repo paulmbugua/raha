@@ -9,8 +9,8 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 
 type UtamuAppProps = { slug?: string[] };
 
-type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; fullName?: string; accountType?: string; emailVerified?: boolean } | null };
-type View = 'home' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; phone?: string; fullName?: string; accountType?: string; emailVerified?: boolean } | null };
+type View = 'home' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
 
 const SESSION_KEY = 'utamu.session';
 const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
@@ -38,6 +38,8 @@ const routeLinks = [
   '/register/member',
   '/register/confirm-email',
   '/messages',
+  '/monetization',
+  '/client-portal',
   '/escort/amina-w',
   '/escort/profile',
   '/escort/dashboard',
@@ -61,6 +63,8 @@ function viewFor(slug?: string[]): View {
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
   if (path.startsWith('register/')) return 'registration';
   if (path === 'messages') return 'messages';
+  if (path === 'monetization') return 'monetization';
+  if (path === 'client-portal') return 'clientPortal';
   if (['model/profile', 'escort/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
@@ -609,6 +613,12 @@ function ProfileScreen({ path }: { path: string }) {
   const [composerOpen, setComposerOpen] = useState(false);
   const [messageBody, setMessageBody] = useState('');
   const [messageStatus, setMessageStatus] = useState('');
+  const [tipTokens, setTipTokens] = useState('25');
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingStatus, setBookingStatus] = useState('');
+  const [bookingMessage, setBookingMessage] = useState('');
+  const [bookingDate, setBookingDate] = useState('');
+  const [bookingLocation, setBookingLocation] = useState(model.city);
   async function startMessage() {
     const session = readSession();
     if (!session?.token) { setLoginPrompt(true); return; }
@@ -617,9 +627,34 @@ function ProfileScreen({ path }: { path: string }) {
   async function sendProfileMessage() {
     const session = readSession();
     if (!session?.token) { setLoginPrompt(true); return; }
-    await utamuApi.sendMessage({ modelSlug: model.slug, modelName: displayName, message: messageBody, subject: 'Profile enquiry' }, session.token);
-    setMessageStatus('Message sent. The escort will see it in their account notifications.');
-    setMessageBody('');
+    try {
+      await utamuApi.sendMessage({ modelSlug: model.slug, modelName: displayName, message: messageBody, subject: 'Profile enquiry' }, session.token);
+      setMessageStatus('Message sent. The escort will see it in their account notifications.');
+      setMessageBody('');
+    } catch (error) {
+      setMessageStatus(error instanceof Error ? error.message : 'Message could not be sent.');
+    }
+  }
+  async function sendProfileTip() {
+    const session = readSession();
+    if (!session?.token) { setLoginPrompt(true); return; }
+    try {
+      await utamuApi.sendTip({ modelSlug: model.slug, amountTokens: Number(tipTokens || 0), message: 'Profile appreciation tip' }, session.token);
+      setMessageStatus('Tip sent successfully.');
+    } catch (error) {
+      setMessageStatus(error instanceof Error ? error.message : 'Tip could not be sent.');
+    }
+  }
+  async function submitBookingLead() {
+    const session = readSession();
+    if (!session?.token) { setLoginPrompt(true); return; }
+    try {
+      await utamuApi.createBookingLead({ modelSlug: model.slug, modelName: displayName, requestedDate: bookingDate || null, location: bookingLocation, message: bookingMessage }, session.token);
+      setBookingStatus('Booking request sent to the dashboard.');
+      setBookingMessage('');
+    } catch (error) {
+      setBookingStatus(error instanceof Error ? error.message : 'Booking request could not be sent.');
+    }
   }
 
   return (
@@ -666,7 +701,7 @@ function ProfileScreen({ path }: { path: string }) {
               <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Contact info:</h2>
               <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-[13px]"><dt className="font-bold">Phone:</dt><dd className="text-[#ff4eb8]">{phone}</dd><dt className="font-bold">WhatsApp:</dt><dd><a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="text-[#ff4eb8]">WhatsApp</a></dd></dl>
               <p className="mt-4 text-[13px] leading-6">Tell us you found this profile on <strong>Secret Nairobi</strong> to improve response handling and platform safety.</p>
-              <button onClick={startMessage} className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white"><Mail className="mr-1 h-4 w-4" />Email Me</button>{loginPrompt && <div className="mt-4 flex items-center justify-between rounded-[3px] bg-[#d70032] px-4 py-3 text-sm font-bold text-white"><span>You need to register or login to send messages</span><button onClick={() => setLoginPrompt(false)} className="rounded-full bg-white px-2 py-1 text-xs text-[#d70032]">Close x</button></div>}{composerOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="Write your message" className="min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={sendProfileMessage} className="mt-2 rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Send message</button>{messageStatus && <p className="mt-2 text-xs text-[#168a4a]">{messageStatus}</p>}</div>}
+              <div className="mt-4 flex flex-wrap gap-2"><button onClick={startMessage} className="inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white"><Mail className="mr-1 h-4 w-4" />Email Me</button><button onClick={() => setBookingOpen((value) => !value)} className="inline-flex rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">Request booking</button><button onClick={sendProfileTip} className="inline-flex rounded-full bg-[#f0b323] px-4 py-2 text-xs font-bold text-[#211000]">Tip {tipTokens} tokens</button><input value={tipTokens} onChange={(event) => setTipTokens(event.target.value)} className="w-20 rounded-full border border-[#ffd0e8] px-3 text-xs" /></div>{loginPrompt && <div className="mt-4 flex items-center justify-between rounded-[3px] bg-[#d70032] px-4 py-3 text-sm font-bold text-white"><span>You need to register or login to send messages, tips, or booking requests</span><button onClick={() => setLoginPrompt(false)} className="rounded-full bg-white px-2 py-1 text-xs text-[#d70032]">Close x</button></div>}{composerOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><p className="mb-2 text-xs text-[#7b6e78]">Private messages cost wallet tokens. Buy bundles from My Account - Monetization.</p><textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="Write your message" className="min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={sendProfileMessage} className="mt-2 rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Send message</button>{messageStatus && <p className="mt-2 text-xs text-[#168a4a]">{messageStatus}</p>}</div>}{bookingOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><div className="grid gap-2 sm:grid-cols-2"><input type="datetime-local" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} className={fieldClass} /><input value={bookingLocation} onChange={(event) => setBookingLocation(event.target.value)} placeholder="Preferred location" className={fieldClass} /></div><textarea value={bookingMessage} onChange={(event) => setBookingMessage(event.target.value)} placeholder="Share timing, area, screening details, and what you want confirmed" className="mt-2 min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={submitBookingLead} className="mt-2 rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">Send booking request</button>{bookingStatus && <p className="mt-2 text-xs text-[#168a4a]">{bookingStatus}</p>}</div>}
             </section>
           </div>
           <section className="mt-3 bg-white p-5">
@@ -781,7 +816,7 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
 }
 
 function AccountSidebar({ active }: { active: string }) {
-  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
+  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ['Monetization', '/monetization'], ['Client Portal', '/client-portal'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
   return <aside className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold text-[#ff1d9b]">My Account</h2><div className="mt-4 grid gap-2">{links.map(([label, href]) => <a key={href} href={href} className={'rounded-[3px] px-3 py-2 text-sm font-bold ' + (active === href.slice(1) ? 'bg-[#e60073] text-white' : 'bg-[#fff0f6] text-[#3b164b] hover:bg-[#ffd6ec]')}>{label}</a>)}</div></aside>;
 }
 
@@ -923,6 +958,72 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
 }
 
+function MonetizationScreen() {
+  const [session, setSession] = useState<UtamuSession | null>(null);
+  const [overview, setOverview] = useState<any>({ products: [], wallet: null, subscriptions: [], assistant: null, clientPortal: null, leads: [], transactions: [], payments: [], messageTokenCost: 5 });
+  const [method, setMethod] = useState<'mpesa' | 'paystack'>('mpesa');
+  const [phone, setPhone] = useState('2547');
+  const [email, setEmail] = useState('');
+  const [status, setStatus] = useState('');
+  const [busyProduct, setBusyProduct] = useState('');
+  const [aiTone, setAiTone] = useState('polite');
+  const [aiInstructions, setAiInstructions] = useState('');
+  useEffect(() => {
+    const next = readSession();
+    setSession(next);
+    if (next?.token) utamuApi.getMonetization(next.token).then((data: any) => {
+      setOverview(data);
+      setAiTone(data.assistant?.tone || 'polite');
+      setAiInstructions(data.assistant?.instructions || '');
+      setEmail(next.user?.email || '');
+      setPhone(next.user?.phone || '2547');
+    });
+  }, []);
+  async function checkout(productId: string) {
+    if (!session?.token) { window.location.href = '/login'; return; }
+    setBusyProduct(productId);
+    setStatus('');
+    try {
+      const result: any = await utamuApi.createMonetizationCheckout({ productId, method, phone, email }, session.token);
+      if (result.authorizationUrl) {
+        window.location.href = result.authorizationUrl;
+        return;
+      }
+      setStatus(result.instructions || 'Payment started. Complete checkout to activate this feature.');
+      const refreshed = await utamuApi.getMonetization(session.token);
+      setOverview(refreshed);
+    } catch (error) {
+      setStatus(error instanceof Error ? error.message : 'Checkout could not be started.');
+    } finally {
+      setBusyProduct('');
+    }
+  }
+  async function saveAssistant(enabled = true) {
+    if (!session?.token) return;
+    const assistant = await utamuApi.configureAiAssistant({ enabled, tone: aiTone, instructions: aiInstructions, autoReplyEnabled: true }, session.token);
+    setOverview((current: any) => ({ ...current, assistant }));
+    setStatus(enabled ? 'AI assistant settings saved.' : 'AI assistant paused.');
+  }
+  if (!session?.token) return <section className="bg-[#fff7fb] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">Login to manage monetization.</div></section>;
+  const grouped = (overview.products || []).reduce((acc: any, product: any) => ({ ...acc, [product.category]: [...(acc[product.category] || []), product] }), {});
+  const categoryTitles: Record<string, string> = { verification: 'Paid verification and trust badges', listing: 'Tiered featured listings', wallet: 'Message tokens and tips', ai: 'AI companion assistant', client_portal: 'Verified client portal' };
+  return <section className="grid gap-4 bg-[#fff7fb] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-5"><div className="bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] p-5 text-white"><StatusBadge tone="gold">Revenue center</StatusBadge><h1 className="mt-3 text-3xl font-bold">Monetization</h1><p className="mt-2 max-w-3xl text-sm text-white/80">Sell trust badges, featured placement, tokenized messages, tips, AI assistant access, vetted client subscriptions, and booking leads from one account area.</p><div className="mt-4 grid gap-3 sm:grid-cols-3"><div className="rounded border border-white/15 bg-white/10 p-3"><p className="text-xs uppercase text-white/60">Wallet</p><strong className="text-2xl">{overview.wallet?.balance_tokens || 0} tokens</strong></div><div className="rounded border border-white/15 bg-white/10 p-3"><p className="text-xs uppercase text-white/60">Listing tier</p><strong className="text-2xl capitalize">{overview.model?.listing_tier || 'free'}</strong></div><div className="rounded border border-white/15 bg-white/10 p-3"><p className="text-xs uppercase text-white/60">Trusted badge</p><strong className="text-2xl">{overview.model?.trusted_badge ? 'Active' : 'Not active'}</strong></div></div></div><div className="bg-white p-4 shadow-sm"><div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]"><select value={method} onChange={(event) => setMethod(event.target.value as 'mpesa' | 'paystack')} className={selectClass}><option value="mpesa">M-Pesa</option><option value="paystack">Paystack</option></select><input value={method === 'mpesa' ? phone : email} onChange={(event) => method === 'mpesa' ? setPhone(event.target.value) : setEmail(event.target.value)} className={fieldClass} placeholder={method === 'mpesa' ? '2547...' : 'email@example.com'} /><a href="/checkout/mpesa" className="rounded-full bg-[#f0b323] px-5 py-2 text-center text-sm font-bold text-[#211000]">VIP quick pay</a></div>{status && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{status}</p>}</div>{Object.entries(grouped).map(([category, products]: any) => <section key={category} className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#e60073] pl-3 text-lg font-bold text-[#e60073]">{categoryTitles[category] || category}</h2><div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">{products.map((product: any) => <article key={product.id} className="rounded border border-[#ffd1e8] bg-[#fff8fb] p-4"><p className="text-xs font-bold uppercase text-[#006b3f]">{product.category}</p><h3 className="mt-2 text-xl font-bold text-[#2b0a3d]">{product.name}</h3><p className="mt-2 min-h-12 text-sm leading-6 text-[#7b6e78]">{product.description}</p><div className="mt-3 flex items-center justify-between"><strong className="text-lg text-[#111]">{kes(product.amountKes || product.amount_kes || 0)}</strong>{product.tokenAmount || product.token_amount ? <span className="rounded-full bg-[#006b3f] px-2 py-1 text-xs font-bold text-white">{product.tokenAmount || product.token_amount} tokens</span> : <span className="rounded-full bg-[#f0b323] px-2 py-1 text-xs font-bold text-[#211000]">{product.durationDays || product.duration_days || 30} days</span>}</div><button disabled={busyProduct === product.id} onClick={() => checkout(product.id)} className="mt-4 w-full rounded-full bg-[#e60073] px-4 py-2 text-sm font-bold text-white disabled:opacity-60">{busyProduct === product.id ? 'Starting...' : 'Activate'}</button></article>)}</div></section>)}<section className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#006b3f] pl-3 text-lg font-bold text-[#006b3f]">AI assistant settings</h2><div className="mt-4 grid gap-3 sm:grid-cols-[220px_1fr]"><select value={aiTone} onChange={(event) => setAiTone(event.target.value)} className={selectClass}><option>polite</option><option>warm</option><option>direct</option><option>premium</option></select><input value={aiInstructions} onChange={(event) => setAiInstructions(event.target.value)} className={fieldClass} placeholder="Screening rules, availability notes, preferred response style" /></div><div className="mt-3 flex gap-2"><button onClick={() => saveAssistant(true)} className="rounded-full bg-[#006b3f] px-5 py-2 text-sm font-bold text-white">Save assistant</button><button onClick={() => saveAssistant(false)} className="rounded-full border border-[#006b3f] px-5 py-2 text-sm font-bold text-[#006b3f]">Pause</button></div></section><section className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#e60073] pl-3 text-lg font-bold text-[#e60073]">Booking leads</h2><div className="mt-4 grid gap-3">{(overview.leads || []).length === 0 && <p className="text-sm text-[#7b6e78]">No paid leads yet.</p>}{(overview.leads || []).map((lead: any) => <article key={lead.id} className="rounded border border-[#ffd1e8] p-3 text-sm"><strong>{lead.model_name || 'Profile lead'}</strong><p className="mt-1 text-[#7b6e78]">{lead.message}</p><span className="text-xs text-[#006b3f]">Lead fee: {kes(Number(lead.lead_fee_kes || 0))}</span></article>)}</div></section></div><AccountSidebar active="monetization" /></section>;
+}
+
+function ClientPortalScreen() {
+  const [session, setSession] = useState<UtamuSession | null>(null);
+  const [portal, setPortal] = useState<any>({ profiles: [] });
+  const [notice, setNotice] = useState('');
+  useEffect(() => {
+    const next = readSession();
+    setSession(next);
+    if (next?.token) utamuApi.getClientPortal(next.token).then(setPortal).catch((error) => setNotice(error instanceof Error ? error.message : 'Upgrade required.'));
+  }, []);
+  if (!session?.token) return <section className="bg-[#fff7fb] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">Login to access the vetted client portal.</div></section>;
+  return <section className="grid gap-4 bg-[#fff7fb] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">Vetted client portal</h1><p className="mt-2 text-sm text-[#7b6e78]">Premium matching for verified, trusted, and VIP profiles.</p>{notice && <p className="mt-3 rounded bg-[#fff0d0] p-3 text-sm text-[#7a4d00]">{notice} <a href="/monetization" className="font-bold text-[#e60073]">Activate access</a></p>}</div><div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">{(portal.profiles || []).map((profile: any) => <a key={profile.id} href={`/escort/${profile.slug}`} className="overflow-hidden rounded border border-[#f0b323]/70 bg-white shadow-sm"><img src={profile.image_url || models[0].image} alt={profile.display_name} className="aspect-[3/4] w-full object-cover" /><div className="p-3"><strong className="text-[#2b0a3d]">{profile.display_name}</strong><p className="text-xs text-[#7b6e78]">{profile.city} - {profile.listing_tier || 'trusted'}</p></div></a>)}</div></div><AccountSidebar active="client-portal" /></section>;
+}
+
+
 function VerificationScreen({ path }: { path: string }) {
   const rejected = path.includes('rejected');
   const resubmitted = path.includes('resubmission');
@@ -1018,5 +1119,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal'].includes(view) && <RouteIndex />}</Shell>;
 }

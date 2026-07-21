@@ -17,10 +17,30 @@ const MAIL_FROM = process.env.MAIL_FROM || `${MAIL_FROM_NAME} <${MAIL_FROM_ADDRE
 const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || MAIL_FROM_ADDRESS;
 const VALIDATION_RESEND_COOLDOWN_MS = Number(process.env.UTAMU_VALIDATION_RESEND_COOLDOWN_MS || 60_000);
 const VIP_VISIBILITY_PRICE_KES = 1000;
+const MESSAGE_TOKEN_COST = Number(process.env.UTAMU_MESSAGE_TOKEN_COST || 5);
+const TIP_COMMISSION_RATE = Number(process.env.UTAMU_TIP_COMMISSION_RATE || 0.15);
+const MONETIZATION_PRODUCTS = [
+  { id: 'verification-trusted', category: 'verification', name: 'Trusted verification badge', description: 'Paid ID/document review with a Trusted badge after approval.', amountKes: 1500, tokenAmount: 0, durationDays: 365, sortOrder: 10 },
+  { id: 'tier-bronze', category: 'listing', name: 'Bronze featured listing', description: 'Monthly profile bumping, 12 photo slots, and stronger ranking.', amountKes: 1500, tokenAmount: 0, durationDays: 30, sortOrder: 20 },
+  { id: 'tier-silver', category: 'listing', name: 'Silver featured listing', description: 'Faster bumping, 20 photo slots, and search priority.', amountKes: 3000, tokenAmount: 0, durationDays: 30, sortOrder: 30 },
+  { id: 'tier-gold', category: 'listing', name: 'Gold featured listing', description: 'Top ranking, 30 photo slots, and sidebar ad eligibility.', amountKes: 6000, tokenAmount: 0, durationDays: 30, sortOrder: 40 },
+  { id: 'tier-vip', category: 'listing', name: 'VIP featured listing', description: 'VIP homepage priority, 40 photo slots, sidebar ad spot, and strongest bumping.', amountKes: 10000, tokenAmount: 0, durationDays: 30, sortOrder: 50 },
+  { id: 'tokens-100', category: 'wallet', name: '100 message tokens', description: 'Credits for paid messages, private unlocks, and tips.', amountKes: 500, tokenAmount: 100, durationDays: null, sortOrder: 60 },
+  { id: 'tokens-300', category: 'wallet', name: '300 message tokens', description: 'Best-value client credits for active messaging and tips.', amountKes: 1200, tokenAmount: 300, durationDays: null, sortOrder: 70 },
+  { id: 'ai-assistant-monthly', category: 'ai', name: 'AI assistant monthly add-on', description: '24/7 assistant that handles common questions and filters weak leads.', amountKes: 6500, tokenAmount: 0, durationDays: 30, sortOrder: 80 },
+  { id: 'client-portal-monthly', category: 'client_portal', name: 'Vetted client portal', description: 'Monthly access to vetted-client-only discovery and matchmaking.', amountKes: 2500, tokenAmount: 0, durationDays: 30, sortOrder: 90 },
+];
+const LISTING_TIER_SETTINGS = {
+  bronze: { galleryLimit: 12, bumpIntervalHours: 168, sidebarAd: false, elite: false },
+  silver: { galleryLimit: 20, bumpIntervalHours: 72, sidebarAd: false, elite: false },
+  gold: { galleryLimit: 30, bumpIntervalHours: 24, sidebarAd: true, elite: true },
+  vip: { galleryLimit: 40, bumpIntervalHours: 8, sidebarAd: true, elite: true },
+};
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.PAYSTACK_SECRET || '';
 
 
 let utamuTransactionalSchemaReady = false;
+let utamuMonetizationSchemaReady = false;
 async function ensureUtamuTransactionalSchema() {
   if (utamuTransactionalSchemaReady) return;
   await queryWithRetry("alter table utamu_payments add column if not exists provider_reference text");
@@ -32,6 +52,114 @@ async function ensureUtamuTransactionalSchema() {
   await queryWithRetry("alter table utamu_reviews add column if not exists author_name text");
   utamuTransactionalSchemaReady = true;
 }
+async function ensureUtamuMonetizationSchema() {
+  if (utamuMonetizationSchemaReady) return;
+  await ensureUtamuTransactionalSchema();
+  const statements = [
+    "alter table utamu_models add column if not exists trusted_badge boolean not null default false",
+    "alter table utamu_models add column if not exists verification_tier text not null default 'none'",
+    "alter table utamu_models add column if not exists listing_tier text not null default 'free'",
+    "alter table utamu_models add column if not exists listing_tier_expires_at timestamptz",
+    "alter table utamu_models add column if not exists gallery_limit integer not null default 8",
+    "alter table utamu_models add column if not exists sidebar_ad boolean not null default false",
+    "alter table utamu_payments add column if not exists metadata jsonb not null default '{}'::jsonb",
+    "create table if not exists utamu_monetization_products (id text primary key, category text not null, name text not null, description text not null, amount_kes integer not null, token_amount integer not null default 0, duration_days integer, sort_order integer not null default 0, active boolean not null default true, created_at timestamptz not null default now())",
+    "create table if not exists utamu_listing_subscriptions (id uuid primary key default gen_random_uuid(), user_id uuid references utamu_users(id) on delete cascade, model_id uuid references utamu_models(id) on delete cascade, tier text not null, amount_kes integer not null default 0, status text not null default 'active', gallery_limit integer not null default 8, bump_interval_hours integer not null default 168, sidebar_ad boolean not null default false, starts_at timestamptz not null default now(), expires_at timestamptz, payment_id uuid references utamu_payments(id) on delete set null, created_at timestamptz not null default now())",
+    "create table if not exists utamu_wallets (user_id uuid primary key references utamu_users(id) on delete cascade, balance_tokens integer not null default 0, lifetime_purchased_tokens integer not null default 0, updated_at timestamptz not null default now())",
+    "create table if not exists utamu_wallet_transactions (id uuid primary key default gen_random_uuid(), user_id uuid not null references utamu_users(id) on delete cascade, counterparty_user_id uuid references utamu_users(id) on delete set null, model_id uuid references utamu_models(id) on delete set null, type text not null, amount_tokens integer not null, balance_after integer not null, commission_tokens integer not null default 0, description text, payment_id uuid references utamu_payments(id) on delete set null, created_at timestamptz not null default now())",
+    "create table if not exists utamu_ai_assistants (user_id uuid primary key references utamu_users(id) on delete cascade, model_id uuid references utamu_models(id) on delete cascade, enabled boolean not null default false, plan text not null default 'off', monthly_price_kes integer not null default 0, tone text not null default 'polite', instructions text, auto_reply_enabled boolean not null default true, expires_at timestamptz, payment_id uuid references utamu_payments(id) on delete set null, updated_at timestamptz not null default now())",
+    "create table if not exists utamu_client_portal_subscriptions (id uuid primary key default gen_random_uuid(), user_id uuid not null references utamu_users(id) on delete cascade, status text not null default 'active', plan text not null default 'vetted-client', amount_kes integer not null default 0, starts_at timestamptz not null default now(), expires_at timestamptz, payment_id uuid references utamu_payments(id) on delete set null, created_at timestamptz not null default now())",
+    "create table if not exists utamu_booking_leads (id uuid primary key default gen_random_uuid(), client_user_id uuid references utamu_users(id) on delete set null, provider_user_id uuid references utamu_users(id) on delete set null, model_id uuid references utamu_models(id) on delete set null, model_slug text, model_name text, requested_date timestamptz, location text, budget_kes integer, message text not null, status text not null default 'new', lead_fee_kes integer not null default 0, created_at timestamptz not null default now())",
+    "create table if not exists utamu_tips (id uuid primary key default gen_random_uuid(), sender_user_id uuid references utamu_users(id) on delete set null, recipient_user_id uuid references utamu_users(id) on delete set null, model_id uuid references utamu_models(id) on delete set null, amount_tokens integer not null, commission_tokens integer not null, message text, created_at timestamptz not null default now())",
+    "create index if not exists utamu_listing_subscriptions_model_idx on utamu_listing_subscriptions (model_id, status, expires_at desc)",
+    "create index if not exists utamu_wallet_transactions_user_idx on utamu_wallet_transactions (user_id, created_at desc)",
+    "create index if not exists utamu_booking_leads_provider_idx on utamu_booking_leads (provider_user_id, created_at desc)",
+    "create index if not exists utamu_booking_leads_client_idx on utamu_booking_leads (client_user_id, created_at desc)",
+  ];
+  for (const statement of statements) await queryWithRetry(statement);
+  for (const product of MONETIZATION_PRODUCTS) {
+    await queryWithRetry(
+      "insert into utamu_monetization_products (id, category, name, description, amount_kes, token_amount, duration_days, sort_order) values ($1,$2,$3,$4,$5,$6,$7,$8) on conflict (id) do update set category = excluded.category, name = excluded.name, description = excluded.description, amount_kes = excluded.amount_kes, token_amount = excluded.token_amount, duration_days = excluded.duration_days, sort_order = excluded.sort_order, active = true",
+      [product.id, product.category, product.name, product.description, product.amountKes, product.tokenAmount, product.durationDays, product.sortOrder]
+    );
+  }
+  utamuMonetizationSchemaReady = true;
+}
+
+function productById(id) {
+  return MONETIZATION_PRODUCTS.find((product) => product.id === id);
+}
+
+function paymentDescriptionFor(product) {
+  return `Secret Nairobi - ${product?.name || 'premium upgrade'}`;
+}
+
+function expiresSql(days) {
+  return days ? `now() + interval '${Number(days)} days'` : 'null';
+}
+
+async function modelForUser(user) {
+  if (!user?.id) return null;
+  const rows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
+  return rows?.[0] || null;
+}
+
+async function walletFor(userId) {
+  const row = await queryWithRetry('insert into utamu_wallets (user_id) values ($1) on conflict (user_id) do update set updated_at = utamu_wallets.updated_at returning *', [userId]);
+  return row.rows[0];
+}
+
+async function creditWallet(userId, tokens, description, paymentId = null, counterpartyUserId = null, modelId = null, type = 'credit') {
+  await walletFor(userId);
+  const updated = await queryWithRetry('update utamu_wallets set balance_tokens = balance_tokens + $2, lifetime_purchased_tokens = lifetime_purchased_tokens + greatest($2, 0), updated_at = now() where user_id = $1 returning *', [userId, tokens]);
+  const wallet = updated.rows[0];
+  await queryWithRetry('insert into utamu_wallet_transactions (user_id, counterparty_user_id, model_id, type, amount_tokens, balance_after, description, payment_id) values ($1,$2,$3,$4,$5,$6,$7,$8)', [userId, counterpartyUserId, modelId, type, tokens, wallet.balance_tokens, description, paymentId]);
+  return wallet;
+}
+
+async function debitWallet(userId, tokens, description, counterpartyUserId = null, modelId = null, type = 'debit') {
+  await walletFor(userId);
+  const updated = await queryWithRetry('update utamu_wallets set balance_tokens = balance_tokens - $2, updated_at = now() where user_id = $1 and balance_tokens >= $2 returning *', [userId, tokens]);
+  const wallet = updated.rows[0];
+  if (!wallet) return null;
+  await queryWithRetry('insert into utamu_wallet_transactions (user_id, counterparty_user_id, model_id, type, amount_tokens, balance_after, description) values ($1,$2,$3,$4,$5,$6,$7)', [userId, counterpartyUserId, modelId, type, -tokens, wallet.balance_tokens, description]);
+  return wallet;
+}
+
+async function activatePaidEntitlement(reference) {
+  await ensureUtamuMonetizationSchema();
+  const rows = await tryQuery('select * from utamu_payments where reference = $1 or provider_reference = $1 limit 1', [reference]);
+  const payment = rows?.[0];
+  if (!payment) return null;
+  const metadata = payment.metadata || {};
+  const product = productById(metadata.productId) || MONETIZATION_PRODUCTS.find((item) => item.id === metadata.purpose);
+  const model = await resolvePaymentModel({ modelId: metadata.modelId, modelSlug: metadata.modelSlug }, payment.user_id ? { id: payment.user_id } : null);
+  if (payment.purpose === 'vip_visibility' || metadata.purpose === 'vip_visibility') {
+    return activateVipVisibility(reference);
+  }
+  if (!product) return payment;
+  if (product.category === 'wallet') {
+    await creditWallet(payment.user_id, product.tokenAmount, product.name, payment.id, null, model?.id || null, 'purchase');
+  }
+  if (product.category === 'verification' && model?.id) {
+    await queryWithRetry("update utamu_models set verified = true, trusted_badge = true, verification_tier = 'trusted' where id = $1", [model.id]);
+    await queryWithRetry("insert into utamu_verifications (model_id, status, risk, notes) values ($1,'approved','low','Paid Trusted badge activated after checkout')", [model.id]);
+  }
+  if (product.category === 'listing' && model?.id) {
+    const tier = product.id.replace('tier-', '');
+    const settings = LISTING_TIER_SETTINGS[tier] || LISTING_TIER_SETTINGS.bronze;
+    await queryWithRetry(`insert into utamu_listing_subscriptions (user_id, model_id, tier, amount_kes, gallery_limit, bump_interval_hours, sidebar_ad, expires_at, payment_id) values ($1,$2,$3,$4,$5,$6,$7,${expiresSql(product.durationDays)},$8)`, [payment.user_id, model.id, tier, product.amountKes, settings.galleryLimit, settings.bumpIntervalHours, settings.sidebarAd, payment.id]);
+    await queryWithRetry(`update utamu_models set listing_tier = $2, gallery_limit = $3, sidebar_ad = $4, elite = case when $5 then true else elite end, listing_tier_expires_at = ${expiresSql(product.durationDays)} where id = $1`, [model.id, tier, settings.galleryLimit, settings.sidebarAd, settings.elite]);
+  }
+  if (product.category === 'ai' && model?.id) {
+    await queryWithRetry(`insert into utamu_ai_assistants (user_id, model_id, enabled, plan, monthly_price_kes, expires_at, payment_id) values ($1,$2,true,'assistant',$3,${expiresSql(product.durationDays)},$4) on conflict (user_id) do update set model_id = excluded.model_id, enabled = true, plan = excluded.plan, monthly_price_kes = excluded.monthly_price_kes, expires_at = excluded.expires_at, payment_id = excluded.payment_id, updated_at = now()`, [payment.user_id, model.id, product.amountKes, payment.id]);
+  }
+  if (product.category === 'client_portal') {
+    await queryWithRetry(`insert into utamu_client_portal_subscriptions (user_id, status, plan, amount_kes, expires_at, payment_id) values ($1,'active','vetted-client',$2,${expiresSql(product.durationDays)},$3)`, [payment.user_id, product.amountKes, payment.id]);
+  }
+  return payment;
+}
+
 function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
 function normalizeKenyanMsisdn(value) {
   const digits = String(value || '').replace(/\D/g, '');
@@ -77,8 +205,13 @@ async function tryQuery(sql, params = []) {
   }
 }
 
+function listingTierWeight(model) {
+  const tier = String(model.listingTier || model.listing_tier || '').toLowerCase();
+  return tier === 'vip' ? 80 : tier === 'gold' ? 60 : tier === 'silver' ? 40 : tier === 'bronze' ? 20 : 0;
+}
+
 function scoreModel(model) {
-  return Math.round(model.rating * 20 + model.reviews * 0.25 + Number(model.elite) * 25 + Number(model.verified) * 18 + Number(model.online) * 8);
+  return Math.round(model.rating * 20 + model.reviews * 0.25 + Number(model.elite) * 25 + Number(model.verified) * 18 + Number(model.trustedBadge || model.trusted_badge) * 30 + listingTierWeight(model) + Number(model.online) * 8);
 }
 
 function slugify(value) {
@@ -284,10 +417,10 @@ export async function getDirectory(_req, res) {
   const payload = rows?.[0]?.payload || directory;
   const dbRows = await tryQuery("select m.*, coalesce(array_agg(i.url) filter (where i.url is not null), '{}') as images from utamu_models m left join utamu_profile_images i on i.model_id = m.id where m.status <> 'deleted' group by m.id order by m.elite desc, m.rating desc, m.created_at desc limit 100");
   const dbModels = (dbRows || []).map((row) => ({
-    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', image: row.images?.[0] || models[0].image, gallery: row.images || [], bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
+    id: row.id, name: row.display_name, slug: row.slug, city: row.city, county: row.county, category: row.category, age: row.age || 24, height: row.height || '165 cm', rating: Number(row.rating || 0), reviews: Number(row.review_count || 0), priceFrom: Number(row.price_from_kes || 0), online: row.online, verified: row.verified, elite: row.elite, responseTime: row.response_time || 'New account', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad, image: row.images?.[0] || models[0].image, gallery: row.images || [], bio: row.bio || '', specialties: [row.category], stats: { bookings: 0, profileViews: 0, completion: 30, earnings: 0 }, rates: [],
   }));
   const reviewRows = await getReviewRows();
-  res.json({ data: { ...payload, models: [...dbModels, ...(payload.models?.length ? payload.models : models)].sort((a, b) => Number(b.elite) - Number(a.elite) || Number(b.rating || 0) - Number(a.rating || 0)), reviews: reviewRows.length ? reviewRows : payload.reviews || reviews } });
+  res.json({ data: { ...payload, models: [...dbModels, ...(payload.models?.length ? payload.models : models)].sort((a, b) => scoreModel(b) - scoreModel(a)), reviews: reviewRows.length ? reviewRows : payload.reviews || reviews } });
 }
 
 
@@ -314,7 +447,7 @@ export async function searchModels(req, res) {
     online: row.online,
     verified: row.verified,
     elite: row.elite,
-    responseTime: row.response_time || 'New account',
+    responseTime: row.response_time || 'New account', trustedBadge: row.trusted_badge, listingTier: row.listing_tier, galleryLimit: row.gallery_limit, sidebarAd: row.sidebar_ad,
     image: row.images?.[0] || models[0].image,
     gallery: row.images || [],
     bio: row.bio || '',
@@ -624,18 +757,33 @@ export async function deleteProfileImage(req, res) {
 }
 
 export async function sendMessage(req, res) {
+  await ensureUtamuMonetizationSchema();
   const user = await authUser(req);
   if (!user) return res.status(401).json({ message: 'You need to register or login to send messages.' });
   const body = String(req.body?.message || req.body?.body || '').trim();
   if (!body) return res.status(400).json({ message: 'Message is required.' });
   const modelRows = await tryQuery('select * from utamu_models where slug = $1 limit 1', [req.body?.modelSlug]);
   const model = modelRows?.[0] || null;
+  let wallet = null;
+  if (user.role === 'client') {
+    wallet = await debitWallet(user.id, MESSAGE_TOKEN_COST, `Paid message to ${model?.display_name || req.body?.modelName || 'profile'}`, model?.user_id || null, model?.id || null, 'message');
+    if (!wallet) return res.status(402).json({ message: `Buy message tokens to send private messages. This action costs ${MESSAGE_TOKEN_COST} tokens.` });
+  }
   const inserted = await queryWithRetry(
     `insert into utamu_messages (sender_user_id, recipient_user_id, model_id, model_slug, model_name, sender_name, sender_email, subject, body)
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *`,
     [user.id, model?.user_id || null, model?.id || null, req.body?.modelSlug || null, req.body?.modelName || model?.display_name || 'Seed escort', user.full_name, user.email, req.body?.subject || 'Profile enquiry', body]
   );
-  res.status(201).json({ data: inserted.rows[0] });
+  const assistantRows = model?.user_id ? await tryQuery('select * from utamu_ai_assistants where user_id = $1 and enabled = true and auto_reply_enabled = true and (expires_at is null or expires_at > now()) limit 1', [model.user_id]) : null;
+  if (assistantRows?.[0]) {
+    const reply = `Thanks for reaching out. I have received your enquiry and will review availability, location, and screening details before confirming next steps.`;
+    await queryWithRetry(
+      `insert into utamu_messages (sender_user_id, recipient_user_id, model_id, model_slug, model_name, sender_name, sender_email, subject, body)
+       values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [model.user_id, user.id, model.id, req.body?.modelSlug || null, model.display_name, `${model.display_name} assistant`, 'assistant@secretnairobi.local', 'Automated availability response', reply]
+    );
+  }
+  res.status(201).json({ data: { ...inserted.rows[0], wallet } });
 }
 
 export async function getMessages(req, res) {
@@ -694,7 +842,7 @@ export async function mpesaPaymentCallback(req, res) {
   const paid = Number(callback.ResultCode) === 0;
   if (reference) {
     await queryWithRetry('update utamu_payments set status = $2, paid_at = case when $2 = $3 then now() else paid_at end where reference = $1', [reference, paid ? 'paid' : 'failed', 'paid']);
-    if (paid) await activateVipVisibility(reference);
+    if (paid) await activatePaidEntitlement(reference);
   }
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 }
@@ -726,7 +874,7 @@ export async function verifyPaystackPayment(req, res) {
     const response = await axios.get('https://api.paystack.co/transaction/verify/' + encodeURIComponent(reference), { headers: { Authorization: 'Bearer ' + PAYSTACK_SECRET_KEY } });
     const status = response.data?.data?.status === 'success' ? 'paid' : 'pending';
     const updated = await queryWithRetry('update utamu_payments set status = $2, paid_at = case when $2 = $3 then now() else paid_at end where reference = $1 or provider_reference = $1 returning *', [reference, status, 'paid']);
-    if (status === 'paid') await activateVipVisibility(reference);
+    if (status === 'paid') await activatePaidEntitlement(reference);
     res.json({ data: publicPayment(updated.rows[0], { reference, status, method: 'paystack' }) });
   } catch (error) {
     console.error('[utamu:paystack] verify_failed', error?.response?.data || error?.message || error);
@@ -766,6 +914,108 @@ export async function submitReview(req, res) {
   res.status(201).json({ data: mapReviewRow(inserted.rows[0]) });
 }
 
+
+
+export async function getMonetizationOverview(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const model = await modelForUser(user);
+  const wallet = await walletFor(user.id);
+  const subscriptions = model?.id ? await tryQuery('select * from utamu_listing_subscriptions where model_id = $1 order by created_at desc limit 20', [model.id]) : [];
+  const assistant = await tryQuery('select * from utamu_ai_assistants where user_id = $1 limit 1', [user.id]);
+  const portal = await tryQuery("select * from utamu_client_portal_subscriptions where user_id = $1 and status = 'active' and (expires_at is null or expires_at > now()) order by created_at desc limit 1", [user.id]);
+  const leads = await tryQuery('select * from utamu_booking_leads where provider_user_id = $1 or client_user_id = $1 order by created_at desc limit 50', [user.id]);
+  const transactions = await tryQuery('select * from utamu_wallet_transactions where user_id = $1 order by created_at desc limit 20', [user.id]);
+  const payments = await tryQuery('select * from utamu_payments where user_id = $1 order by created_at desc limit 20', [user.id]);
+  res.json({ data: { products: MONETIZATION_PRODUCTS, messageTokenCost: MESSAGE_TOKEN_COST, tipCommissionRate: TIP_COMMISSION_RATE, wallet, model, subscriptions: subscriptions || [], assistant: assistant?.[0] || null, clientPortal: portal?.[0] || null, leads: leads || [], transactions: transactions || [], payments: payments || [] } });
+}
+
+export async function createMonetizationCheckout(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const product = productById(req.body?.productId);
+  if (!product) return res.status(404).json({ message: 'Product not found.' });
+  const method = String(req.body?.method || 'mpesa').toLowerCase();
+  const model = await resolvePaymentModel(req.body || {}, user);
+  const metadata = { productId: product.id, purpose: product.category, modelId: model?.id || null, modelSlug: model?.slug || req.body?.modelSlug || null, tokenAmount: product.tokenAmount };
+  const referencePrefix = method === 'paystack' ? 'SNPAY-' : 'SNMPESA-';
+  if (method === 'paystack') {
+    if (!PAYSTACK_SECRET_KEY) return res.status(503).json({ message: 'Paystack is not configured. Set PAYSTACK_SECRET_KEY.' });
+    const email = String(req.body?.email || user.email || '').trim().toLowerCase();
+    if (!email) return res.status(400).json({ message: 'Email address is required for Paystack checkout.' });
+    const reference = referencePrefix + crypto.randomBytes(8).toString('hex').toUpperCase();
+    const response = await axios.post('https://api.paystack.co/transaction/initialize', { email, amount: product.amountKes * 100, currency: 'KES', reference, callback_url: APP_URL + '/paystack/callback', metadata }, { headers: { Authorization: 'Bearer ' + PAYSTACK_SECRET_KEY, 'Content-Type': 'application/json' } });
+    const data = response.data?.data || {};
+    const inserted = await queryWithRetry("insert into utamu_payments (model_id, user_id, amount_kes, method, status, reference, provider_reference, authorization_url, purpose, metadata) values ($1,$2,$3,'paystack','pending',$4,$5,$6,$7,$8) returning *", [model?.id || null, user.id, product.amountKes, reference, data.reference || reference, data.authorization_url || null, product.category, metadata]);
+    return res.status(201).json({ data: { ...publicPayment(inserted.rows[0], { method: 'paystack', authorizationUrl: data.authorization_url }), product } });
+  }
+  const phone = normalizeKenyanMsisdn(req.body?.phone || user.phone);
+  if (!/^254(7|1)\d{8}$/.test(phone)) return res.status(400).json({ message: 'Enter a valid Kenyan M-Pesa phone number.' });
+  const callbackUrl = resolveStkCallbackUrl({ product: 'Utamu' });
+  const health = getMpesaConfigHealth();
+  const missing = [...health.missing, !callbackUrl ? 'MPESA_Utamu_CALLBACK_URL' : null].filter(Boolean);
+  if (missing.length) return res.status(503).json({ message: 'M-Pesa is not fully configured.', missing });
+  const timestamp = mpesaTimestamp();
+  const payload = { BusinessShortCode: shortcode, Password: mpesaPassword(timestamp), Timestamp: timestamp, TransactionType: 'CustomerPayBillOnline', Amount: product.amountKes, PartyA: phone, PartyB: shortcode, PhoneNumber: phone, CallBackURL: callbackUrl, AccountReference: 'SecretNairobi', TransactionDesc: paymentDescriptionFor(product) };
+  const accessToken = await getAccessToken();
+  const response = await axios.post(MPESA_BASE + '/mpesa/stkpush/v1/processrequest', payload, { headers: { Authorization: 'Bearer ' + accessToken } });
+  const provider = response.data || {};
+  const reference = provider.CheckoutRequestID || provider.MerchantRequestID || referencePrefix + crypto.randomBytes(6).toString('hex').toUpperCase();
+  const inserted = await queryWithRetry("insert into utamu_payments (model_id, user_id, amount_kes, method, status, reference, provider_reference, purpose, metadata) values ($1,$2,$3,'mpesa','pending',$4,$5,$6,$7) returning *", [model?.id || null, user.id, product.amountKes, reference, provider.MerchantRequestID || null, product.category, metadata]);
+  res.status(201).json({ data: { ...publicPayment(inserted.rows[0], { status: 'stk_sent', method: 'mpesa', instructions: 'STK push sent. Enter your PIN to activate ' + product.name + '.' }), product } });
+}
+
+export async function configureAiAssistant(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const model = await modelForUser(user);
+  if (!model) return res.status(400).json({ message: 'Create a profile before enabling the AI assistant.' });
+  const row = await queryWithRetry("insert into utamu_ai_assistants (user_id, model_id, enabled, plan, tone, instructions, auto_reply_enabled) values ($1,$2,$3,'manual',$4,$5,$6) on conflict (user_id) do update set model_id = excluded.model_id, enabled = excluded.enabled, tone = excluded.tone, instructions = excluded.instructions, auto_reply_enabled = excluded.auto_reply_enabled, updated_at = now() returning *", [user.id, model.id, Boolean(req.body?.enabled), req.body?.tone || 'polite', req.body?.instructions || null, req.body?.autoReplyEnabled !== false]);
+  res.json({ data: row.rows[0] });
+}
+
+export async function sendTip(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const amount = Math.max(1, Math.round(Number(req.body?.amountTokens || 0)));
+  const model = await resolvePaymentModel(req.body || {}, null);
+  if (!model?.user_id) return res.status(404).json({ message: 'Profile not found.' });
+  const wallet = await debitWallet(user.id, amount, `Tip to ${model.display_name}`, model.user_id, model.id, 'tip');
+  if (!wallet) return res.status(402).json({ message: 'Buy tokens before sending a tip.' });
+  const commission = Math.floor(amount * TIP_COMMISSION_RATE);
+  const net = amount - commission;
+  await creditWallet(model.user_id, net, `Tip received from ${user.full_name}`, null, user.id, model.id, 'tip_received');
+  const inserted = await queryWithRetry('insert into utamu_tips (sender_user_id, recipient_user_id, model_id, amount_tokens, commission_tokens, message) values ($1,$2,$3,$4,$5,$6) returning *', [user.id, model.user_id, model.id, amount, commission, req.body?.message || null]);
+  res.status(201).json({ data: { tip: inserted.rows[0], wallet } });
+}
+
+export async function createBookingLead(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const message = String(req.body?.message || '').trim();
+  if (!message) return res.status(400).json({ message: 'Booking details are required.' });
+  const model = await resolvePaymentModel(req.body || {}, null);
+  if (!model) return res.status(404).json({ message: 'Profile not found.' });
+  const tier = model.listing_tier || 'free';
+  const leadFee = tier === 'free' ? 0 : tier === 'bronze' ? 100 : tier === 'silver' ? 200 : tier === 'gold' ? 350 : 500;
+  const inserted = await queryWithRetry('insert into utamu_booking_leads (client_user_id, provider_user_id, model_id, model_slug, model_name, requested_date, location, budget_kes, message, lead_fee_kes) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *', [user.id, model.user_id || null, model.id, model.slug, model.display_name, req.body?.requestedDate || null, req.body?.location || null, req.body?.budgetKes ? Number(req.body.budgetKes) : null, message, leadFee]);
+  res.status(201).json({ data: inserted.rows[0] });
+}
+
+export async function getClientPortal(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const portal = await tryQuery("select * from utamu_client_portal_subscriptions where user_id = $1 and status = 'active' and (expires_at is null or expires_at > now()) order by created_at desc limit 1", [user.id]);
+  if (!portal?.[0]) return res.status(402).json({ message: 'Upgrade to the vetted client portal to access this section.', products: MONETIZATION_PRODUCTS.filter((item) => item.category === 'client_portal') });
+  const rows = await tryQuery("select m.*, coalesce(pi.url, '') as image_url from utamu_models m left join lateral (select url from utamu_profile_images where model_id = m.id order by sort_order, created_at limit 1) pi on true where (m.verified = true or m.trusted_badge = true or m.elite = true) and m.status <> 'deleted' order by m.trusted_badge desc, m.elite desc, m.rating desc limit 50");
+  res.json({ data: { subscription: portal[0], profiles: rows || [] } });
+}
 
 export async function getAdmin(_req, res) {
   res.json({ data: { verificationCases, analytics, pending: verificationCases.filter((item) => item.status === 'pending') } });

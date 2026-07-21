@@ -4,14 +4,19 @@ import {
   addProfileImage,
   changePassword,
   confirmEmail,
+  configureAiAssistant,
+  createBookingLead,
+  createMonetizationCheckout,
   createMpesaPayment,
   createPaystackPayment,
   deleteProfileImage,
   getAdmin,
   getDirectory,
   getMe,
+  getClientPortal,
   getMessages,
   getModel,
+  getMonetizationOverview,
   getNotifications,
   getReviews,
   loginAccount,
@@ -19,6 +24,7 @@ import {
   resendValidation,
   searchModels,
   sendMessage,
+  sendTip,
   submitReview,
   submitVerification,
   mpesaPaymentCallback,
@@ -46,6 +52,12 @@ router.post('/account/change-password', changePassword);
 router.get('/messages', getMessages);
 router.post('/messages', sendMessage);
 router.get('/notifications', getNotifications);
+router.get('/monetization', getMonetizationOverview);
+router.post('/monetization/checkout', createMonetizationCheckout);
+router.post('/ai-assistant', configureAiAssistant);
+router.post('/tips', sendTip);
+router.post('/booking-leads', createBookingLead);
+router.get('/client-portal', getClientPortal);
 router.post('/payments/mpesa', createMpesaPayment);
 router.post('/payments/mpesa/callback', mpesaPaymentCallback);
 router.post('/payments/paystack', createPaystackPayment);
