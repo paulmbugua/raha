@@ -816,6 +816,15 @@ export async function proxyProfileImage(req, res) {
   if (!key || key.includes('..')) return res.status(400).json({ message: 'Invalid image key.' });
   try {
     const object = await getImageObject(key);
+    const requestOrigin = req.get('origin');
+    if (requestOrigin) {
+      res.setHeader('Access-Control-Allow-Origin', requestOrigin);
+      res.setHeader('Vary', 'Origin');
+    } else {
+      res.setHeader('Access-Control-Allow-Origin', '*');
+    }
+    res.setHeader('Cross-Origin-Resource-Policy', 'cross-origin');
+    res.setHeader('Timing-Allow-Origin', '*');
     res.setHeader('Content-Type', object.ContentType || 'application/octet-stream');
     if (object.ContentLength) res.setHeader('Content-Length', String(object.ContentLength));
     res.setHeader('Cache-Control', 'public, max-age=3600');
