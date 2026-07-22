@@ -45,6 +45,9 @@ create table if not exists utamu_blacklisted_clients (
   owner_user_id uuid not null references utamu_users(id) on delete cascade,
   client_name text not null,
   client_email text,
+  client_phone text,
   reason text,
+  notes text,
   created_at timestamptz not null default now()
 );
+create index if not exists utamu_blacklisted_clients_owner_idx on utamu_blacklisted_clients (owner_user_id, created_at desc);

@@ -45,6 +45,10 @@ let utamuTransactionalSchemaReady = false;
 let utamuMonetizationSchemaReady = false;
 async function ensureUtamuTransactionalSchema() {
   if (utamuTransactionalSchemaReady) return;
+  await queryWithRetry("create table if not exists utamu_blacklisted_clients (id uuid primary key default gen_random_uuid(), owner_user_id uuid not null references utamu_users(id) on delete cascade, client_name text not null, client_email text, reason text, created_at timestamptz not null default now())");
+  await queryWithRetry("alter table utamu_blacklisted_clients add column if not exists client_phone text");
+  await queryWithRetry("alter table utamu_blacklisted_clients add column if not exists notes text");
+  await queryWithRetry("create index if not exists utamu_blacklisted_clients_owner_idx on utamu_blacklisted_clients (owner_user_id, created_at desc)");
   await queryWithRetry("alter table utamu_payments add column if not exists provider_reference text");
   await queryWithRetry("alter table utamu_payments add column if not exists authorization_url text");
   await queryWithRetry("alter table utamu_payments add column if not exists purpose text");
@@ -347,7 +351,7 @@ async function authUser(req) {
   if (!token) return null;
   try {
     const payload = jwt.verify(token, JWT_SECRET);
-    const rows = await tryQuery('select * from utamu_users where id = $1', [payload.sub]);
+    const rows = await tryQuery("select * from utamu_users where id = $1 and coalesce(status, '') <> 'deleted'", [payload.sub]);
     return rows?.[0] || null;
   } catch {
     return null;
@@ -735,6 +739,10 @@ export async function loginAccount(req, res) {
     hasPasswordHash: Boolean(user?.password_hash),
   }, user ? 'log' : 'warn');
   if (!user) return res.status(401).json({ message: 'No account exists for that email or username.' });
+  if (user.status === 'deleted') {
+    loginFlowLog('login_blocked_deleted_account', { requestId, userId: user.id, login: maskEmail(login) }, 'warn');
+    return res.status(403).json({ message: 'This account has been deleted.' });
+  }
   if (!user.password_hash) {
     loginFlowLog('login_missing_password_hash', { requestId, userId: user.id, login: maskEmail(login) }, 'error');
     return res.status(401).json({ message: 'This account has no password set. Please reset your password or register again.' });
@@ -994,6 +1002,67 @@ export async function changePassword(req, res) {
   const hash = await bcrypt.hash(next, 10);
   await queryWithRetry('update utamu_users set password_hash = $2 where id = $1', [user.id, hash]);
   res.json({ data: { changed: true } });
+}
+
+function mapBlacklistedClient(row) {
+  return {
+    id: row.id,
+    clientName: row.client_name,
+    clientEmail: row.client_email,
+    clientPhone: row.client_phone,
+    reason: row.reason,
+    notes: row.notes,
+    createdAt: row.created_at,
+  };
+}
+
+export async function getBlacklistedClients(req, res) {
+  await ensureUtamuTransactionalSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const rows = await tryQuery('select * from utamu_blacklisted_clients where owner_user_id = $1 order by created_at desc', [user.id]);
+  res.json({ data: (rows || []).map(mapBlacklistedClient) });
+}
+
+export async function addBlacklistedClient(req, res) {
+  await ensureUtamuTransactionalSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const clientName = String(req.body?.clientName || req.body?.client_name || '').trim();
+  const clientEmail = String(req.body?.clientEmail || req.body?.client_email || '').trim().toLowerCase() || null;
+  const clientPhone = String(req.body?.clientPhone || req.body?.client_phone || req.body?.phone || '').trim() || null;
+  const reason = String(req.body?.reason || '').trim();
+  const notes = String(req.body?.notes || '').trim() || null;
+  if (!clientName) return res.status(400).json({ message: 'Client name is required.' });
+  if (!clientPhone && !clientEmail) return res.status(400).json({ message: 'Add a phone number or email for this client.' });
+  const inserted = await queryWithRetry(
+    'insert into utamu_blacklisted_clients (owner_user_id, client_name, client_email, client_phone, reason, notes) values ($1,$2,$3,$4,$5,$6) returning *',
+    [user.id, clientName, clientEmail, clientPhone, reason || 'Not specified', notes]
+  );
+  res.status(201).json({ data: mapBlacklistedClient(inserted.rows[0]) });
+}
+
+export async function deleteBlacklistedClient(req, res) {
+  await ensureUtamuTransactionalSchema();
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const id = String(req.params?.id || '').trim();
+  if (!id) return res.status(400).json({ message: 'Blacklist entry is required.' });
+  const deleted = await queryWithRetry('delete from utamu_blacklisted_clients where id = $1 and owner_user_id = $2 returning id', [id, user.id]);
+  if (!deleted.rows[0]) return res.status(404).json({ message: 'Blacklist entry was not found.' });
+  res.json({ data: { deleted: true, id } });
+}
+
+export async function deleteAccount(req, res) {
+  const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'Unauthorized' });
+  const confirmation = String(req.body?.confirmation || req.body?.confirm || '').trim().toUpperCase();
+  if (confirmation !== 'DELETE') return res.status(400).json({ message: 'Type DELETE to confirm account deletion.' });
+  const deletedEmail = `deleted-${user.id}@deleted.secretnairobi.local`;
+  const deletedUsername = `deleted-${user.id}`;
+  await queryWithRetry("update utamu_models set status = 'deleted', online = false, display_name = 'Deleted account', image_url = null where user_id = $1", [user.id]);
+  await queryWithRetry("update utamu_users set status = 'deleted', email_verified = false, validation_token = null, password_hash = null, email = $2, username = $3, phone = null, full_name = 'Deleted account', profile = '{}'::jsonb where id = $1", [user.id, deletedEmail, deletedUsername]);
+  res.json({ data: { deleted: true } });
 }
 
 export async function createMpesaPayment(req, res) {

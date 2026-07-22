@@ -39,6 +39,8 @@ const routeLinks = [
   '/register/member',
   '/register/confirm-email',
   '/messages',
+  '/blacklisted-clients',
+  '/delete-account',
   '/monetization',
   '/client-portal',
   '/escort/profile',
@@ -66,7 +68,7 @@ function viewFor(slug?: string[]): View {
   if (path === 'messages') return 'messages';
   if (path === 'monetization') return 'monetization';
   if (path === 'client-portal') return 'clientPortal';
-  if (['model/profile', 'escort/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'logout'].includes(path)) return 'dashboard';
+  if (['model/profile', 'escort/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'delete-account', 'logout'].includes(path)) return 'dashboard';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
@@ -910,7 +912,7 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
 }
 
 function AccountSidebar({ active }: { active: string }) {
-  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ['Monetization', '/monetization'], ['Client Portal', '/client-portal'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['LogOut', '/logout']];
+  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ['Monetization', '/monetization'], ['Client Portal', '/client-portal'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['Delete Account', '/delete-account'], ['LogOut', '/logout']];
   return <aside className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold text-[#ff1d9b]">My Account</h2><div className="mt-4 grid gap-2">{links.map(([label, href]) => <a key={href} href={href} className={'rounded-[3px] px-3 py-2 text-sm font-bold ' + (active === href.slice(1) ? 'bg-[#e60073] text-white' : 'bg-[#fff0f6] text-[#3b164b] hover:bg-[#ffd6ec]')}>{label}</a>)}</div></aside>;
 }
 
@@ -922,12 +924,25 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   const [uploadingImages, setUploadingImages] = useState(false);
   const [savingProfile, setSavingProfile] = useState(false);
   const [password, setPassword] = useState('');
+  const [blacklist, setBlacklist] = useState<any[]>([]);
+  const [blacklistLoading, setBlacklistLoading] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deletingAccount, setDeletingAccount] = useState(false);
   const [notice, setNotice] = useState('');
   useEffect(() => {
     if (path === 'logout') { clearSession(); window.location.href = '/'; return; }
     const next = readSession();
     setSession(next);
-    if (next?.token) utamuApi.getMe(next.token).then(setAccount);
+    if (next?.token) {
+      utamuApi.getMe(next.token).then(setAccount);
+      if (path === 'blacklisted-clients') {
+        setBlacklistLoading(true);
+        utamuApi.getBlacklistedClients(next.token)
+          .then((rows: any) => setBlacklist(Array.isArray(rows) ? rows : []))
+          .catch((error) => setNotice(error instanceof Error ? error.message : 'Blacklisted clients could not be loaded.'))
+          .finally(() => setBlacklistLoading(false));
+      }
+    }
   }, [path]);
   function clearSelectedImages() {
     imagePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
@@ -1016,6 +1031,50 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
     setPassword('');
     setNotice('Password changed successfully.');
   }
+  async function addBlacklistedClient(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session?.token) return;
+    const form = event.currentTarget;
+    const formData = new FormData(form);
+    const body = {
+      clientName: String(formData.get('clientName') || '').trim(),
+      clientPhone: String(formData.get('clientPhone') || '').trim(),
+      clientEmail: String(formData.get('clientEmail') || '').trim(),
+      reason: String(formData.get('reason') || '').trim(),
+      notes: String(formData.get('notes') || '').trim(),
+    };
+    try {
+      const entry: any = await utamuApi.addBlacklistedClient(body, session.token);
+      setBlacklist((current) => [entry, ...current]);
+      form.reset();
+      setNotice('Client added to your blacklist.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Client could not be added.');
+    }
+  }
+  async function removeBlacklistedClient(id: string) {
+    if (!session?.token || !id) return;
+    try {
+      await utamuApi.deleteBlacklistedClient(id, session.token);
+      setBlacklist((current) => current.filter((entry) => entry.id !== id));
+      setNotice('Client removed from your blacklist.');
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Client could not be removed.');
+    }
+  }
+  async function deleteMyAccount() {
+    if (!session?.token || deletingAccount || deleteConfirm.trim().toUpperCase() !== 'DELETE') return;
+    setDeletingAccount(true);
+    try {
+      await utamuApi.deleteAccount({ confirmation: deleteConfirm }, session.token);
+      clearSession();
+      setNotice('Your account has been deleted.');
+      window.location.href = '/';
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Account could not be deleted.');
+      setDeletingAccount(false);
+    }
+  }
   if (!session?.token) return <section className="bg-[#fff0f6] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">You need to <a className="underline" href="/register">register</a> or <a className="underline" href="/login">login</a> to access your account.</div></section>;
   const images = account?.images || [];
   const profile = account?.user?.profile || {};
@@ -1049,7 +1108,9 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   ].filter(([, value]) => Boolean(value));
   const uploadPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">{showFirstUpload ? 'Add your first profile images' : 'Profile image manager'}</h2><p className="mt-3 text-sm leading-6 text-[#7b6e78]">{showFirstUpload ? 'Select portfolio images, preview them here, then publish them online. After your first upload, image management moves to Edit my Profile.' : 'Preview new portfolio images before publishing, or remove older ones.'}</p><div className="mt-4 flex flex-col gap-3 rounded-[3px] border border-dashed border-[#ff9bd0] bg-[#fff8fb] p-4"><input id="profile-image-files" type="file" accept="image/*" multiple onChange={(event) => selectImages(event.target.files)} className="hidden" /><label htmlFor="profile-image-files" className="inline-flex w-fit cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Select images</label>{imagePreviews.length > 0 && <div className="grid grid-cols-2 gap-3 md:grid-cols-4">{imagePreviews.map((preview) => <figure key={preview.url} className="overflow-hidden rounded-[3px] border border-[#ffd1e8] bg-white"><img src={preview.url} alt={preview.name} className="aspect-[4/5] w-full object-cover" /><figcaption className="truncate px-2 py-1 text-xs text-[#7b6e78]">{preview.name}</figcaption></figure>)}</div>}<div className="flex flex-wrap gap-2">{imagePreviews.length > 0 && <button onClick={addImage} disabled={uploadingImages} className="rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-60">{uploadingImages ? 'Uploading...' : 'Publish selected images'}</button>}{imagePreviews.length > 0 && <button onClick={clearSelectedImages} className="rounded-full border border-[#e60073] px-5 py-2 text-sm font-bold text-[#e60073]">Clear previews</button>}</div></div>{images.length > 0 && <div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-4">{images.map((image: any) => <figure key={image.id || image.url} className="relative overflow-hidden rounded-[3px] border border-[#ffd1e8]"><img src={image.url} alt={image.alt || 'Profile image'} className="aspect-[4/5] w-full object-cover" />{isEditProfile && <button onClick={() => deleteImage(image.id)} className="absolute right-2 top-2 rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Delete</button>}</figure>)}</div>}</div>;
   const profileDataPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">My uploaded profile data</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{profileRows.map(([label, value]) => <div key={String(label)} className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">{label}</p><p className="mt-1 text-sm text-[#2b123a]">{String(value)}</p></div>)}</div>{profile.about && <div className="mt-4 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">About</p><p className="mt-2 text-sm leading-7 text-[#2b123a]">{profile.about}</p></div>}{images.length > 0 && isViewProfile && <a href="/edit-profile" className="mt-5 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Edit profile images</a>}</div>;
-  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{path === 'blacklisted-clients' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-4 text-sm">No blacklisted clients yet.</p></div>}</div><AccountSidebar active={path} /></section>;
+  const blacklistPanel = path === 'blacklisted-clients' && <div className="bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-2 text-sm leading-6 text-[#7b6e78]">Keep a private record of clients you do not want to engage again. These entries are visible only inside your account.</p></div><span className="rounded-full bg-[#fff0f6] px-3 py-1 text-xs font-bold text-[#e60073]">{blacklist.length} saved</span></div><form onSubmit={addBlacklistedClient} className="mt-5 grid gap-3 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4 md:grid-cols-2"><input name="clientName" required className={fieldClass} placeholder="Client name" /><input name="clientPhone" className={fieldClass} placeholder="Phone number" /><input name="clientEmail" type="email" className={fieldClass} placeholder="Email address" /><select name="reason" className={selectClass} defaultValue=""><option value="" disabled>Reason</option><option>No-show</option><option>Unsafe conduct</option><option>Payment issue</option><option>Harassment</option><option>Spam or fake booking</option><option>Other</option></select><textarea name="notes" className={fieldClass + ' min-h-24 md:col-span-2'} placeholder="Private notes" /><button className="w-fit rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add client</button></form><div className="mt-5 grid gap-3">{blacklistLoading && <p className="rounded bg-[#fff8fb] p-4 text-sm text-[#7b6e78]">Loading blacklist...</p>}{!blacklistLoading && blacklist.length === 0 && <p className="rounded bg-[#fff8fb] p-4 text-sm text-[#7b6e78]">No blacklisted clients yet.</p>}{blacklist.map((entry: any) => <article key={entry.id} className="rounded-[3px] border border-[#ffd1e8] bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="text-[#2b123a]">{entry.clientName || entry.client_name}</strong><p className="mt-1 text-sm text-[#7b6e78]">{[entry.clientPhone || entry.client_phone, entry.clientEmail || entry.client_email].filter(Boolean).join(' - ')}</p></div><button onClick={() => removeBlacklistedClient(entry.id)} className="rounded-full bg-[#d70032] px-4 py-1.5 text-xs font-bold text-white">Remove</button></div><p className="mt-3 text-sm font-bold text-[#e60073]">{entry.reason || 'Not specified'}</p>{entry.notes && <p className="mt-2 text-sm leading-6 text-[#2b123a]">{entry.notes}</p>}<p className="mt-3 text-xs text-[#9b8090]">Added {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-KE') : 'today'}</p></article>)}</div></div>;
+  const deleteAccountPanel = path === 'delete-account' && <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#d70032] pl-3 font-bold uppercase text-[#d70032]">Delete Account</h2><div className="mt-4 rounded-[3px] border border-[#ffc2cf] bg-[#fff4f6] p-4"><p className="text-sm leading-6 text-[#4a1220]">Deleting your account removes it from login, hides your escort profile from public pages, and clears personal contact details from the active account record.</p></div><label className="mt-5 block text-sm font-bold text-[#2b123a]">Type DELETE to confirm</label><input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} className={fieldClass + ' mt-2 max-w-md'} placeholder="DELETE" /><button onClick={deleteMyAccount} disabled={deletingAccount || deleteConfirm.trim().toUpperCase() !== 'DELETE'} className="mt-4 rounded-full bg-[#d70032] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{deletingAccount ? 'Deleting...' : 'Delete my account'}</button></div>;
+  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{blacklistPanel}{deleteAccountPanel}</div><AccountSidebar active={path} /></section>;
 }
 
 function MonetizationScreen() {

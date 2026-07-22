@@ -2,6 +2,7 @@ import express from 'express';
 import upload from '../middleware/multer.js';
 import {
   addProfileImage,
+  addBlacklistedClient,
   changePassword,
   confirmEmail,
   configureAiAssistant,
@@ -9,8 +10,11 @@ import {
   createMonetizationCheckout,
   createMpesaPayment,
   createPaystackPayment,
+  deleteBlacklistedClient,
+  deleteAccount,
   deleteProfileImage,
   getAdmin,
+  getBlacklistedClients,
   getDirectory,
   getMe,
   getClientPortal,
@@ -52,6 +56,10 @@ router.post('/account/images', addProfileImage);
 router.post('/account/images/upload', upload.array('images', 8), uploadProfileImages);
 router.delete('/account/images/:id', deleteProfileImage);
 router.post('/account/change-password', changePassword);
+router.get('/account/blacklisted-clients', getBlacklistedClients);
+router.post('/account/blacklisted-clients', addBlacklistedClient);
+router.delete('/account/blacklisted-clients/:id', deleteBlacklistedClient);
+router.delete('/account', deleteAccount);
 router.get('/messages', getMessages);
 router.post('/messages', sendMessage);
 router.get('/notifications', getNotifications);

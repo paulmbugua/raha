@@ -71,6 +71,20 @@ async function deleteJson<T>(path: string, fallback: T, token?: string): Promise
   return await parseResponse<T>(response);
 }
 
+async function deleteJsonBody<T>(path: string, body: unknown, fallback: T, token?: string): Promise<T> {
+  if (!API_BASE || !token) return fallback;
+  const response = await fetch(`${API_BASE}${path}`, {
+    method: 'DELETE',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(body),
+  });
+  return await parseResponse<T>(response);
+}
+
 async function getJsonAuth<T>(path: string, token: string | undefined, fallback: T): Promise<T> {
   if (!API_BASE || !token) return fallback;
   try {
@@ -99,6 +113,10 @@ export const utamuApi = {
   uploadProfileImages: (files: File[], token?: string) => uploadFiles('/api/utamu/account/images/upload', files, [], token),
   deleteProfileImage: (id: string, token?: string) => deleteJson(`/api/utamu/account/images/${encodeURIComponent(id)}`, { deleted: true, id }, token),
   changePassword: (body: unknown, token?: string) => postJson('/api/utamu/account/change-password', body, { changed: true }, token),
+  getBlacklistedClients: (token?: string) => getJsonAuth('/api/utamu/account/blacklisted-clients', token, []),
+  addBlacklistedClient: (body: unknown, token?: string) => postJson('/api/utamu/account/blacklisted-clients', body, { id: 'local-blacklist', ...(body as object) }, token),
+  deleteBlacklistedClient: (id: string, token?: string) => deleteJson(`/api/utamu/account/blacklisted-clients/${encodeURIComponent(id)}`, { deleted: true, id }, token),
+  deleteAccount: (body: unknown, token?: string) => deleteJsonBody('/api/utamu/account', body, { deleted: true }, token),
   getMessages: (token?: string) => getJsonAuth('/api/utamu/messages', token, []),
   sendMessage: (body: unknown, token?: string) => postJson('/api/utamu/messages', body, { id: 'local-message', sent: true }, token),
   getNotifications: (token?: string) => getJsonAuth('/api/utamu/notifications', token, { unreadMessages: 0 }),
