@@ -4,39 +4,37 @@ import pool from '../config/db.js';
 import { applyUtamuMpesaCallback } from './utamuController.js';
 
 export const mpesaCallback = async (req, res) => {
-  console.log('🔥 GOT STK CALLBACK (raw body):\n', JSON.stringify(req.body, null, 2));
+  console.log('[mpesa] GOT STK CALLBACK (raw body):\n', JSON.stringify(req.body, null, 2));
+
+  const stkCallback = req.body.Body?.stkCallback;
+  if (!stkCallback) {
+    console.warn('[mpesa] Invalid STK callback, no Body.stkCallback');
+    return res.status(400).json({ message: 'Invalid callback payload' });
+  }
+
+  const { CheckoutRequestID, ResultCode, CallbackMetadata } = stkCallback;
+  console.log('[mpesa] Received STK Callback:', CheckoutRequestID, 'ResultCode:', ResultCode);
+
+  const utamuResult = await applyUtamuMpesaCallback(req.body).catch((error) => {
+    console.error('[utamu:mpesa] callback_bridge_failed', error?.message || error);
+    return { handled: false };
+  });
+  if (utamuResult?.handled) return res.status(200).send('OK');
 
   let client;
   try {
     client = await pool.connect();
     client.on('error', err => {
-      console.error('⚠️ PG CLIENT ERROR (ignored):', err.message);
+      console.error('[mpesa] PG CLIENT ERROR (ignored):', err.message);
     });
     await client.query('BEGIN');
 
-    const stkCallback = req.body.Body?.stkCallback;
-    if (!stkCallback) {
-      console.warn('Invalid STK callback, no Body.stkCallback');
-      await client.query('ROLLBACK');
-      return res.status(400).json({ message: 'Invalid callback payload' });
-    }
-
-    const { CheckoutRequestID, ResultCode, CallbackMetadata } = stkCallback;
-    console.log('Received STK Callback:', CheckoutRequestID, 'ResultCode:', ResultCode);
-
-    const utamuResult = await applyUtamuMpesaCallback(req.body).catch((error) => {
-      console.error('[utamu:mpesa] legacy_callback_bridge_failed', error?.message || error);
-      return { handled: false };
-    });
-
     if (ResultCode === 0) {
-      // Success: extract the M-Pesa receipt but _do not_ change status here
       const items = CallbackMetadata?.Item || [];
       const receiptItem = items.find(i => i.Name === 'MpesaReceiptNumber');
       const mpesaReference = receiptItem?.Value || null;
-      console.log('✅ Extracted MpesaReference:', mpesaReference);
+      console.log('[mpesa] Extracted MpesaReference:', mpesaReference);
 
-      // Only update the reference field; leave status = 'Pending'
       const { rowCount, rows } = await client.query(
         `UPDATE payments
            SET mpesa_reference = COALESCE(mpesa_reference, $1),
@@ -46,33 +44,26 @@ export const mpesaCallback = async (req, res) => {
          RETURNING *;`,
         [mpesaReference, CheckoutRequestID]
       );
-      if (!rowCount) {
-        console.warn('No pending legacy payment found for TX:', CheckoutRequestID);
-        if (utamuResult?.handled) {
-          await client.query('COMMIT');
-          return res.status(200).send('OK');
-        }
-        await client.query('ROLLBACK');
-        return res.status(404).json({ message: 'Payment not found or already processed.' });
-      }
-      console.log('💾 Updated payment record (reference only):', rows[0]);
+      if (!rowCount) console.warn('[mpesa] No pending legacy payment found for TX:', CheckoutRequestID);
+      else console.log('[mpesa] Updated legacy payment record:', rows[0]);
     } else {
-      // Failure: you may still mark status = 'Failed' if you wish,
-      // or leave as-is so confirm endpoint handles timeouts.
-      console.log(`❌ STK Push returned error code ${ResultCode} for ${CheckoutRequestID}`);
+      console.log(`[mpesa] STK Push returned error code ${ResultCode} for ${CheckoutRequestID}`);
     }
 
     await client.query('COMMIT');
-    res.status(200).send('OK');
+    return res.status(200).send('OK');
   } catch (err) {
-    console.error('❌ Error processing STK callback:', err);
     try { await client?.query('ROLLBACK'); } catch {}
-    res.status(500).json({ message: 'Failed to process STK callback' });
+    if (err?.code === '42P01') {
+      console.warn('[mpesa] Legacy payments table is not present; Utamu callback bridge already attempted.', { checkoutRequestId: CheckoutRequestID });
+      return res.status(200).send('OK');
+    }
+    console.error('[mpesa] Error processing STK callback:', err);
+    return res.status(200).send('OK');
   } finally {
     client?.release();
   }
 };
-
 
 export const b2cResult = async (req, res) => {
   console.log('📬 B2C Result Callback:', JSON.stringify(req.body, null, 2));
