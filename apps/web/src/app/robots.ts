@@ -8,7 +8,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: ['/', '/help', '/cookie-policy'],
+        allow: ['/', '/privacy-policy', '/terms', '/help', '/cookie-policy'],
         disallow: ['/login', '/messages', '/profile', '/paystack/callback'],
       },
     ],

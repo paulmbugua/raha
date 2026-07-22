@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 
-const FALLBACK_SITE_URL = 'https://utamu.co.ke';
+const FALLBACK_SITE_URL = 'https://secretnairobi.co.ke';
 const DEFAULT_OG_IMAGE = '/assets/logo.png';
 
 export function getSiteUrl(): string {
@@ -45,8 +45,8 @@ export function buildPageMetadata(params: {
       url: canonical,
       title: params.title,
       description: params.description,
-      siteName: 'Utamu',
-      images: [{ url: absoluteUrl(DEFAULT_OG_IMAGE), width: 1200, height: 630, alt: 'Utamu verified Kenyan model directory' }],
+      siteName: 'Secret Nairobi',
+      images: [{ url: absoluteUrl(DEFAULT_OG_IMAGE), width: 1200, height: 630, alt: 'Secret Nairobi verified escort directory' }],
     },
     twitter: { card: 'summary_large_image', title: params.title, description: params.description, images: [absoluteUrl(DEFAULT_OG_IMAGE)] },
   };
@@ -54,12 +54,12 @@ export function buildPageMetadata(params: {
 
 export function buildOrganizationSchema() {
   const siteUrl = getSiteUrl();
-  return { '@context': 'https://schema.org', '@type': 'Organization', name: 'Utamu', url: siteUrl, logo: absoluteUrl('/assets/logo.png'), sameAs: [] };
+  return { '@context': 'https://schema.org', '@type': 'Organization', name: 'Secret Nairobi', url: siteUrl, logo: absoluteUrl('/assets/logo.png'), sameAs: [] };
 }
 
 export function buildWebsiteSchema() {
   const siteUrl = getSiteUrl();
-  return { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Utamu', url: siteUrl, description: 'Verified Kenyan model and talent directory with M-Pesa deposits and admin compliance workflows.' };
+  return { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Secret Nairobi', url: siteUrl, description: 'Verified Nairobi escort directory with M-Pesa payments, reviews, messaging, and account verification workflows.' };
 }
 
 export function buildBreadcrumbSchema(items: Array<{ name: string; path: string }>) {

@@ -3,11 +3,11 @@ import UtamuApp from '../../components/utamu/UtamuApp';
 import { buildPageMetadata } from '../../lib/seo';
 
 export const metadata: Metadata = buildPageMetadata({
-  title: 'Secret Nairobi | Verified Nairobi Escort Directory',
-  description: 'Secret Nairobi routes are served through the verified Nairobi escort directory experience.',
-  path: '/',
+  title: 'Contact Secret Nairobi | Support',
+  description: 'Contact Secret Nairobi support for account, payment, verification, profile, safety, and platform help.',
+  path: '/help',
 });
 
 export default function Page() {
-  return <UtamuApp />;
+  return <UtamuApp slug={['help']} />;
 }

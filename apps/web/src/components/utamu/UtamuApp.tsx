@@ -10,7 +10,7 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 type UtamuAppProps = { slug?: string[] };
 
 type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; phone?: string; fullName?: string; accountType?: string; emailVerified?: boolean } | null };
-type View = 'home' | 'advancedSearch' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type View = 'home' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
 
 const SESSION_KEY = 'utamu.session';
 const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
@@ -33,6 +33,9 @@ const routeLinks = [
   '/',
   '/discover',
   '/advanced-search',
+  '/privacy-policy',
+  '/terms',
+  '/help',
   '/register',
   '/register/independent-model',
   '/register/agency',
@@ -62,6 +65,7 @@ function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
   if (path === 'advanced-search') return 'advancedSearch';
+  if (['privacy-policy', 'terms', 'help'].includes(path)) return 'legal';
   if (path === 'register') return 'register';
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
   if (path.startsWith('register/')) return 'registration';
@@ -1326,6 +1330,41 @@ function Panel({ title, icon: Icon, items }: { title: string; icon: typeof Gauge
   return <div className="min-w-0 rounded-2xl border border-[#2a2a2a] bg-[#1e1e1e] p-4 sm:p-6"><Icon className="mb-6 h-7 w-7 text-[#ffd700]" /><h2 className="font-display text-2xl font-bold text-[#fff6df]">{title}</h2><div className="mt-4 grid gap-3">{items.map((item) => <div key={item} className="flex items-center justify-between rounded-xl border border-[#353534] bg-[#201f1f] p-3 text-sm text-[#d0c6ab]"><span>{item}</span><ChevronRight className="h-4 w-4" /></div>)}</div></div>;
 }
 
+function LegalScreen({ path }: { path: string }) {
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const isPrivacy = path === 'privacy-policy';
+  const isTerms = path === 'terms';
+  const supportEmail = 'support@grogonsacco.co.ke';
+  const contactHref = `mailto:${supportEmail}?subject=Secret%20Nairobi%20support&body=Name:%20${encodeURIComponent(contactName)}%0AEmail:%20${encodeURIComponent(contactEmail)}%0A%0A${encodeURIComponent(contactMessage)}`;
+  const title = isPrivacy ? 'Privacy Policy' : isTerms ? 'Terms and Conditions' : 'Contact Secret Nairobi';
+  const intro = isPrivacy
+    ? 'How Secret Nairobi handles account, profile, payment, message, review, and verification data.'
+    : isTerms
+      ? 'The rules for using Secret Nairobi responsibly as an adult member, escort, agency, or administrator.'
+      : 'Reach the Secret Nairobi support team for account, payment, verification, safety, or profile support.';
+  const sections = isPrivacy ? [
+    ['Data we collect', 'We collect account details, profile information, selected services, uploaded images, payment references, reviews, messages, booking leads, support requests, and technical logs needed to operate the platform.'],
+    ['How we use data', 'We use this information to create accounts, display approved profiles, process payments, deliver notifications, prevent fraud, support verification, moderate abuse, and improve the service.'],
+    ['Visibility and control', 'Public profile details are shown only where the user has created a listing. Account holders can edit profile data, manage images, blacklist clients privately, or request/deactivate account access from My Account.'],
+    ['Payments and providers', 'M-Pesa, Paystack, email, Cloudflare R2, hosting, and analytics providers may process the minimum information needed to complete their service. Payment secrets and full credentials are never shown publicly.'],
+    ['Retention', 'We keep operational records for compliance, dispute resolution, security, and accounting. Deleted accounts are removed from public discovery and marked inactive in active account systems.'],
+  ] : isTerms ? [
+    ['Adult-use platform', 'Secret Nairobi is intended only for adults who are legally allowed to access and use this type of directory. Users must comply with Kenyan law and any applicable local rules.'],
+    ['Account responsibility', 'Users must provide accurate registration details, keep login credentials private, and avoid impersonation, spam, harassment, fraud, or unsafe conduct.'],
+    ['Profile and content rules', 'Escorts and agencies are responsible for profile accuracy, image rights, service descriptions, rates, and communication with members. We may remove misleading, unsafe, illegal, or abusive content.'],
+    ['Payments and upgrades', 'Paid verification, VIP visibility, listing tiers, wallet tokens, tips, AI assistant access, and client portal access activate according to successful payment confirmation and product rules shown at checkout.'],
+    ['Messages, reviews, and bookings', 'Members must use messages, booking leads, tips, and reviews respectfully. Reviews may be moderated for safety, relevance, abuse, and fraud prevention.'],
+    ['Account removal', 'Users can delete their account from My Account. Deleted profiles are hidden from public discovery and inactive accounts cannot log in again.'],
+  ] : [
+    ['Account help', 'Use this channel for login, email confirmation, password, profile, image upload, and account deletion questions.'],
+    ['Payments', 'Include your M-Pesa or Paystack reference, phone number used for payment, account email, and the package you were activating.'],
+    ['Verification and safety', 'Send clear details about verification review, trusted badge status, blacklisted clients, message abuse, or profile safety reports.'],
+  ];
+  return <><section className="bg-[#101010] px-4 py-8 md:px-5"><div className="bg-[#fff0f6] p-5 shadow-sm md:p-8"><p className="text-xs font-bold uppercase tracking-[0.2em] text-[#006b3f]">Secret Nairobi</p><h1 className="mt-2 text-3xl font-bold text-[#2b0a3d] md:text-5xl">{title}</h1><p className="mt-3 max-w-3xl text-sm leading-7 text-[#5f5262] md:text-base">{intro}</p><div className="mt-8 grid gap-4 md:grid-cols-2">{sections.map(([heading, body]) => <article key={heading} className="border border-[#ffd1e8] bg-white p-4"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold text-[#ff1d9b]">{heading}</h2><p className="mt-3 text-sm leading-7 text-[#21102b]">{body}</p></article>)}</div>{!isPrivacy && !isTerms && <form onSubmit={(event) => { event.preventDefault(); window.location.href = contactHref; }} className="mt-8 grid gap-3 border border-[#ffd1e8] bg-white p-4"><h2 className="border-l-4 border-[#006b3f] pl-3 text-lg font-bold text-[#006b3f]">Send a support request</h2><div className="grid gap-3 md:grid-cols-2"><input value={contactName} onChange={(event) => setContactName(event.target.value)} className={fieldClass} placeholder="Your name" required /><input value={contactEmail} onChange={(event) => setContactEmail(event.target.value)} className={fieldClass} placeholder="Your email" type="email" required /></div><textarea value={contactMessage} onChange={(event) => setContactMessage(event.target.value)} className={fieldClass + ' min-h-32'} placeholder="How can we help?" required /><button className="w-fit rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Open email</button><p className="text-xs text-[#7b6e78]">Support email: <a className="font-bold text-[#e60073]" href={`mailto:${supportEmail}`}>{supportEmail}</a></p></form>}<div className="mt-8 flex flex-wrap gap-2 text-sm font-bold"><a className="rounded-full bg-[#3b164b] px-4 py-2 text-white" href="/">All Nairobi Escorts</a><a className="rounded-full bg-[#e60073] px-4 py-2 text-white" href="/register">Register</a><a className="rounded-full border border-[#e60073] px-4 py-2 text-[#e60073]" href="/sitemap.xml">Sitemap</a></div></div></section><RegistrationFooter /></>;
+}
+
 function RouteIndex() {
   return <section className="mx-auto max-w-7xl px-4 py-10 pb-28 sm:px-5"><h2 className="font-display text-2xl font-bold text-[#fff6df]">Connected Secret Nairobi routes</h2><div className="mt-4 flex flex-wrap gap-2">{routeLinks.map((route) => <a key={route} href={route} className="rounded-full border border-[#4d4732] bg-[#1e1e1e] px-4 py-2 text-sm text-[#d0c6ab] hover:border-[#ffd700]">{route}</a>)}</div></section>;
 }
@@ -1333,5 +1372,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
 }
