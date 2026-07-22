@@ -49,6 +49,7 @@ async function ensureUtamuTransactionalSchema() {
   await queryWithRetry("alter table utamu_payments add column if not exists authorization_url text");
   await queryWithRetry("alter table utamu_payments add column if not exists purpose text");
   await queryWithRetry("alter table utamu_payments add column if not exists paid_at timestamptz");
+  await queryWithRetry("alter table utamu_payments add column if not exists entitlement_activated_at timestamptz");
   await queryWithRetry("alter table utamu_reviews add column if not exists model_name text");
   await queryWithRetry("alter table utamu_reviews add column if not exists model_image text");
   await queryWithRetry("alter table utamu_reviews add column if not exists author_name text");
@@ -96,6 +97,48 @@ function paymentDescriptionFor(product) {
   return `Secret Nairobi - ${product?.name || 'premium upgrade'}`;
 }
 
+function isFutureDate(value) {
+  if (!value) return true;
+  const time = new Date(value).getTime();
+  return Number.isFinite(time) && time > Date.now();
+}
+
+function isAssistantEntitlementActive(assistant) {
+  return Boolean(assistant && assistant.plan === 'assistant' && isFutureDate(assistant.expires_at));
+}
+
+function mpesaCallbackDetails(callback) {
+  const items = callback?.CallbackMetadata?.Item || [];
+  const valueFor = (name) => items.find((item) => item.Name === name)?.Value ?? null;
+  return {
+    checkoutRequestId: callback?.CheckoutRequestID || null,
+    merchantRequestId: callback?.MerchantRequestID || null,
+    resultCode: callback?.ResultCode ?? null,
+    resultDesc: callback?.ResultDesc || null,
+    amount: valueFor('Amount'),
+    receiptNumber: valueFor('MpesaReceiptNumber'),
+    transactionDate: valueFor('TransactionDate'),
+    phoneNumber: valueFor('PhoneNumber'),
+  };
+}
+
+function assistantReplyFor(assistant, model, inboundMessage) {
+  const tone = String(assistant?.tone || 'polite').toLowerCase();
+  const instructions = String(assistant?.instructions || '').trim();
+  const intro = tone === 'direct'
+    ? 'Thanks. Your enquiry has been received.'
+    : tone === 'premium'
+      ? 'Thank you for reaching out. Your enquiry has been received and will be handled discreetly.'
+      : tone === 'warm'
+        ? 'Thanks for reaching out. I have received your message.'
+        : 'Thank you. Your enquiry has been received.';
+  const guidance = instructions
+    ? `Profile guidance: ${instructions}`
+    : 'Please include your preferred time, Nairobi area, and any screening details so availability can be reviewed.';
+  const context = inboundMessage ? `Message noted: ${String(inboundMessage).slice(0, 180)}` : '';
+  return [intro, `This is ${model?.display_name || 'the profile'} assistant.`, guidance, context].filter(Boolean).join('\n\n');
+}
+
 function expiresSql(days) {
   return days ? `now() + interval '${Number(days)} days'` : 'null';
 }
@@ -130,36 +173,48 @@ async function debitWallet(userId, tokens, description, counterpartyUserId = nul
 
 async function activatePaidEntitlement(reference) {
   await ensureUtamuMonetizationSchema();
-  const rows = await tryQuery('select * from utamu_payments where reference = $1 or provider_reference = $1 limit 1', [reference]);
-  const payment = rows?.[0];
-  if (!payment) return null;
-  const metadata = payment.metadata || {};
-  const product = productById(metadata.productId) || MONETIZATION_PRODUCTS.find((item) => item.id === metadata.purpose);
-  const model = await resolvePaymentModel({ modelId: metadata.modelId, modelSlug: metadata.modelSlug }, payment.user_id ? { id: payment.user_id } : null);
-  if (payment.purpose === 'vip_visibility' || metadata.purpose === 'vip_visibility') {
-    return activateVipVisibility(reference);
+  const claimed = await queryWithRetry(
+    "update utamu_payments set entitlement_activated_at = now() where (reference = $1 or provider_reference = $1) and status = 'paid' and entitlement_activated_at is null returning *",
+    [reference]
+  );
+  const payment = claimed.rows[0];
+  if (!payment) {
+    const rows = await tryQuery('select * from utamu_payments where reference = $1 or provider_reference = $1 limit 1', [reference]);
+    return rows?.[0] || null;
   }
-  if (!product) return payment;
-  if (product.category === 'wallet') {
-    await creditWallet(payment.user_id, product.tokenAmount, product.name, payment.id, null, model?.id || null, 'purchase');
+  try {
+    const metadata = payment.metadata || {};
+    const product = productById(metadata.productId) || MONETIZATION_PRODUCTS.find((item) => item.id === metadata.purpose);
+    const model = await resolvePaymentModel({ modelId: metadata.modelId, modelSlug: metadata.modelSlug }, payment.user_id ? { id: payment.user_id } : null);
+    if (payment.purpose === 'vip_visibility' || metadata.purpose === 'vip_visibility') {
+      await activateVipVisibility(reference);
+      return payment;
+    }
+    if (!product) return payment;
+    if (product.category === 'wallet') {
+      await creditWallet(payment.user_id, product.tokenAmount, product.name, payment.id, null, model?.id || null, 'purchase');
+    }
+    if (product.category === 'verification' && model?.id) {
+      await queryWithRetry("update utamu_models set verified = true, trusted_badge = true, verification_tier = 'trusted' where id = $1", [model.id]);
+      await queryWithRetry("insert into utamu_verifications (model_id, status, risk, notes) values ($1,'approved','low','Paid Trusted badge activated after checkout')", [model.id]);
+    }
+    if (product.category === 'listing' && model?.id) {
+      const tier = product.id.replace('tier-', '');
+      const settings = LISTING_TIER_SETTINGS[tier] || LISTING_TIER_SETTINGS.bronze;
+      await queryWithRetry(`insert into utamu_listing_subscriptions (user_id, model_id, tier, amount_kes, gallery_limit, bump_interval_hours, sidebar_ad, expires_at, payment_id) values ($1,$2,$3,$4,$5,$6,$7,${expiresSql(product.durationDays)},$8)`, [payment.user_id, model.id, tier, product.amountKes, settings.galleryLimit, settings.bumpIntervalHours, settings.sidebarAd, payment.id]);
+      await queryWithRetry(`update utamu_models set listing_tier = $2, gallery_limit = $3, sidebar_ad = $4, elite = case when $5 then true else elite end, listing_tier_expires_at = ${expiresSql(product.durationDays)} where id = $1`, [model.id, tier, settings.galleryLimit, settings.sidebarAd, settings.elite]);
+    }
+    if (product.category === 'ai' && model?.id) {
+      await queryWithRetry(`insert into utamu_ai_assistants (user_id, model_id, enabled, plan, monthly_price_kes, expires_at, payment_id) values ($1,$2,true,'assistant',$3,${expiresSql(product.durationDays)},$4) on conflict (user_id) do update set model_id = excluded.model_id, enabled = true, plan = excluded.plan, monthly_price_kes = excluded.monthly_price_kes, expires_at = excluded.expires_at, payment_id = excluded.payment_id, updated_at = now()`, [payment.user_id, model.id, product.amountKes, payment.id]);
+    }
+    if (product.category === 'client_portal') {
+      await queryWithRetry(`insert into utamu_client_portal_subscriptions (user_id, status, plan, amount_kes, expires_at, payment_id) values ($1,'active','vetted-client',$2,${expiresSql(product.durationDays)},$3)`, [payment.user_id, product.amountKes, payment.id]);
+    }
+    return payment;
+  } catch (error) {
+    await queryWithRetry('update utamu_payments set entitlement_activated_at = null where id = $1', [payment.id]).catch(() => {});
+    throw error;
   }
-  if (product.category === 'verification' && model?.id) {
-    await queryWithRetry("update utamu_models set verified = true, trusted_badge = true, verification_tier = 'trusted' where id = $1", [model.id]);
-    await queryWithRetry("insert into utamu_verifications (model_id, status, risk, notes) values ($1,'approved','low','Paid Trusted badge activated after checkout')", [model.id]);
-  }
-  if (product.category === 'listing' && model?.id) {
-    const tier = product.id.replace('tier-', '');
-    const settings = LISTING_TIER_SETTINGS[tier] || LISTING_TIER_SETTINGS.bronze;
-    await queryWithRetry(`insert into utamu_listing_subscriptions (user_id, model_id, tier, amount_kes, gallery_limit, bump_interval_hours, sidebar_ad, expires_at, payment_id) values ($1,$2,$3,$4,$5,$6,$7,${expiresSql(product.durationDays)},$8)`, [payment.user_id, model.id, tier, product.amountKes, settings.galleryLimit, settings.bumpIntervalHours, settings.sidebarAd, payment.id]);
-    await queryWithRetry(`update utamu_models set listing_tier = $2, gallery_limit = $3, sidebar_ad = $4, elite = case when $5 then true else elite end, listing_tier_expires_at = ${expiresSql(product.durationDays)} where id = $1`, [model.id, tier, settings.galleryLimit, settings.sidebarAd, settings.elite]);
-  }
-  if (product.category === 'ai' && model?.id) {
-    await queryWithRetry(`insert into utamu_ai_assistants (user_id, model_id, enabled, plan, monthly_price_kes, expires_at, payment_id) values ($1,$2,true,'assistant',$3,${expiresSql(product.durationDays)},$4) on conflict (user_id) do update set model_id = excluded.model_id, enabled = true, plan = excluded.plan, monthly_price_kes = excluded.monthly_price_kes, expires_at = excluded.expires_at, payment_id = excluded.payment_id, updated_at = now()`, [payment.user_id, model.id, product.amountKes, payment.id]);
-  }
-  if (product.category === 'client_portal') {
-    await queryWithRetry(`insert into utamu_client_portal_subscriptions (user_id, status, plan, amount_kes, expires_at, payment_id) values ($1,'active','vetted-client',$2,${expiresSql(product.durationDays)},$3)`, [payment.user_id, product.amountKes, payment.id]);
-  }
-  return payment;
 }
 
 function isUuid(value) { return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(String(value || '')); }
@@ -905,9 +960,9 @@ export async function sendMessage(req, res) {
      values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *`,
     [user.id, model?.user_id || null, model?.id || null, req.body?.modelSlug || null, req.body?.modelName || model?.display_name || 'Seed escort', user.full_name, user.email, req.body?.subject || 'Profile enquiry', body]
   );
-  const assistantRows = model?.user_id ? await tryQuery('select * from utamu_ai_assistants where user_id = $1 and enabled = true and auto_reply_enabled = true and (expires_at is null or expires_at > now()) limit 1', [model.user_id]) : null;
+  const assistantRows = model?.user_id ? await tryQuery('select * from utamu_ai_assistants where user_id = $1 and enabled = true and auto_reply_enabled = true and plan = $2 and (expires_at is null or expires_at > now()) limit 1', [model.user_id, 'assistant']) : null;
   if (assistantRows?.[0]) {
-    const reply = `Thanks for reaching out. I have received your enquiry and will review availability, location, and screening details before confirming next steps.`;
+    const reply = assistantReplyFor(assistantRows[0], model, body);
     await queryWithRetry(
       `insert into utamu_messages (sender_user_id, recipient_user_id, model_id, model_slug, model_name, sender_name, sender_email, subject, body)
        values ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
@@ -942,7 +997,7 @@ export async function changePassword(req, res) {
 }
 
 export async function createMpesaPayment(req, res) {
-  await ensureUtamuTransactionalSchema();
+  await ensureUtamuMonetizationSchema();
   const user = await authUser(req);
   const phone = normalizeKenyanMsisdn(req.body?.phone);
   if (!/^254(7|1)\d{8}$/.test(phone)) return res.status(400).json({ message: 'Enter a valid Kenyan M-Pesa phone number.' });
@@ -967,13 +1022,31 @@ export async function createMpesaPayment(req, res) {
   }
 }
 export async function mpesaPaymentCallback(req, res) {
-  await ensureUtamuTransactionalSchema();
+  await ensureUtamuMonetizationSchema();
   const callback = req.body?.Body?.stkCallback || {};
-  const reference = callback.CheckoutRequestID;
-  const paid = Number(callback.ResultCode) === 0;
-  if (reference) {
-    await queryWithRetry('update utamu_payments set status = $2, paid_at = case when $2 = $3 then now() else paid_at end where reference = $1', [reference, paid ? 'paid' : 'failed', 'paid']);
-    if (paid) await activatePaidEntitlement(reference);
+  const details = mpesaCallbackDetails(callback);
+  const checkoutReference = details.checkoutRequestId;
+  const merchantReference = details.merchantRequestId;
+  const lookupReference = checkoutReference || merchantReference;
+  const paid = Number(details.resultCode) === 0;
+  if (lookupReference) {
+    const status = paid ? 'paid' : 'failed';
+    const metadataPatch = JSON.stringify({ mpesa: details });
+    const updated = await queryWithRetry(
+      `update utamu_payments
+       set status = $3,
+           paid_at = case when $3 = 'paid' then coalesce(paid_at, now()) else paid_at end,
+           provider_reference = coalesce(provider_reference, $2),
+           metadata = coalesce(metadata, '{}'::jsonb) || $4::jsonb
+       where reference = $1 or provider_reference = $1 or ($2 is not null and (reference = $2 or provider_reference = $2))
+       returning *`,
+      [checkoutReference, merchantReference, status, metadataPatch]
+    );
+    if (!updated.rows[0]) {
+      console.warn('[utamu:mpesa] callback_unmatched_payment', details);
+    } else if (paid) {
+      await activatePaidEntitlement(updated.rows[0].reference);
+    }
   }
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 }
@@ -1104,8 +1177,20 @@ export async function configureAiAssistant(req, res) {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const model = await modelForUser(user);
   if (!model) return res.status(400).json({ message: 'Create a profile before enabling the AI assistant.' });
-  const row = await queryWithRetry("insert into utamu_ai_assistants (user_id, model_id, enabled, plan, tone, instructions, auto_reply_enabled) values ($1,$2,$3,'manual',$4,$5,$6) on conflict (user_id) do update set model_id = excluded.model_id, enabled = excluded.enabled, tone = excluded.tone, instructions = excluded.instructions, auto_reply_enabled = excluded.auto_reply_enabled, updated_at = now() returning *", [user.id, model.id, Boolean(req.body?.enabled), req.body?.tone || 'polite', req.body?.instructions || null, req.body?.autoReplyEnabled !== false]);
-  res.json({ data: row.rows[0] });
+  const existingRows = await tryQuery('select * from utamu_ai_assistants where user_id = $1 limit 1', [user.id]);
+  const existing = existingRows?.[0] || null;
+  const enabled = Boolean(req.body?.enabled);
+  if (enabled && !isAssistantEntitlementActive(existing)) {
+    return res.status(402).json({ message: 'Activate the AI assistant monthly add-on before enabling automatic replies.', product: productById('ai-assistant-monthly') });
+  }
+  const row = await queryWithRetry(
+    `insert into utamu_ai_assistants (user_id, model_id, enabled, plan, monthly_price_kes, tone, instructions, auto_reply_enabled, expires_at, payment_id)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+     on conflict (user_id) do update set model_id = excluded.model_id, enabled = excluded.enabled, plan = excluded.plan, monthly_price_kes = excluded.monthly_price_kes, tone = excluded.tone, instructions = excluded.instructions, auto_reply_enabled = excluded.auto_reply_enabled, expires_at = excluded.expires_at, payment_id = excluded.payment_id, updated_at = now()
+     returning *`,
+    [user.id, model.id, enabled, existing?.plan || 'off', existing?.monthly_price_kes || 0, req.body?.tone || existing?.tone || 'polite', req.body?.instructions || null, req.body?.autoReplyEnabled !== false, existing?.expires_at || null, existing?.payment_id || null]
+  );
+  res.json({ data: { ...row.rows[0], activeEntitlement: isAssistantEntitlementActive(row.rows[0]) } });
 }
 
 export async function sendTip(req, res) {
