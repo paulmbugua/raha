@@ -1075,6 +1075,25 @@ function MonetizationScreen() {
       setPhone(next.user?.phone || '2547');
     });
   }, []);
+  async function waitForMonetizationPayment(reference: string) {
+    if (!session?.token || !reference) return false;
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt < 10 ? 2000 : 4000));
+      const refreshed: any = await utamuApi.getMonetization(session.token);
+      setOverview(refreshed);
+      const payment = (refreshed.payments || []).find((item: any) => item.reference === reference || item.provider_reference === reference);
+      if (payment?.status === 'paid') {
+        setStatus('Payment confirmed. Your page has been updated.');
+        return true;
+      }
+      if (payment?.status === 'failed') {
+        setStatus('Payment was not completed. Please try again.');
+        return true;
+      }
+    }
+    setStatus('Still waiting for M-Pesa confirmation. This page will update automatically when you open Monetization again.');
+    return false;
+  }
   async function checkout(productId: string) {
     if (!session?.token) { window.location.href = '/login'; return; }
     setBusyProduct(productId);
@@ -1085,9 +1104,10 @@ function MonetizationScreen() {
         window.location.href = result.authorizationUrl;
         return;
       }
-      setStatus(result.instructions || 'Payment started. Complete checkout to activate this feature.');
+      setStatus((result.instructions || 'Payment started.') + ' Waiting for M-Pesa confirmation...');
       const refreshed = await utamuApi.getMonetization(session.token);
       setOverview(refreshed);
+      await waitForMonetizationPayment(result.reference);
     } catch (error) {
       setStatus(error instanceof Error ? error.message : 'Checkout could not be started.');
     } finally {
@@ -1151,6 +1171,23 @@ function CheckoutScreen() {
   const [email, setEmail] = useState('');
   const [status, setStatus] = useState('');
   const [paying, setPaying] = useState(false);
+  async function waitForPaymentStatus(reference: string) {
+    if (!reference) return;
+    for (let attempt = 0; attempt < 30; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, attempt < 10 ? 2000 : 4000));
+      const payment: any = await utamuApi.getPaymentStatus(reference);
+      if (payment?.status === 'paid') {
+        setStatus('Payment confirmed. Reloading your updated page...');
+        setTimeout(() => window.location.href = '/monetization', 900);
+        return;
+      }
+      if (payment?.status === 'failed') {
+        setStatus('Payment was not completed. Please try again.');
+        return;
+      }
+    }
+    setStatus('Still waiting for M-Pesa confirmation. You can safely keep this page open.');
+  }
   async function pay() {
     setStatus('');
     setPaying(true);
@@ -1158,7 +1195,8 @@ function CheckoutScreen() {
       const payload = { amount: 5, modelSlug: 'amina-w', purpose: 'vip_visibility', description: 'Secret Nairobi VIP visibility - 1 month' };
       if (method === 'mpesa') {
         const result: any = await utamuApi.createMpesaPayment({ ...payload, phone });
-        setStatus(result.instructions || 'STK push sent. Enter your PIN on your phone and keep this page open.');
+        setStatus((result.instructions || 'STK push sent. Enter your PIN on your phone and keep this page open.') + ' Waiting for confirmation...');
+        await waitForPaymentStatus(result.reference);
       } else {
         const result: any = await utamuApi.createPaystackPayment({ ...payload, email });
         if (result.authorizationUrl && typeof window !== 'undefined') window.location.href = result.authorizationUrl;

@@ -1091,6 +1091,19 @@ export async function verifyPaystackPayment(req, res) {
     res.status(502).json({ message: 'Paystack payment could not be verified.' });
   }
 }
+export async function getPaymentStatus(req, res) {
+  await ensureUtamuMonetizationSchema();
+  const reference = String(req.params?.reference || req.query?.reference || '').trim();
+  if (!reference) return res.status(400).json({ message: 'Payment reference is required.' });
+  const rows = await tryQuery(
+    'select id, user_id, model_id, amount_kes, method, status, reference, provider_reference, purpose, paid_at, entitlement_activated_at, created_at from utamu_payments where reference = $1 or provider_reference = $1 limit 1',
+    [reference]
+  );
+  const payment = rows?.[0] || null;
+  if (!payment) return res.status(404).json({ message: 'Payment not found.' });
+  res.json({ data: publicPayment(payment, { reference: payment.reference, status: payment.status, method: payment.method }) });
+}
+
 export async function submitVerification(req, res) {
   res.status(201).json({ data: { id: 'v-' + Date.now(), status: 'pending', submittedAt: new Date().toISOString(), ...req.body } });
 }

@@ -18,6 +18,7 @@ import {
   getModel,
   getMonetizationOverview,
   getNotifications,
+  getPaymentStatus,
   getReviews,
   loginAccount,
   registerAccount,
@@ -62,6 +63,7 @@ router.post('/booking-leads', createBookingLead);
 router.get('/client-portal', getClientPortal);
 router.post('/payments/mpesa', createMpesaPayment);
 router.post('/payments/mpesa/callback', mpesaPaymentCallback);
+router.get('/payments/:reference/status', getPaymentStatus);
 router.post('/payments/paystack', createPaystackPayment);
 router.post('/payments/paystack/verify', verifyPaystackPayment);
 router.get('/payments/paystack/verify', verifyPaystackPayment);

@@ -107,6 +107,7 @@ export const utamuApi = {
   createMpesaPayment: (body: unknown) => postJson('/api/utamu/payments/mpesa', body, { reference: 'UTAMU-LOCAL', status: 'stk_sent' }),
   createPaystackPayment: (body: unknown) => postJson('/api/utamu/payments/paystack', body, { reference: 'UTAMU-LOCAL', authorizationUrl: '' }),
   verifyPaystackPayment: (reference: string) => postJson('/api/utamu/payments/paystack/verify', { reference }, { reference, status: 'pending' }),
+  getPaymentStatus: (reference: string) => getJson(`/api/utamu/payments/${encodeURIComponent(reference)}/status`, { reference, status: 'pending' }),
   getMonetization: (token?: string) => getJsonAuth('/api/utamu/monetization', token, { products: [], wallet: null, subscriptions: [], assistant: null, clientPortal: null, leads: [], transactions: [], payments: [], messageTokenCost: 5, tipCommissionRate: 0.15 }),
   createMonetizationCheckout: (body: unknown, token?: string) => postJson('/api/utamu/monetization/checkout', body, { reference: 'SN-LOCAL', status: 'pending' }, token),
   configureAiAssistant: (body: unknown, token?: string) => postJson('/api/utamu/ai-assistant', body, { enabled: false }, token),
