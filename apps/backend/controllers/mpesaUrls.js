@@ -1,6 +1,7 @@
 // apps/backend/controllers/mpesaUrls.js
 
 import pool from '../config/db.js';
+import { applyUtamuMpesaCallback } from './utamuController.js';
 
 export const mpesaCallback = async (req, res) => {
   console.log('🔥 GOT STK CALLBACK (raw body):\n', JSON.stringify(req.body, null, 2));
@@ -23,6 +24,11 @@ export const mpesaCallback = async (req, res) => {
     const { CheckoutRequestID, ResultCode, CallbackMetadata } = stkCallback;
     console.log('Received STK Callback:', CheckoutRequestID, 'ResultCode:', ResultCode);
 
+    const utamuResult = await applyUtamuMpesaCallback(req.body).catch((error) => {
+      console.error('[utamu:mpesa] legacy_callback_bridge_failed', error?.message || error);
+      return { handled: false };
+    });
+
     if (ResultCode === 0) {
       // Success: extract the M-Pesa receipt but _do not_ change status here
       const items = CallbackMetadata?.Item || [];
@@ -41,7 +47,11 @@ export const mpesaCallback = async (req, res) => {
         [mpesaReference, CheckoutRequestID]
       );
       if (!rowCount) {
-        console.warn('No pending payment found for TX:', CheckoutRequestID);
+        console.warn('No pending legacy payment found for TX:', CheckoutRequestID);
+        if (utamuResult?.handled) {
+          await client.query('COMMIT');
+          return res.status(200).send('OK');
+        }
         await client.query('ROLLBACK');
         return res.status(404).json({ message: 'Payment not found or already processed.' });
       }

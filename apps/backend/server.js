@@ -4,6 +4,7 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import utamuRoutes from './routes/utamuRoutes.js';
+import mpesaUrlsRoutes from './routes/mpesaUrlsRoutes.js';
 
 const app = express();
 const port = Number(process.env.PORT || 4008);
@@ -19,7 +20,8 @@ app.get('/', (_req, res) => res.json({ name: 'Utamu Directory API', status: 'ok'
 app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', service: 'utamu-backend' }));
 app.use('/api/utamu', utamuRoutes);
-app.use('/api', (_req, res) => res.status(200).json({ message: 'Utamu API is ready.', routes: ['/api/utamu/directory', '/api/utamu/models', '/api/utamu/payments/mpesa', '/api/utamu/admin'] }));
+app.use('/api/mpesa', mpesaUrlsRoutes);
+app.use('/api', (_req, res) => res.status(200).json({ message: 'Utamu API is ready.', routes: ['/api/utamu/directory', '/api/utamu/models', '/api/utamu/payments/mpesa', '/api/mpesa/callback', '/api/utamu/admin'] }));
 app.use((req, res) => res.status(404).json({ message: 'Route not found', path: req.originalUrl }));
 app.use((err, _req, res, _next) => { console.error(err); res.status(500).json({ message: 'Internal server error' }); });
 app.listen(port, '0.0.0.0', () => console.log('Utamu backend listening on port ' + port));

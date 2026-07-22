@@ -1021,33 +1021,39 @@ export async function createMpesaPayment(req, res) {
     res.status(502).json({ message: 'M-Pesa STK push could not be started.' });
   }
 }
-export async function mpesaPaymentCallback(req, res) {
+export async function applyUtamuMpesaCallback(body) {
   await ensureUtamuMonetizationSchema();
-  const callback = req.body?.Body?.stkCallback || {};
+  const callback = body?.Body?.stkCallback || {};
   const details = mpesaCallbackDetails(callback);
   const checkoutReference = details.checkoutRequestId;
   const merchantReference = details.merchantRequestId;
   const lookupReference = checkoutReference || merchantReference;
   const paid = Number(details.resultCode) === 0;
-  if (lookupReference) {
-    const status = paid ? 'paid' : 'failed';
-    const metadataPatch = JSON.stringify({ mpesa: details });
-    const updated = await queryWithRetry(
-      `update utamu_payments
-       set status = $3,
-           paid_at = case when $3 = 'paid' then coalesce(paid_at, now()) else paid_at end,
-           provider_reference = coalesce(provider_reference, $2),
-           metadata = coalesce(metadata, '{}'::jsonb) || $4::jsonb
-       where reference = $1 or provider_reference = $1 or ($2 is not null and (reference = $2 or provider_reference = $2))
-       returning *`,
-      [checkoutReference, merchantReference, status, metadataPatch]
-    );
-    if (!updated.rows[0]) {
-      console.warn('[utamu:mpesa] callback_unmatched_payment', details);
-    } else if (paid) {
-      await activatePaidEntitlement(updated.rows[0].reference);
-    }
+  if (!lookupReference) return { handled: false, paid, details, payment: null };
+  const status = paid ? 'paid' : 'failed';
+  const metadataPatch = JSON.stringify({ mpesa: details });
+  const updated = await queryWithRetry(
+    `update utamu_payments
+     set status = $3,
+         paid_at = case when $3 = 'paid' then coalesce(paid_at, now()) else paid_at end,
+         provider_reference = coalesce(provider_reference, $2),
+         metadata = coalesce(metadata, '{}'::jsonb) || $4::jsonb
+     where reference = $1 or provider_reference = $1 or ($2::text is not null and (reference = $2::text or provider_reference = $2::text))
+     returning *`,
+    [checkoutReference, merchantReference, status, metadataPatch]
+  );
+  const payment = updated.rows[0] || null;
+  if (!payment) {
+    console.warn('[utamu:mpesa] callback_unmatched_payment', details);
+    return { handled: false, paid, details, payment: null };
   }
+  if (paid) await activatePaidEntitlement(payment.reference);
+  console.log('[utamu:mpesa] callback_processed', { paymentId: payment.id, reference: payment.reference, purpose: payment.purpose, paid });
+  return { handled: true, paid, details, payment };
+}
+
+export async function mpesaPaymentCallback(req, res) {
+  await applyUtamuMpesaCallback(req.body);
   res.json({ ResultCode: 0, ResultDesc: 'Accepted' });
 }
 export async function createPaystackPayment(req, res) {
