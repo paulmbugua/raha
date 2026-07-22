@@ -1060,9 +1060,14 @@ export async function deleteAccount(req, res) {
   if (confirmation !== 'DELETE') return res.status(400).json({ message: 'Type DELETE to confirm account deletion.' });
   const deletedEmail = `deleted-${user.id}@deleted.secretnairobi.local`;
   const deletedUsername = `deleted-${user.id}`;
-  await queryWithRetry("update utamu_models set status = 'deleted', online = false, display_name = 'Deleted account', image_url = null where user_id = $1", [user.id]);
-  await queryWithRetry("update utamu_users set status = 'deleted', email_verified = false, validation_token = null, password_hash = null, email = $2, username = $3, phone = null, full_name = 'Deleted account', profile = '{}'::jsonb where id = $1", [user.id, deletedEmail, deletedUsername]);
-  res.json({ data: { deleted: true } });
+  try {
+    await queryWithRetry("update utamu_models set status = 'deleted', online = false, display_name = 'Deleted account' where user_id = $1", [user.id]);
+    await queryWithRetry("update utamu_users set status = 'deleted', email_verified = false, validation_token = null, password_hash = null, email = $2, username = $3, phone = null, full_name = 'Deleted account', profile = '{}'::jsonb where id = $1", [user.id, deletedEmail, deletedUsername]);
+    res.json({ data: { deleted: true } });
+  } catch (error) {
+    console.error('[utamu:account] delete_failed', { userId: user.id, code: error?.code || null, message: error?.message || 'Unknown account deletion error' });
+    res.status(500).json({ message: 'Account could not be deleted. Please try again.' });
+  }
 }
 
 export async function createMpesaPayment(req, res) {
