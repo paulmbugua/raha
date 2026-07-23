@@ -540,12 +540,12 @@ export async function searchModels(req, res) {
   const query = String(req.query.query || '').toLowerCase();
   const city = String(req.query.city || 'All');
   const gender = String(req.query.gender || 'All');
-  const listing = String(req.query.listing || 'All');
+  const listing = String(req.query.listing || (String(req.query.vip || '') === 'true' ? 'VIP' : String(req.query.verified || '') === 'true' ? 'Trusted' : 'All'));
   const service = String(req.query.service || 'All');
   const minPrice = Number(req.query.minPrice || 0);
   const maxPrice = Number(req.query.maxPrice || 0);
-  const verified = String(req.query.verified || '') === 'true';
-  const vip = String(req.query.vip || '') === 'true';
+  const verified = String(req.query.verified || '') === 'true' && listing !== 'Trusted';
+  const vip = String(req.query.vip || '') === 'true' && listing !== 'VIP';
   const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
     from utamu_models m
     left join utamu_users u on u.id = m.user_id

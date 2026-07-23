@@ -163,11 +163,16 @@ function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:
     { label: 'Only independent', value: 'Independent' },
     { label: 'Trusted badge', value: 'Trusted' },
   ];
+  const activeListingLabel = listingOptions.find((option) => option.value === listing)?.label || 'All escorts';
+  function runSearch(nextListing = listing) {
+    setListing(nextListing);
+    if (typeof window !== 'undefined') {
+      window.location.href = buildSearchUrl({ query, country, gender, listing: nextListing, vip: nextListing === 'VIP' });
+    }
+  }
   function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (typeof window !== 'undefined') {
-      window.location.href = buildSearchUrl({ query, country, gender, listing, vip: listing === 'VIP', verified: listing === 'Trusted' });
-    }
+    runSearch();
   }
   return (
     <aside className="bg-[#101010] text-white">
@@ -184,14 +189,15 @@ function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:
             <option value="Male">Male</option>
           </select>
           <div className="space-y-2">
+            <p className="rounded-[3px] bg-white/10 px-3 py-2 text-xs font-bold uppercase tracking-wide text-[#ffe8f4]">Showing: {activeListingLabel}</p>
             {listingOptions.map((option) => (
-              <label key={option.value} className="flex cursor-pointer items-center gap-2 font-semibold">
-                <input type="radio" name="quick-listing" value={option.value} checked={listing === option.value} onChange={() => setListing(option.value)} className="h-4 w-4 accent-[#f0b323]" />
+              <label key={option.value} className={'flex cursor-pointer items-center gap-2 rounded-[3px] px-3 py-2 font-semibold transition ' + (listing === option.value ? 'bg-white text-[#3b0d42] shadow-sm' : 'bg-white/5 text-white hover:bg-white/15')}>
+                <input type="radio" name="quick-listing" value={option.value} checked={listing === option.value} onChange={() => runSearch(option.value)} className="h-4 w-4 accent-[#f0b323]" />
                 <span>{option.label}</span>
               </label>
             ))}
           </div>
-          <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073] shadow-sm transition hover:bg-[#f0b323] hover:text-[#2b0a3d]">Search</button></div>
+          <div className="text-center"><button className="rounded-full bg-white px-7 py-2 font-bold text-[#e60073] shadow-sm transition hover:bg-[#f0b323] hover:text-[#2b0a3d]">Apply search</button></div>
           <a href="/advanced-search" className="block text-center font-semibold text-[#ffe4f3] hover:text-white"><Search className="mr-1 inline h-3.5 w-3.5" />Advanced search</a>
         </div>
       </form>

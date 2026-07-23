@@ -69,12 +69,13 @@ export function useUtamuDirectory() {
     setCity(params.get('city') || 'All');
     setCategory(params.get('category') || 'All');
     setGender(params.get('gender') || 'All');
-    setListingType(params.get('listing') || 'All');
+    const nextListingType = params.get('listing') || (params.get('vip') === 'true' ? 'VIP' : params.get('verified') === 'true' ? 'Trusted' : 'All');
+    setListingType(nextListingType);
     setService(params.get('service') || 'All');
     setMinPrice(params.get('minPrice') || '');
     setMaxPrice(params.get('maxPrice') || '');
-    setVerifiedOnly(params.get('verified') === 'true');
-    setEliteOnly(params.get('vip') === 'true');
+    setVerifiedOnly(params.get('verified') === 'true' && nextListingType !== 'Trusted');
+    setEliteOnly(params.get('vip') === 'true' && nextListingType !== 'VIP');
   }
 
   return {
