@@ -628,7 +628,12 @@ export async function registerAccount(req, res) {
     const samePhone = phone && String(existingUser.phone || '').trim() === phone;
     const pendingEmail = sameEmail && (!existingUser.email_verified || existingUser.status === 'pending_email');
     if (pendingEmail) {
-      const duplicateUploadToken = accountType === 'independent-model' && existingUser.password_hash && await bcrypt.compare(password, existingUser.password_hash) ? signUser(existingUser) : null;
+      const duplicatePasswordMatches = Boolean(accountType === 'independent-model' && existingUser.password_hash && await bcrypt.compare(password, existingUser.password_hash));
+      const duplicateUploadToken = duplicatePasswordMatches ? signUser(existingUser) : null;
+      if (accountType === 'independent-model' && !duplicateUploadToken) {
+        emailFlowLog('registration_duplicate_pending_upload_blocked', { registrationId, userId: existingUser.id, email: maskEmail(email), username: body.username, reason: 'password_mismatch_or_missing_hash' }, 'warn');
+        return res.status(409).json({ message: 'A pending escort registration already exists for this email. Login with that account, or retry registration with the same password, then add your profile image from My Account.' });
+      }
       const validationToken = existingUser.validation_token || crypto.randomBytes(24).toString('hex');
       const retryAfterSeconds = validationRetryAfterSeconds(existingUser);
       const confirmationUrl = validationConfirmationUrl(validationToken);

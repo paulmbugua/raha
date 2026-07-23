@@ -554,7 +554,10 @@ function RegistrationFormScreen({ path }: { path: string }) {
       let nextResult: any = result;
       if (isIndependent) {
         const uploadToken = (result as any).uploadToken || (result as any).token;
-        if (!uploadToken) throw new Error('Registration was created, but image upload could not start. Please login and add your profile image from My Account.');
+        if (!uploadToken) {
+          console.error('[utamu:registration] missing upload token after registration', { accountType: kind, result });
+          throw new Error('Your account was created, but this API response did not include the image upload session. In development, confirm the web app is using the backend on http://localhost:4008 and restart both servers.');
+        }
         const uploaded: any = await utamuApi.uploadProfileImages(registrationImages, uploadToken);
         if (!Array.isArray(uploaded) || uploaded.length === 0) throw new Error('Please publish at least one profile image before continuing.');
         nextResult = { ...(result as any), initialImages: uploaded };
