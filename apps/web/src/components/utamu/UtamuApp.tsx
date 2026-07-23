@@ -502,6 +502,8 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const memberPreferences = ['Save favorite profiles', 'Compare escort profiles', 'Request booking details', 'Follow verified escorts', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
+  const [registrationImages, setRegistrationImages] = useState<File[]>([]);
+  const [registrationImagePreviews, setRegistrationImagePreviews] = useState<{ name: string; url: string }[]>([]);
   const [registrationResult, setRegistrationResult] = useState<any>(null);
   const [registrationError, setRegistrationError] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -509,10 +511,26 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const toggleService = (service: string) => setSelectedServices((current) => current.includes(service) ? current.filter((item) => item !== service) : [...current, service]);
   const toggleAllServices = () => setSelectedServices(allServicesSelected ? [] : services);
   const toggleAvailability = (item: string) => setSelectedAvailability((current) => current.includes(item) ? current.filter((value) => value !== item) : [...current, item]);
+  function clearRegistrationImages() {
+    registrationImagePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    setRegistrationImages([]);
+    setRegistrationImagePreviews([]);
+  }
+  function selectRegistrationImages(files: FileList | null) {
+    registrationImagePreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    const nextFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/')).slice(0, 8);
+    setRegistrationImages(nextFiles);
+    setRegistrationImagePreviews(nextFiles.map((file) => ({ name: file.name, url: URL.createObjectURL(file) })));
+    if (!nextFiles.length) setRegistrationError('Please select at least one clear profile image.');
+  }
 
   async function handleRegistrationSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setRegistrationError('');
+    if (isIndependent && registrationImages.length === 0) {
+      setRegistrationError('Please add at least one clear profile image before submitting.');
+      return;
+    }
     if (isIndependent && selectedAvailability.length === 0) {
       setRegistrationError('Please select at least one availability option.');
       return;
@@ -527,8 +545,16 @@ function RegistrationFormScreen({ path }: { path: string }) {
         setRegistrationError('Registration could not be completed. Please check your details and try again.');
         return;
       }
-      setRegistrationResult(result);
-      window.localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(result));
+      let nextResult: any = result;
+      if (isIndependent) {
+        const uploadToken = (result as any).uploadToken || (result as any).token;
+        if (!uploadToken) throw new Error('Registration was created, but image upload could not start. Please login and add your profile image from My Account.');
+        const uploaded: any = await utamuApi.uploadProfileImages(registrationImages, uploadToken);
+        if (!Array.isArray(uploaded) || uploaded.length === 0) throw new Error('Please publish at least one profile image before continuing.');
+        nextResult = { ...(result as any), initialImages: uploaded };
+      }
+      setRegistrationResult(nextResult);
+      window.localStorage.setItem(PENDING_REGISTRATION_KEY, JSON.stringify(nextResult));
       window.history.pushState({}, '', '/register/confirm-email');
     } catch (error) {
       setRegistrationError(error instanceof Error ? error.message : 'Registration request failed. Confirm the backend is running on http://localhost:4008.');
@@ -539,6 +565,30 @@ function RegistrationFormScreen({ path }: { path: string }) {
 
   if (registrationResult) return <ConfirmEmailScreen pending={registrationResult} />;
 
+
+  const registrationImagePanel = isIndependent && (
+    <FormRow label="Profile images" hint="Add at least one clear public profile image" required>
+      <div className="rounded-[3px] border border-dashed border-[#ff8fc8] bg-white/70 p-4">
+        <input id="registration-profile-images" type="file" accept="image/*" multiple onChange={(event) => selectRegistrationImages(event.target.files)} className="hidden" />
+        <label htmlFor="registration-profile-images" className="inline-flex cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Choose profile images</label>
+        <p className="mt-2 text-xs leading-5 text-[#7b6e78]">Your first image prevents empty profiles. You can add more later from My Account.</p>
+        {registrationImagePreviews.length > 0 && (
+          <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {registrationImagePreviews.map((preview) => (
+              <figure key={preview.url} className="overflow-hidden rounded-[3px] border border-[#ffd1e8] bg-white">
+                <img src={preview.url} alt={preview.name} className="aspect-[4/5] w-full object-cover" />
+                <figcaption className="truncate px-2 py-1 text-xs text-[#7b6e78]">{preview.name}</figcaption>
+              </figure>
+            ))}
+          </div>
+        )}
+        <div className="mt-3 flex flex-wrap items-center gap-2">
+          {registrationImages.length > 0 && <span className="rounded-full bg-[#006b3f] px-3 py-1 text-xs font-bold text-white">{registrationImages.length} ready</span>}
+          {registrationImages.length > 0 && <button type="button" onClick={clearRegistrationImages} className="rounded-full border border-[#e60073] px-4 py-1 text-xs font-bold text-[#e60073]">Change selection</button>}
+        </div>
+      </div>
+    </FormRow>
+  );
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
@@ -547,6 +597,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
           {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Escorts should register here</div>}
           <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
           <form className="mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
+            {registrationImagePanel}
             <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
             <FormRow label="Password" hint="Must be between 6 and 50 characters" required><input name="password" type="password" className={fieldClass} /></FormRow>
             {!isMember && <FormRow label={isAgency ? 'Email' : 'Your email'} required><input name="email" type="email" className={fieldClass} /></FormRow>}

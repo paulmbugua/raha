@@ -628,17 +628,18 @@ export async function registerAccount(req, res) {
     const samePhone = phone && String(existingUser.phone || '').trim() === phone;
     const pendingEmail = sameEmail && (!existingUser.email_verified || existingUser.status === 'pending_email');
     if (pendingEmail) {
+      const duplicateUploadToken = accountType === 'independent-model' && existingUser.password_hash && await bcrypt.compare(password, existingUser.password_hash) ? signUser(existingUser) : null;
       const validationToken = existingUser.validation_token || crypto.randomBytes(24).toString('hex');
       const retryAfterSeconds = validationRetryAfterSeconds(existingUser);
       const confirmationUrl = validationConfirmationUrl(validationToken);
       if (retryAfterSeconds > 0) {
         emailFlowLog('registration_duplicate_pending_resend_throttled', { registrationId, userId: existingUser.id, email: maskEmail(email), retryAfterSeconds }, 'warn');
-        return res.status(200).json({ data: { registrationComplete: true, resentValidation: false, recentlySent: true, retryAfterSeconds, user: publicUser(existingUser), validationToken, confirmationUrl } });
+        return res.status(200).json({ data: { registrationComplete: true, resentValidation: false, recentlySent: true, retryAfterSeconds, user: publicUser(existingUser), validationToken, confirmationUrl, ...(duplicateUploadToken ? { uploadToken: duplicateUploadToken } : {}) } });
       }
       const updated = await queryWithRetry('update utamu_users set validation_token = $2, validation_sent_at = now() where id = $1 returning *', [existingUser.id, validationToken]);
       const emailPreview = await sendValidationEmail(updated.rows[0], confirmationUrl, false);
       emailFlowLog('registration_duplicate_pending_resend', { registrationId, userId: existingUser.id, email: maskEmail(email), username: body.username, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null }, 'warn');
-      return res.status(200).json({ data: { registrationComplete: true, resentValidation: true, user: publicUser(updated.rows[0]), validationToken, confirmationUrl, emailPreview } });
+      return res.status(200).json({ data: { registrationComplete: true, resentValidation: true, user: publicUser(updated.rows[0]), validationToken, confirmationUrl, emailPreview, ...(duplicateUploadToken ? { uploadToken: duplicateUploadToken } : {}) } });
     }
     const duplicateField = samePhone ? 'phone' : 'email_or_username';
     emailFlowLog('registration_duplicate', { registrationId, email: maskEmail(email), username: body.username, duplicateField, existingStatus: existingUser.status, existingEmailVerified: existingUser.email_verified }, 'warn');
@@ -683,7 +684,7 @@ export async function registerAccount(req, res) {
   const confirmationUrl = validationConfirmationUrl(validationToken);
   const emailPreview = await sendValidationEmail(user, confirmationUrl, true);
   emailFlowLog('registration_email_result', { registrationId, userId: user.id, delivered: Boolean(emailPreview?.delivered), errorCode: emailPreview?.error?.code || null, errorMessage: emailPreview?.error?.message || null });
-  res.status(201).json({ data: { registrationComplete: true, user: publicUser(user), model, validationToken, confirmationUrl, emailPreview } });
+  res.status(201).json({ data: { registrationComplete: true, user: publicUser(user), model, validationToken, confirmationUrl, emailPreview, uploadToken: signUser(user) } });
 }
 
 export async function confirmEmail(req, res) {
