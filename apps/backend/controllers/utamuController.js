@@ -612,6 +612,7 @@ export async function registerAccount(req, res) {
     hasPhone: Boolean(phone),
   });
   if (!email || !password || !body.username) return res.status(400).json({ message: 'Username, email and password are required.' });
+  if (body.confirmPassword !== undefined && String(body.confirmPassword || '') !== password) return res.status(400).json({ message: 'Password and confirmation password must match.' });
   if (!body.availability?.length && accountType === 'independent-model') return res.status(400).json({ message: 'Please select at least one availability option.' });
 
   const existing = await tryQuery(

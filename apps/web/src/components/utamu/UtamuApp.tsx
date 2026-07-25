@@ -544,7 +544,14 @@ function RegistrationFormScreen({ path }: { path: string }) {
     setSubmitting(true);
     const formData = new FormData(event.currentTarget);
     const values = Object.fromEntries(formData.entries());
-    const payload = { ...values, accountType: kind, services: isIndependent ? selectedServices : isAgency ? agencyServices.filter((item) => formData.getAll('agencyServices').includes(item)) : [], availability: selectedAvailability, preferences: formData.getAll('preferences'), profile: values };
+    const passwordValue = String(values.password || '');
+    const confirmPasswordValue = String(values.confirmPassword || '');
+    if (passwordValue !== confirmPasswordValue) {
+      setRegistrationError('Password and confirmation password must match.');
+      return;
+    }
+    const { confirmPassword: _confirmPassword, ...profileValues } = values;
+    const payload = { ...profileValues, accountType: kind, services: isIndependent ? selectedServices : isAgency ? agencyServices.filter((item) => formData.getAll('agencyServices').includes(item)) : [], availability: selectedAvailability, preferences: formData.getAll('preferences'), profile: profileValues };
     try {
       const result = await utamuApi.registerAccount(payload);
       if (!(result as any).registrationComplete) {
@@ -608,7 +615,8 @@ function RegistrationFormScreen({ path }: { path: string }) {
           <form className="mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
             {registrationImagePanel}
             <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
-            <FormRow label="Password" hint="Must be between 6 and 50 characters" required><input name="password" type="password" className={fieldClass} /></FormRow>
+            <FormRow label='Password' hint='Must be between 6 and 50 characters' required><input name='password' type='password' className={fieldClass} /></FormRow>
+            <FormRow label='Confirm password' hint='Repeat your password exactly' required><input name='confirmPassword' type='password' className={fieldClass} /></FormRow>
             {!isMember && <FormRow label={isAgency ? 'Email' : 'Your email'} required><input name="email" type="email" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="Email" required><input name="email" type="email" className={fieldClass} /></FormRow>}
