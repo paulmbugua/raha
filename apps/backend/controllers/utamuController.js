@@ -1207,17 +1207,21 @@ export async function getReviews(_req, res) {
 export async function submitReview(req, res) {
   await ensureUtamuTransactionalSchema();
   const user = await authUser(req);
+  if (!user) return res.status(401).json({ message: 'You need to login as a normal user to submit reviews.' });
+  if (user.account_type !== 'member' || user.role !== 'client') return res.status(403).json({ message: 'Only normal user accounts can review escorts and agencies.' });
   const rating = Math.max(1, Math.min(5, Number(req.body?.rating || 5)));
   const body = String(req.body?.body || '').trim();
   if (!body) return res.status(400).json({ message: 'Review text is required.' });
   const model = await resolvePaymentModel({ modelId: req.body?.modelId, modelSlug: req.body?.modelSlug }, null);
+  if (!model?.id) return res.status(404).json({ message: 'Select a listed escort or agency to review.' });
+  const modelCategory = String(model.category || '').toLowerCase();
+  if (!modelCategory.includes('independent') && !modelCategory.includes('agency')) return res.status(400).json({ message: 'Reviews are only available for independent escorts and agencies.' });
   const modelName = req.body?.modelName || model?.display_name || 'Secret Nairobi escort';
   const modelImage = req.body?.modelImage || '';
-  const authorName = req.body?.author || user?.full_name || 'Normal user';
-  const inserted = await queryWithRetry("insert into utamu_reviews (model_id, user_id, rating, body, anonymous, status, model_name, model_image, author_name) values ($1,$2,$3,$4,$5,'approved',$6,$7,$8) returning *", [model?.id || null, user?.id || null, rating, body, Boolean(req.body?.anonymous), modelName, modelImage, authorName]);
+  const authorName = user.full_name || user.username || 'Normal user';
+  const inserted = await queryWithRetry("insert into utamu_reviews (model_id, user_id, rating, body, anonymous, status, model_name, model_image, author_name) values ($1,$2,$3,$4,$5,'approved',$6,$7,$8) returning *", [model.id, user.id, rating, body, Boolean(req.body?.anonymous), modelName, modelImage, authorName]);
   res.status(201).json({ data: mapReviewRow(inserted.rows[0]) });
 }
-
 
 
 export async function getMonetizationOverview(req, res) {
