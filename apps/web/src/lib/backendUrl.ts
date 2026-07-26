@@ -1,10 +1,10 @@
-const PROD_BACKEND_URL = 'https://api.secretnairobi.co.ke';
+const PROD_BACKEND_URL = 'https://server.secretnairobi.co.ke';
 const DEV_BACKEND_URL = 'http://localhost:4008';
 
 const PRODUCTION_HOST_PATTERNS = [
   'secretnairobi.co.ke',
   'www.secretnairobi.co.ke',
-  'api.secretnairobi.co.ke',
+  'server.secretnairobi.co.ke',
 ];
 
 const isDev = process.env.NODE_ENV !== 'production';
