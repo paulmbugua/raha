@@ -1,7 +1,7 @@
 {
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "main": ".open-next/worker.js",
-  "name": "Utamu",
+  "name": "secret-nairobi-web",
   "compatibility_date": "2026-03-27",
   "compatibility_flags": [
     "nodejs_compat",
@@ -14,19 +14,20 @@
   "services": [
     {
       "binding": "WORKER_SELF_REFERENCE",
-      "service": "Utamu"
+      "service": "secret-nairobi-web"
     }
   ],
   "vars": {
-    "NEXT_PUBLIC_BACKEND_URL": "https://api.utamu.co.ke"
+    "NEXT_PUBLIC_BACKEND_URL": "https://api.secretnairobi.co.ke",
+    "NEXT_PUBLIC_APP_ORIGIN": "https://secretnairobi.co.ke"
   },
   "routes": [
     {
-      "pattern": "utamu.co.ke",
+      "pattern": "secretnairobi.co.ke",
       "custom_domain": true
     },
     {
-      "pattern": "www.utamu.co.ke",
+      "pattern": "www.secretnairobi.co.ke",
       "custom_domain": true
     }
   ]

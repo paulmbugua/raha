@@ -81,6 +81,7 @@ turbo/
 
 # Next.js build output
 apps/web/.next/
+apps/web/.open-next/
 
 
 # Next cache/logs
