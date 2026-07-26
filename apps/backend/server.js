@@ -8,9 +8,44 @@ import mpesaUrlsRoutes from './routes/mpesaUrlsRoutes.js';
 
 const app = express();
 const port = Number(process.env.PORT || 4008);
-const allowedOrigins = String(process.env.CORS_ALLOWED_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001').split(',').map((origin) => origin.trim()).filter(Boolean);
+const defaultAllowedOrigins = [
+  'http://localhost:3000',
+  'http://127.0.0.1:3000',
+  'http://localhost:3001',
+  'https://secretnairobi.co.ke',
+  'https://www.secretnairobi.co.ke',
+  'https://server.secretnairobi.co.ke',
+];
+const configuredAllowedOrigins = String(process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map((origin) => origin.trim())
+  .filter(Boolean);
+const allowedOrigins = [...new Set([...defaultAllowedOrigins, ...configuredAllowedOrigins])];
 
-app.use(cors({ origin: (origin, callback) => (!origin || allowedOrigins.includes(origin) ? callback(null, true) : callback(new Error('Not allowed by CORS: ' + origin))), credentials: true }));
+function isAllowedCorsOrigin(origin) {
+  if (!origin) return true;
+  if (allowedOrigins.includes(origin)) return true;
+
+  try {
+    const url = new URL(origin);
+    return url.protocol === 'https:' && (url.hostname === 'secretnairobi.co.ke' || url.hostname.endsWith('.secretnairobi.co.ke'));
+  } catch {
+    return false;
+  }
+}
+
+const corsOptions = {
+  origin: (origin, callback) => {
+    if (isAllowedCorsOrigin(origin)) return callback(null, true);
+    console.warn('[cors] blocked_origin', origin);
+    return callback(new Error('Not allowed by CORS: ' + origin));
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+};
+
+app.use(cors(corsOptions));
 app.use(helmet());
 app.use(morgan('dev'));
 app.use(express.json({ limit: '1mb' }));
