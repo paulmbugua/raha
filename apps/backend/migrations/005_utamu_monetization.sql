@@ -117,15 +117,22 @@ create index if not exists utamu_booking_leads_provider_idx on utamu_booking_lea
 create index if not exists utamu_booking_leads_client_idx on utamu_booking_leads (client_user_id, created_at desc);
 
 insert into utamu_monetization_products (id, category, name, description, amount_kes, token_amount, duration_days, sort_order) values
-  ('verification-trusted', 'verification', 'Trusted verification badge', 'Paid ID/document review with a Trusted badge after approval.', 1500, 0, 365, 10),
-  ('tier-bronze', 'listing', 'Bronze featured listing', 'Monthly profile bumping, 12 photo slots, and stronger ranking.', 1500, 0, 30, 20),
-  ('tier-silver', 'listing', 'Silver featured listing', 'Faster bumping, 20 photo slots, and search priority.', 3000, 0, 30, 30),
-  ('tier-gold', 'listing', 'Gold featured listing', 'Top ranking, 30 photo slots, and sidebar ad eligibility.', 6000, 0, 30, 40),
-  ('tier-vip', 'listing', 'VIP featured listing', 'VIP homepage priority, 40 photo slots, sidebar ad spot, and strongest bumping.', 10000, 0, 30, 50),
-  ('tokens-100', 'wallet', '100 message tokens', 'Credits for paid messages, private unlocks, and tips.', 500, 100, null, 60),
-  ('tokens-300', 'wallet', '300 message tokens', 'Best-value client credits for active messaging and tips.', 1200, 300, null, 70),
-  ('ai-assistant-monthly', 'ai', 'AI assistant monthly add-on', '24/7 assistant that handles common questions and filters weak leads.', 6500, 0, 30, 80),
-  ('client-portal-monthly', 'client_portal', 'Vetted client portal', 'Monthly access to vetted-client-only discovery and matchmaking.', 2500, 0, 30, 90)
+  ('verification-trusted-weekly', 'verification', 'Trusted badge - weekly', '7-day Trusted badge after ID/document review and approval.', 350, 0, 7, 10),
+  ('verification-trusted', 'verification', 'Trusted badge - monthly', '30-day Trusted badge after ID/document review and approval.', 1200, 0, 30, 11),
+  ('tier-bronze-weekly', 'listing', 'Bronze featured listing - weekly', '7 days of profile bumping, 12 photo slots, and stronger ranking.', 300, 0, 7, 20),
+  ('tier-bronze', 'listing', 'Bronze featured listing - monthly', '30 days of profile bumping, 12 photo slots, and stronger ranking.', 1000, 0, 30, 21),
+  ('tier-silver-weekly', 'listing', 'Silver featured listing - weekly', '7 days of faster bumping, 20 photo slots, and search priority.', 400, 0, 7, 30),
+  ('tier-silver', 'listing', 'Silver featured listing - monthly', '30 days of faster bumping, 20 photo slots, and search priority.', 1400, 0, 30, 31),
+  ('tier-gold-weekly', 'listing', 'Gold featured listing - weekly', '7 days of top ranking, 30 photo slots, and sidebar ad eligibility.', 500, 0, 7, 40),
+  ('tier-gold', 'listing', 'Gold featured listing - monthly', '30 days of top ranking, 30 photo slots, and sidebar ad eligibility.', 1700, 0, 30, 41),
+  ('tier-vip-weekly', 'listing', 'VIP featured listing - weekly', '7 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', 600, 0, 7, 50),
+  ('tier-vip', 'listing', 'VIP featured listing - monthly', '30 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', 2000, 0, 30, 51),
+  ('tokens-100', 'wallet', '100 message tokens', 'Credits for paid messages, private unlocks, and tips.', 200, 100, null, 60),
+  ('tokens-300', 'wallet', '300 message tokens', 'Best-value client credits for active messaging and tips.', 500, 300, null, 70),
+  ('ai-assistant-weekly', 'ai', 'AI assistant - weekly', '7 days of 24/7 assistant replies for common questions and weak-lead filtering.', 450, 0, 7, 80),
+  ('ai-assistant-monthly', 'ai', 'AI assistant - monthly', '30 days of 24/7 assistant replies for common questions and weak-lead filtering.', 1600, 0, 30, 81),
+  ('client-portal-weekly', 'client_portal', 'Vetted client portal - weekly', '7-day access to vetted-client-only discovery and matchmaking.', 300, 0, 7, 90),
+  ('client-portal-monthly', 'client_portal', 'Vetted client portal - monthly', '30-day access to vetted-client-only discovery and matchmaking.', 1000, 0, 30, 91)
 on conflict (id) do update set
   category = excluded.category,
   name = excluded.name,
