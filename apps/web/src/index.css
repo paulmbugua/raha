@@ -118,6 +118,168 @@ section[id] {
   }
 }
 
+
+/* Secret Nairobi motion system */
+@keyframes sn-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sn-slide-down {
+  from {
+    opacity: 0;
+    transform: translateY(-14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes sn-soft-glow {
+  0%, 100% {
+    box-shadow: 0 0 0 rgba(230, 0, 115, 0);
+  }
+  50% {
+    box-shadow: 0 0 28px rgba(230, 0, 115, 0.22);
+  }
+}
+
+@keyframes sn-shine {
+  from {
+    transform: translateX(-120%) skewX(-18deg);
+  }
+  to {
+    transform: translateX(180%) skewX(-18deg);
+  }
+}
+
+.sn-page-enter {
+  animation: sn-fade-up 0.55s ease both;
+}
+
+.sn-header-enter {
+  animation: sn-slide-down 0.5s ease both;
+}
+
+.sn-fade-up {
+  animation: sn-fade-up 0.55s ease both;
+}
+
+.sn-stagger > * {
+  animation: sn-fade-up 0.55s ease both;
+}
+
+.sn-stagger > *:nth-child(1) { animation-delay: 0.03s; }
+.sn-stagger > *:nth-child(2) { animation-delay: 0.07s; }
+.sn-stagger > *:nth-child(3) { animation-delay: 0.11s; }
+.sn-stagger > *:nth-child(4) { animation-delay: 0.15s; }
+.sn-stagger > *:nth-child(5) { animation-delay: 0.19s; }
+.sn-stagger > *:nth-child(6) { animation-delay: 0.23s; }
+.sn-stagger > *:nth-child(7) { animation-delay: 0.27s; }
+.sn-stagger > *:nth-child(8) { animation-delay: 0.31s; }
+.sn-stagger > *:nth-child(9) { animation-delay: 0.35s; }
+.sn-stagger > *:nth-child(10) { animation-delay: 0.39s; }
+.sn-stagger > *:nth-child(11) { animation-delay: 0.43s; }
+.sn-stagger > *:nth-child(12) { animation-delay: 0.47s; }
+
+.sn-lift {
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease, filter 180ms ease;
+}
+
+.sn-lift:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 34px rgba(43, 10, 61, 0.18);
+}
+
+.sn-category-card {
+  position: relative;
+  isolation: isolate;
+  transition: transform 180ms ease, box-shadow 180ms ease;
+}
+
+.sn-category-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  opacity: 0;
+  background: linear-gradient(135deg, rgba(230, 0, 115, 0.18), rgba(240, 179, 35, 0.16), rgba(0, 107, 63, 0.16));
+  transition: opacity 180ms ease;
+}
+
+.sn-category-card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 24px 44px rgba(0, 0, 0, 0.36);
+}
+
+.sn-category-card:hover::after {
+  opacity: 1;
+}
+
+.sn-profile-card {
+  animation: sn-fade-up 0.55s ease both;
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.sn-profile-card:hover {
+  transform: translateY(-5px) scale(1.01);
+  border-color: rgba(230, 0, 115, 0.55);
+  box-shadow: 0 20px 36px rgba(43, 10, 61, 0.22);
+}
+
+.sn-shine {
+  position: relative;
+  overflow: hidden;
+}
+
+.sn-shine::before {
+  content: '';
+  position: absolute;
+  inset: -40% auto -40% 0;
+  width: 34%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: translateX(-120%) skewX(-18deg);
+  pointer-events: none;
+}
+
+.sn-shine:hover::before {
+  animation: sn-shine 0.75s ease;
+}
+
+.sn-soft-glow {
+  animation: sn-soft-glow 3.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sn-page-enter,
+  .sn-header-enter,
+  .sn-fade-up,
+  .sn-stagger > *,
+  .sn-profile-card,
+  .sn-soft-glow {
+    animation: none !important;
+  }
+
+  .sn-lift,
+  .sn-category-card,
+  .sn-profile-card {
+    transition: none !important;
+  }
+
+  .sn-lift:hover,
+  .sn-category-card:hover,
+  .sn-profile-card:hover {
+    transform: none !important;
+  }
+}
+
 /* Hide scrollbars (opt-in) */
 .no-scrollbar::-webkit-scrollbar {
   display: none;

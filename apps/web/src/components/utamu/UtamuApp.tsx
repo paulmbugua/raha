@@ -140,8 +140,8 @@ function Shell({ children }: { children: React.ReactNode }) {
   }, []);
   return (
     <main className="min-h-screen overflow-x-hidden bg-[#070707] font-serif text-[#21102b] selection:bg-[#e60073] selection:text-white">
-      <div className="mx-auto w-full max-w-[1180px] bg-[#fff7fb] shadow-2xl shadow-black/50 ring-1 ring-[#f0b323]/20">
-        <header className="border-t-4 border-[#f0b323] bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] text-white shadow-lg shadow-black/30">
+      <div className="sn-page-enter mx-auto w-full max-w-[1180px] bg-[#fff7fb] shadow-2xl shadow-black/50 ring-1 ring-[#f0b323]/20">
+        <header className="sn-header-enter border-t-4 border-[#f0b323] bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] text-white shadow-lg shadow-black/30">
           <div className="flex min-h-[72px] flex-col items-stretch gap-3 px-3 py-3 sm:px-5 lg:flex-row lg:items-center lg:justify-between">
             <a href="/" className="text-center font-serif text-3xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#7f6a90,0_0_22px_rgba(240,179,35,.22)] sm:text-4xl lg:text-left lg:text-5xl">Secret Nairobi</a>
             <nav className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:flex-1 lg:justify-start">
@@ -209,7 +209,7 @@ function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:
   }
   return (
     <aside className="bg-[#101010] text-white">
-      <form onSubmit={submit} className="bg-gradient-to-b from-[#e60073] via-[#cf0065] to-[#3b0d42] px-4 py-5 shadow-inner">
+      <form onSubmit={submit} className="sn-fade-up bg-gradient-to-b from-[#e60073] via-[#cf0065] to-[#3b0d42] px-4 py-5 shadow-inner">
         <h2 className="mb-3 text-base font-bold">Quick Search:</h2>
         <div className="space-y-3 text-sm">
           <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Name, area, service" className="w-full rounded-[3px] border border-white bg-white px-2 py-2 text-[#35213f] outline-none focus:ring-2 focus:ring-[#f0b323]" />
@@ -247,7 +247,7 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
   const tierClass = tier === 'gold' ? 'from-[#c89b00] to-[#f7d867]' : tier === 'silver' ? 'from-[#8a96a8] to-[#dce3ef]' : tier === 'bronze' ? 'from-[#9b5a2e] to-[#d9965b]' : 'from-[#ff8a00] to-[#ffbd00]';
   const isNew = Boolean((model as UtamuModel & { isNew?: boolean }).isNew);
   return (
-    <a href={`/escort/${model.slug}`} className="group relative block overflow-hidden rounded-[3px] border border-[#f0b323]/70 bg-white shadow-md shadow-[#2b0a3d]/10 ring-1 ring-[#e60073]/10">
+    <a href={`/escort/${model.slug}`} style={{ animationDelay: `${Math.min(index, 11) * 45}ms` }} className="sn-profile-card group relative block overflow-hidden rounded-[3px] border border-[#f0b323]/70 bg-white shadow-md shadow-[#2b0a3d]/10 ring-1 ring-[#e60073]/10">
       <div className="relative aspect-[3/4] overflow-hidden">
         <img src={model.image} alt={`${model.name} Nairobi escort profile`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
         {tierLabel && <div className={'absolute right-[-34px] top-3 rotate-45 bg-gradient-to-r px-9 py-1 text-[10px] font-bold uppercase text-white shadow ' + tierClass}>{tierLabel}</div>}
@@ -276,8 +276,8 @@ function DiscoveryHome() {
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
-        <section className="bg-[#fff7fb] px-4 py-5 md:px-5">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
+        <section className="sn-fade-up bg-[#fff7fb] px-4 py-5 md:px-5">
+          <div className="sn-fade-up mb-6 flex flex-wrap items-center justify-between gap-4">
             <h1 className="text-xl font-normal text-[#3b164b]">All escorts</h1>
             <div className="flex flex-wrap gap-2 text-sm">
               {[
@@ -296,14 +296,14 @@ function DiscoveryHome() {
         </section>
         <QuickSearchPanel />
       </div>
-      <section className="border-t-4 border-[#006b3f] bg-[#fff7fb] px-4 py-7 text-[#111] md:px-5">
+      <section className="sn-fade-up border-t-4 border-[#006b3f] bg-[#fff7fb] px-4 py-7 text-[#111] md:px-5">
         <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">Secret Nairobi Escorts - Nairobi's Premium Companion Directory</h2>
         <p className="mb-3 text-[15px] leading-7">Across Nairobi, adults need a discreet and organized way to discover verified escorts with polished presentation, clear communication, and reliable profile details. Secret Nairobi Escorts gives members a simple way to browse listings, compare styles, review availability, and connect with companions suited for private bookings, hospitality, travel-ready arrangements, and premium social experiences.</p>
         <p className="mb-3 text-[15px] leading-7">Our directory focuses on elegant presentation, quick discovery, and visible trust signals. You can explore independent escorts, VIP profiles, new listings, and verified members from one place, with Nairobi neighborhoods and Kenyan payment flows designed into the experience.</p>
         <h3 className="mb-2 text-2xl font-bold">We Serve The Best Escort Directory Experience In Kenya</h3>
         <p className="text-[15px] leading-7">At Secret Nairobi, listed escorts are presented with clear photos, verification labels, review flows, and profile details so adults can make informed choices. Whether you prefer VIP visibility, independent listings, agency-managed profiles, or discreet Nairobi bookings, the goal is to make discovery fast, attractive, and easy to navigate.</p>
       </section>
-      <footer className="bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] px-5 py-5 text-center text-sm text-white">
+      <footer className="sn-fade-up bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] px-5 py-5 text-center text-sm text-white">
         <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
         <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Escorts</a><a href="/agencies">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
       </footer>
@@ -358,10 +358,10 @@ function RegisterScreen() {
   return (
     <>
       <section className="bg-[#101010] px-4 pb-6 pt-2 text-[#222] md:px-5">
-        <h1 className="text-center text-3xl font-normal leading-tight text-white md:text-4xl">Create an Account</h1>
-        <div className="grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 lg:py-10">
-          {plans.map((plan) => (
-            <article key={plan.title} className="overflow-hidden rounded-[3px] bg-white shadow-lg shadow-black/30">
+        <h1 className="sn-fade-up text-center text-3xl font-normal leading-tight text-white md:text-4xl">Create an Account</h1>
+        <div className="sn-stagger grid gap-6 py-8 sm:grid-cols-2 lg:grid-cols-3 lg:gap-8 lg:py-10">
+          {plans.map((plan, index) => (
+            <article key={plan.title} style={{ animationDelay: `${index * 90}ms` }} className="sn-category-card sn-shine overflow-hidden rounded-[3px] bg-white shadow-lg shadow-black/30">
               <h2 className="bg-gradient-to-b from-[#ff4fbd] to-[#e60073] px-3 py-3 text-sm font-bold text-white">{plan.title}</h2>
               <div className="p-5">
                 <ul className="space-y-3 text-sm text-[#8a8a8a]">
@@ -375,15 +375,15 @@ function RegisterScreen() {
                 {plan.vipFeature && <div className="mt-4 rounded-[3px] border border-[#ffb100] bg-[#fff8df] p-3 text-[#3b164b]"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-bold">{plan.vipFeature}</span>{plan.highlight && <span className="rounded-full bg-[#1fbfa5] px-3 py-1 text-xs font-bold text-white">{plan.highlight}</span>}</div><a href="/checkout/mpesa" className="mt-3 inline-flex rounded-full bg-[#e60073] px-4 py-2 text-xs font-bold text-white">Upgrade after registration</a></div>}
                 <div className="mt-6 border-t border-[#eeeeee] pt-4">
                   <p className="mb-4 text-2xl font-normal text-[#555]">{plan.price}</p>
-                  <a href={plan.ctaHref} className="inline-flex items-center gap-2 rounded-[3px] bg-[#23b86b] px-5 py-3 text-sm font-bold text-white hover:bg-[#1fa461]">{plan.cta}<ChevronRight className="h-4 w-4" /></a>
+                  <a href={plan.ctaHref} className="sn-lift inline-flex items-center gap-2 rounded-[3px] bg-[#23b86b] px-5 py-3 text-sm font-bold text-white hover:bg-[#1fa461]">{plan.cta}<ChevronRight className="h-4 w-4" /></a>
                 </div>
               </div>
             </article>
           ))}
         </div>
       </section>
-      <section className="bg-[#fff0f6] px-4 py-10 text-[#111] md:px-5">
-        <div className="grid gap-8 md:grid-cols-3">
+      <section className="sn-fade-up bg-[#fff0f6] px-4 py-10 text-[#111] md:px-5">
+        <div className="sn-stagger grid gap-8 md:grid-cols-3">
           {infoBlocks.map((block) => (
             <article key={block.title}>
               <h2 className="mb-4 text-base font-bold text-[#9b9098]">{block.title}</h2>
@@ -392,11 +392,11 @@ function RegisterScreen() {
           ))}
         </div>
       </section>
-      <section className="bg-[#fff0f6] px-4 pb-8 text-center text-[13px] leading-6 text-[#b3a7af] md:px-5">
+      <section className="sn-fade-up bg-[#fff0f6] px-4 pb-8 text-center text-[13px] leading-6 text-[#b3a7af] md:px-5">
         <p>This platform is intended for adults creating or browsing professional escort profiles. By entering, you confirm that you will use the site responsibly, respect listed members, and follow all applicable booking, privacy, and platform safety rules.</p>
         <div className="mt-5 font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
       </section>
-      <footer className="bg-[#fff0f6] px-4 pb-5 text-center text-xs text-[#e60073] md:px-5">
+      <footer className="sn-fade-up bg-[#fff0f6] px-4 pb-5 text-center text-xs text-[#e60073] md:px-5">
         <div className="mb-4 flex flex-wrap justify-center gap-2"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
         <div className="-mx-4 bg-[#101010] py-2 text-white md:-mx-5">(c) 2026 SecretNairobi.com - Escorts in Nairobi</div>
       </footer>
@@ -412,8 +412,8 @@ function RegistrationQuickSearch() {
 function RegistrationFooter() {
   return (
     <>
-      <section className="border-t-4 border-[#f0b323]/70 bg-[#fff7fb] px-5 py-16 text-[#111] md:py-20">
-        <div className="grid gap-10 md:grid-cols-3">
+      <section className="sn-fade-up border-t-4 border-[#f0b323]/70 bg-[#fff7fb] px-5 py-16 text-[#111] md:py-20">
+        <div className="sn-stagger grid gap-10 md:grid-cols-3">
           <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Why Choose Our Escorts In Nairobi?</h2><p className="text-[15px] leading-8">Secret Nairobi makes registration clear for escorts, agencies, and members. Every account path is organized around profile quality, communication, verification, and discreet discovery.</p></article>
           <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">The Gratifying Professional Services</h2><p className="text-[15px] leading-8">Independent escorts can prepare a complete public profile, agencies can coordinate multiple listings, and members can create lightweight accounts for favorites, reviews, and saved browsing.</p></article>
           <article><h2 className="mb-5 text-xl font-bold text-[#9b9098]">Affordable Escorts Make Life Enjoyable</h2><p className="text-[15px] leading-8">The platform keeps Nairobi discovery simple while giving premium accounts stronger visibility through VIP placement, profile completeness, and trusted account signals.</p></article>
@@ -422,14 +422,14 @@ function RegistrationFooter() {
         <div className="mt-6 text-center font-bold text-[#2b0a3d]">ADULTS only or <a href="/" className="text-[#e60073]">LEAVE THE SITE NOW!</a></div>
         <div className="mt-10 flex flex-wrap justify-center gap-2 text-center text-xs text-[#e60073]"><a href="/">Secret Nairobi</a><span>-</span><a href="/login">Login</a><span>-</span><a href="/register">Register</a><span>-</span><a href="/privacy-policy">Privacy Policy</a><span>-</span><a href="/terms">Terms and Conditions</a><span>-</span><a href="/help">Contact</a><span>-</span><a href="/sitemap.xml">Sitemap</a></div>
       </section>
-      <footer className="bg-[#070707] px-5 py-3 text-center text-xs font-bold text-white ring-1 ring-[#f0b323]/20">(c) 2026 SecretNairobi.com - Escorts in Nairobi</footer>
+      <footer className="sn-fade-up bg-[#070707] px-5 py-3 text-center text-xs font-bold text-white ring-1 ring-[#f0b323]/20">(c) 2026 SecretNairobi.com - Escorts in Nairobi</footer>
     </>
   );
 }
 
 function FormRow({ label, hint, required = false, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="grid gap-2 lg:grid-cols-[minmax(160px,260px)_1fr] lg:items-start">
+    <div className="sn-fade-up grid gap-2 lg:grid-cols-[minmax(160px,260px)_1fr] lg:items-start">
       <label className="text-sm font-normal text-[#00627c]">{label}{required && <span className="text-[#ff1493]">*</span>}{hint && <span className="mt-1 block text-xs text-[#a99aa5]">{hint}</span>}</label>
       <div>{children}</div>
     </div>
@@ -641,11 +641,11 @@ function RegistrationFormScreen({ path }: { path: string }) {
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
-        <section className={'min-w-0 bg-[#fff0f6] px-4 py-5 text-[#003b5c] sm:px-5 ' + formMinHeight}>
+        <section className={'sn-fade-up min-w-0 bg-[#fff0f6] px-4 py-5 text-[#003b5c] sm:px-5 ' + formMinHeight}>
           <h1 className="text-2xl font-normal text-[#3b164b]">{title}</h1>
           {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Escorts should register here</div>}
           <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
-          <form className="mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
+          <form className="sn-stagger mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
             {registrationImagePanel}
             <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
             <FormRow label='Password' hint='Must be between 6 and 50 characters' required><input name='password' type='password' className={fieldClass} /></FormRow>
@@ -708,7 +708,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
         </section>
         <RegistrationQuickSearch />
       </div>
-      <section className="bg-[#fff0f6] px-4 py-16 sm:px-5 md:py-28">
+      <section className="sn-fade-up bg-[#fff0f6] px-4 py-16 sm:px-5 md:py-28">
         <div className="mx-auto max-w-5xl border-y border-[#ffc4e1] bg-white/45 px-4 py-10 text-center shadow-inner sm:px-6 sm:py-12">
           <p className="text-sm leading-7 text-[#9b8090]">Your account details are reviewed carefully so every Secret Nairobi profile starts with cleaner data, better trust signals, and a more polished public presence.</p>
           <div className="mx-auto mt-10 h-1.5 w-32 rounded-full bg-[#e60073]" />
