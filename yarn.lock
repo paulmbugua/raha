@@ -2382,9 +2382,9 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@mindcare/backend@workspace:apps/backend":
+"@desirenairobi/backend@workspace:apps/backend":
   version: 0.0.0-use.local
-  resolution: "@mindcare/backend@workspace:apps/backend"
+  resolution: "@desirenairobi/backend@workspace:apps/backend"
   dependencies:
     "@aws-sdk/client-s3": "npm:^3.862.0"
     "@aws-sdk/s3-request-presigner": "npm:^3.862.0"
