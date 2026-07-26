@@ -20,7 +20,7 @@ const timeoutURL        = process.env.TIMEOUT_URL;               // B2C timeout
 const resultURL         = process.env.RESULT_URL;                // B2C result
 const initiatorName     = process.env.MPESA_INITIATOR_NAME;
 const initiatorPassword = process.env.MPESA_INITIATOR_PASSWORD;
-const certPath          = process.env.MPESA_CERTIFICATE_PATH;
+const certPath          = process.env.MPESA_CERTIFICATE_PATH || 'certs/ProductionCertificate.cer';
 
 // New: environment-aware base (sandbox vs live)
 const MPESA_ENV  = (process.env.MPESA_ENV || 'live').trim().toLowerCase();
@@ -98,20 +98,38 @@ const password  = mpesaPassword(timestamp);
 /* ─────────────────────────────────────────────────────────
  * SecurityCredential (encrypt initiatorPassword using Safaricom public cert)
  * ───────────────────────────────────────────────────────── */
+function resolveCertificatePath(configuredPath) {
+  const certFile = String(configuredPath || '').trim();
+  const bundledCert = path.resolve(process.cwd(), 'apps/backend/certs/ProductionCertificate.cer');
+  const localCert = path.resolve(process.cwd(), 'certs/ProductionCertificate.cer');
+  const candidates = [];
+
+  if (certFile && !/^[A-Za-z]:[\\/]/.test(certFile)) {
+    candidates.push(path.resolve(certFile));
+    candidates.push(path.resolve(process.cwd(), certFile));
+    candidates.push(path.resolve(process.cwd(), 'apps/backend', certFile));
+  }
+
+  candidates.push(localCert, bundledCert);
+  return candidates.find((candidate) => fs.existsSync(candidate)) || null;
+}
+
 let securityCredential = null;
-if (initiatorPassword && certPath) {
+if (initiatorPassword) {
   try {
-    const pubKey = fs.readFileSync(path.resolve(certPath), 'utf8');
+    const resolvedCertPath = resolveCertificatePath(certPath);
+    if (!resolvedCertPath) throw new Error('M-Pesa certificate file was not found.');
+    const pubKey = fs.readFileSync(resolvedCertPath, 'utf8');
     const encrypted = crypto.publicEncrypt(
       { key: pubKey, padding: crypto.constants.RSA_PKCS1_PADDING },
       Buffer.from(initiatorPassword, 'utf8')
     );
     securityCredential = encrypted.toString('base64');
   } catch (err) {
-    console.error('❌ Failed to generate securityCredential:', err.message);
+    console.error('[mpesa] Failed to generate securityCredential:', err.message);
   }
 } else {
-  console.warn('❌ Cannot generate securityCredential: missing password or certificate path');
+  console.warn('[mpesa] Cannot generate securityCredential: missing initiator password');
 }
 
 /* ─────────────────────────────────────────────────────────

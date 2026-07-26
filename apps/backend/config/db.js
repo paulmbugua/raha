@@ -6,22 +6,49 @@ dotenv.config();
 
 const isProd = process.env.NODE_ENV === 'production';
 
-/* ───────── 1) Object-based configuration (safer than raw URL) ───────── */
-const cfg = process.env.DATABASE_URL
-  ? { connectionString: process.env.DATABASE_URL }
-  : {
-      user: process.env.DB_USER,
-      password: process.env.DB_PASSWORD,
-      host: process.env.DB_HOST || 'localhost',
-      port: Number(process.env.DB_PORT || 5432),
-      database: process.env.DB_NAME,
-    };
+function isLocalDatabaseUrl(value) {
+  try {
+    const url = new URL(String(value || ''));
+    return ['localhost', '127.0.0.1', '::1'].includes(url.hostname);
+  } catch {
+    return false;
+  }
+}
+
+const railwayLikeDatabaseUrl =
+  process.env.DATABASE_PRIVATE_URL ||
+  process.env.POSTGRES_PRIVATE_URL ||
+  process.env.POSTGRES_URL ||
+  process.env.PGURL;
+
+const rawDatabaseUrl = process.env.DATABASE_URL;
+const productionLocalDatabaseUrl = isProd && isLocalDatabaseUrl(rawDatabaseUrl);
+const effectiveDatabaseUrl = productionLocalDatabaseUrl && railwayLikeDatabaseUrl
+  ? railwayLikeDatabaseUrl
+  : rawDatabaseUrl;
+
+if (productionLocalDatabaseUrl) {
+  console.error('[db] DATABASE_URL points to localhost in production. On Railway, link a Postgres service and use its DATABASE_URL, DATABASE_PRIVATE_URL, or PG* variables.');
+}
+
+/* 1) Object-based configuration (safer than raw URL) */
+const cfg = effectiveDatabaseUrl && !productionLocalDatabaseUrl
+  ? { connectionString: effectiveDatabaseUrl }
+  : railwayLikeDatabaseUrl && productionLocalDatabaseUrl
+    ? { connectionString: railwayLikeDatabaseUrl }
+    : {
+        user: process.env.PGUSER || process.env.DB_USER,
+        password: process.env.PGPASSWORD || process.env.DB_PASSWORD,
+        host: process.env.PGHOST || process.env.DB_HOST || (isProd ? undefined : 'localhost'),
+        port: Number(process.env.PGPORT || process.env.DB_PORT || 5432),
+        database: process.env.PGDATABASE || process.env.DB_NAME,
+      };
 
     
          
   const wantSsl =
   process.env.PGSSL === 'require' ||
-  (isProd && !!process.env.DATABASE_URL);
+  (isProd && !!cfg.connectionString);
 
 const pool = new Pool({
   ...cfg,
