@@ -10,7 +10,7 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 type UtamuAppProps = { slug?: string[] };
 
 type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; phone?: string; fullName?: string; role?: string; accountType?: string; emailVerified?: boolean } | null };
-type View = 'home' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'agencies' | 'admin' | 'notification';
+type View = 'home' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'activationWelcome' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'agencies' | 'admin' | 'notification';
 
 const SESSION_KEY = 'utamu.session';
 const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
@@ -42,6 +42,7 @@ const routeLinks = [
   '/register/agency',
   '/register/member',
   '/register/confirm-email',
+  '/activation-welcome',
   '/messages',
   '/blacklisted-clients',
   '/delete-account',
@@ -70,6 +71,7 @@ function viewFor(slug?: string[]): View {
   if (['privacy-policy', 'terms', 'help'].includes(path)) return 'legal';
   if (path === 'register') return 'register';
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
+  if (path === 'activation-welcome' || path === 'account/welcome') return 'activationWelcome';
   if (path.startsWith('register/')) return 'registration';
   if (path === 'messages') return 'messages';
   if (path === 'monetization') return 'monetization';
@@ -757,7 +759,7 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
       if (!result?.token) { setMessage('The validation link could not be confirmed.'); return; }
       saveSession(result);
       window.localStorage.removeItem(PENDING_REGISTRATION_KEY);
-      window.location.href = '/escort/profile';
+      window.location.href = '/activation-welcome';
     } catch (error) {
       const fallback = 'Validation link is invalid or already used. If you already confirmed this account, please login.';
       setMessage(error instanceof Error ? error.message || fallback : fallback);
@@ -793,6 +795,71 @@ function ConfirmEmailScreen({ pending }: { pending?: any }) {
     {data?.confirmationUrl && <p className="mt-5 break-all text-sm text-[#8c6f7e]">Development validation link: <a className="text-[#e60073]" href={data.confirmationUrl}>{data.confirmationUrl}</a></p>}
     {message && <p className="mt-4 rounded bg-white p-3 text-sm text-[#d70032]">{message}</p>}
   </section>;
+}
+
+
+function ActivationWelcomeScreen() {
+  const [session, setSession] = useState<UtamuSession | null>(null);
+
+  useEffect(() => {
+    setSession(readSession());
+  }, []);
+
+  const user = session?.user;
+  const displayName = user?.fullName || user?.username || (user?.email ? user.email.split('@')[0] : 'there');
+  const isClient = user?.accountType === 'member' || user?.role === 'client';
+  const primaryHref = isClient ? '/escort/dashboard' : '/escort/profile';
+  const primaryLabel = isClient ? 'Open my account' : 'View my profile';
+  const secondaryHref = isClient ? '/reviews/ratings' : '/edit-profile';
+  const secondaryLabel = isClient ? 'Browse reviews' : 'Complete profile details';
+
+  return (
+    <section className="bg-[#fff0f6] px-4 py-10 text-[#2b123a] sm:px-6 lg:py-16">
+      <div className="mx-auto max-w-5xl overflow-hidden rounded-[6px] border border-[#ffd1e8] bg-white shadow-xl shadow-[#3b164b]/10">
+        <div className="bg-[radial-gradient(circle_at_top_left,#e60073_0,#3b164b_42%,#071812_100%)] px-5 py-8 text-white sm:px-8 lg:px-10 lg:py-10">
+          <div className="flex flex-wrap items-start justify-between gap-5">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/12 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#ffe4f3] ring-1 ring-white/20"><ShieldCheck className="h-4 w-4" /> Email activated</span>
+              <h1 className="mt-5 text-4xl font-bold leading-tight text-white sm:text-5xl">Welcome back, {displayName}</h1>
+              <p className="mt-4 max-w-xl text-base leading-7 text-[#ffe4f3]">Your Secret Nairobi account is active and you are signed in. You can now manage your profile, messages, reviews, and account tools from one place.</p>
+            </div>
+            <div className="grid h-24 w-24 shrink-0 place-items-center rounded-full bg-[#67a62b] text-white shadow-lg shadow-black/25 sm:h-28 sm:w-28">
+              <Check className="h-12 w-12" />
+            </div>
+          </div>
+        </div>
+        <div className="grid gap-0 lg:grid-cols-[1fr_320px]">
+          <div className="px-5 py-7 sm:px-8 lg:px-10 lg:py-9">
+            <div className="grid gap-3 sm:grid-cols-3">
+              {[
+                ['Confirmed', 'Your email address has been verified.'],
+                ['Signed in', 'Your secure session is ready on this device.'],
+                ['Ready', isClient ? 'You can browse, message, and review.' : 'Your public profile tools are unlocked.'],
+              ].map(([title, copy]) => (
+                <div key={title} className="rounded-[4px] border border-[#ffd1e8] bg-[#fff7fb] p-4">
+                  <p className="text-sm font-bold text-[#e60073]">{title}</p>
+                  <p className="mt-2 text-sm leading-6 text-[#7b6e78]">{copy}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-7 flex flex-wrap gap-3">
+              <a href={primaryHref} className="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-[#e60073] to-[#ff58bf] px-6 py-3 text-sm font-bold text-white shadow-sm shadow-[#e60073]/30">{primaryLabel}<ChevronRight className="ml-1 h-4 w-4" /></a>
+              <a href={secondaryHref} className="inline-flex items-center justify-center rounded-full border border-[#e60073] px-6 py-3 text-sm font-bold text-[#e60073]">{secondaryLabel}</a>
+              <a href="/" className="inline-flex items-center justify-center rounded-full border border-[#ffd1e8] px-6 py-3 text-sm font-bold text-[#3b164b]">Go to Nairobi escorts</a>
+            </div>
+          </div>
+          <aside className="border-t border-[#ffd1e8] bg-[#fff7fb] px-5 py-7 sm:px-8 lg:border-l lg:border-t-0">
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#006b3f]">Next best step</p>
+            <h2 className="mt-2 text-2xl font-bold text-[#3b164b]">Make the account feel complete.</h2>
+            <p className="mt-3 text-sm leading-7 text-[#7b6e78]">Add profile images, review your saved details, and keep your contact preferences current so the account is useful immediately.</p>
+            <div className="mt-5 rounded-[4px] border border-[#d8f0e4] bg-[#ecfff5] p-4 text-sm font-semibold leading-6 text-[#006b3f]">
+              Activation is complete. No extra login is required after this email confirmation.
+            </div>
+          </aside>
+        </div>
+      </div>
+    </section>
+  );
 }
 
 function ProfileScreen({ path }: { path: string }) {
@@ -1513,5 +1580,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'agencies' && <AgenciesScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'agencies', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'activationWelcome' && <ActivationWelcomeScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'agencies' && <AgenciesScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'activationWelcome', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'agencies', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
 }
