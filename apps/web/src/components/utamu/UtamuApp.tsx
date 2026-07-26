@@ -10,7 +10,7 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 type UtamuAppProps = { slug?: string[] };
 
 type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; phone?: string; fullName?: string; accountType?: string; emailVerified?: boolean } | null };
-type View = 'home' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'admin' | 'notification';
+type View = 'home' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'agencies' | 'admin' | 'notification';
 
 const SESSION_KEY = 'utamu.session';
 const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
@@ -33,6 +33,7 @@ const routeLinks = [
   '/',
   '/discover',
   '/advanced-search',
+  '/agencies',
   '/privacy-policy',
   '/terms',
   '/help',
@@ -65,6 +66,7 @@ function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
   if (path === 'advanced-search') return 'advancedSearch';
+  if (path === 'agencies') return 'agencies';
   if (['privacy-policy', 'terms', 'help'].includes(path)) return 'legal';
   if (path === 'register') return 'register';
   if (path === 'register/confirm-email' || path === 'register/complete') return 'confirm';
@@ -85,6 +87,35 @@ function viewFor(slug?: string[]): View {
 
 function kes(value: number) {
   return `Ksh ${value.toLocaleString('en-KE')}`;
+}
+
+function isAgencyModel(model: UtamuModel | any) {
+  return String(model?.category || model?.profile?.accountType || '').toLowerCase().includes('agency');
+}
+
+function isIndependentModel(model: UtamuModel | any) {
+  return String([model?.category, model?.listingTier, ...(model?.specialties || [])].filter(Boolean).join(' ')).toLowerCase().includes('independent');
+}
+
+function isNewModel(model: UtamuModel | any) {
+  if (model?.isNew) return true;
+  const createdAt = model?.createdAt || model?.created_at;
+  if (!createdAt) return false;
+  const ageMs = Date.now() - new Date(createdAt).getTime();
+  return Number.isFinite(ageMs) && ageMs >= 0 && ageMs <= 1000 * 60 * 60 * 24 * 30;
+}
+
+function directoryRank(model: UtamuModel | any) {
+  const tier = String(model?.listingTier || model?.listing_tier || '').toLowerCase();
+  const trusted = Boolean(model?.trustedBadge || model?.trusted_badge || model?.verified);
+  const vip = Boolean(model?.elite || tier === 'vip');
+  const fresh = isNewModel(model);
+  const independent = isIndependentModel(model);
+  return (trusted ? 8000 : 0) + (vip ? 4000 : 0) + (fresh ? 2000 : 0) + (independent ? 1000 : 0) + Number(model?.rating || 0) * 100 + Number(model?.reviews || model?.review_count || 0);
+}
+
+function sortDirectoryItems<T extends UtamuModel | any>(items: T[]) {
+  return items.slice().sort((a, b) => directoryRank(b) - directoryRank(a));
 }
 
 function StatusBadge({ children, tone = 'gold' }: { children: React.ReactNode; tone?: 'gold' | 'green' | 'red' | 'muted' }) {
@@ -113,9 +144,9 @@ function Shell({ children }: { children: React.ReactNode }) {
             <a href="/" className="text-center font-serif text-3xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#7f6a90,0_0_22px_rgba(240,179,35,.22)] sm:text-4xl lg:text-left lg:text-5xl">Secret Nairobi</a>
             <nav className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:flex-1 lg:justify-start">
               <a href="/" className="rounded-full bg-gradient-to-r from-[#e60073] to-[#ff57b8] px-3 py-2 text-white shadow-sm shadow-[#e60073]/30 ring-1 ring-white/15 sm:px-4">All Nairobi Escorts</a>
-              <a href="/admin/verification-review" className="hover:text-[#f0b323]">Agencies</a>
-              <a href="/reviews/ratings" className="hover:text-[#f0b323]">Reviews</a>
-              <a href="/register" className="uppercase hover:text-[#f0b323]">Advertise here</a>
+              <a href="/agencies" className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-[#f0b323]">Agencies</a>
+              <a href="/reviews/ratings" className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-[#f0b323]">Reviews</a>
+              <a href="/register" className="rounded-full px-3 py-2 uppercase transition hover:bg-white/10 hover:text-[#f0b323]">Advertise here</a>
             </nav>
             <div className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:justify-end">
               {!session && <a href="/register" className="rounded-full bg-gradient-to-r from-[#e60073] to-[#ff57b8] px-3 py-2 shadow-sm shadow-[#e60073]/30">Register</a>}
@@ -237,7 +268,7 @@ function DiscoveryHome() {
     actions.applySearchParams(params);
   }, []);
   const hasActiveFilters = Boolean(filters.query || filters.city !== 'All' || filters.category !== 'All' || filters.gender !== 'All' || filters.listingType !== 'All' || filters.service !== 'All' || filters.minPrice || filters.maxPrice || filters.verifiedOnly || filters.eliteOnly);
-  const sortedHomeModels = filteredModels.slice().sort((a, b) => Number(b.elite) - Number(a.elite) || b.rating - a.rating || b.reviews - a.reviews);
+  const sortedHomeModels = sortDirectoryItems(filteredModels);
   const directoryModels = sortedHomeModels;
 
   return (
@@ -272,7 +303,7 @@ function DiscoveryHome() {
       </section>
       <footer className="bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] px-5 py-5 text-center text-sm text-white">
         <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
-        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Escorts</a><a href="/admin/verification-review">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
+        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Escorts</a><a href="/agencies">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
       </footer>
     </>
   );
@@ -1345,6 +1376,12 @@ function CheckoutScreen() {
 }
 
 
+function AgenciesScreen() {
+  const directory = useUtamuDirectory();
+  const agencies = sortDirectoryItems(directory.models.filter((model) => isAgencyModel(model)));
+  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-6 text-[#003b5c] md:px-5"><div className="mb-6 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#006b3f]">Listed agencies</p><h1 className="mt-2 text-3xl font-bold text-[#3b164b]">Secret Nairobi Agencies</h1><p className="mt-2 max-w-3xl text-sm leading-6 text-[#7b6e78]">Agency-managed listings are ordered by trust signals first: Trusted badges, VIP visibility, new listings, then independent coverage signals.</p></div><a href="/register/agency" className="rounded-full bg-[#e60073] px-5 py-2 text-sm font-bold text-white">Register agency</a></div>{agencies.length === 0 && <div className="rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-sm font-semibold text-[#3b164b]">No listed agencies are available yet. Registered agencies will appear here after profile setup.</div>}<div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{agencies.map((agency) => <article key={agency.id} className="overflow-hidden rounded-[4px] border border-[#ffd1e8] bg-white shadow-sm"><a href={'/escort/' + agency.slug}>{agency.image ? <img src={agency.image} alt={agency.name + ' agency'} className="aspect-[4/3] w-full object-cover" /> : <div className="grid aspect-[4/3] place-items-center bg-[#fff8fb] p-5 text-center text-xs font-bold uppercase tracking-wide text-[#9b8090]">Agency image pending</div>}</a><div className="p-4"><div className="flex flex-wrap gap-2 text-[11px] font-bold uppercase text-white">{(agency.trustedBadge || agency.verified) && <span className="rounded-full bg-[#006b3f] px-2 py-1">Trusted</span>}{(agency.elite || agency.listingTier === 'vip') && <span className="rounded-full bg-[#ff8a00] px-2 py-1">VIP</span>}{isNewModel(agency) && <span className="rounded-full bg-[#e60073] px-2 py-1">New</span>}</div><h2 className="mt-3 text-xl font-bold text-[#3b164b]">{agency.name}</h2><p className="mt-1 text-sm text-[#7b6e78]">{agency.city} - {agency.category}</p><p className="mt-3 text-sm leading-6 text-[#2b123a]">{agency.bio || 'Agency-managed escort profiles with coordinated presentation, review flow, and verification support.'}</p><div className="mt-4 flex items-center justify-between text-xs font-bold text-[#006b3f]"><span>{agency.reviews || 0} reviews</span><span>{agency.rating ? agency.rating.toFixed(1) : 'New'} rating</span></div></div></article>)}</div></section><RegistrationQuickSearch /></div>;
+}
+
 function ReviewScreen() {
   const directory = useUtamuDirectory();
   const [remoteReviews, setRemoteReviews] = useState<any[]>([]);
@@ -1352,11 +1389,12 @@ function ReviewScreen() {
     utamuApi.getReviews().then((items: any) => setRemoteReviews(Array.isArray(items) ? items : []));
   }, []);
   const sourceReviews = remoteReviews.length ? remoteReviews : directory.reviews;
-  const reviewItems = sourceReviews.map((review: any, index: number) => {
+  const reviewItems = sortDirectoryItems(sourceReviews.map((review: any, index: number) => {
     const modelName = review.modelName || review.model_name || review.model || 'Secret Nairobi escort';
     const model = directory.models.find((item) => item.name === modelName || item.slug === review.modelSlug || item.slug === review.model_slug);
     return {
       id: review.id || modelName + '-' + index,
+      model,
       modelName,
       modelSlug: model?.slug || review.modelSlug || review.model_slug || '',
       modelImage: review.modelImage || review.model_image || model?.image || '',
@@ -1364,9 +1402,19 @@ function ReviewScreen() {
       rating: Math.max(1, Math.min(5, Number(review.rating || 5))),
       body: review.body || 'The profile was reviewed by a registered member.',
       createdAt: review.createdAt || review.created_at || new Date().toISOString(),
+      trustedBadge: Boolean(model?.trustedBadge || model?.verified),
+      elite: Boolean(model?.elite),
+      listingTier: model?.listingTier || '',
+      category: model?.category || '',
+      specialties: model?.specialties || [],
     };
-  });
-  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex items-center justify-between gap-3"><h1 className="text-xl font-normal text-[#3b164b]">Escort Reviews</h1><a href="/reviews/ratings#submit-review" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Agency Reviews</a></div><div className="space-y-8">{reviewItems.length === 0 && <p className="bg-white p-5 text-sm text-[#7b6e78]">No real profile reviews have been submitted yet.</p>}{reviewItems.map((review) => <article key={review.id} className="grid gap-4 sm:grid-cols-[145px_1fr]">{review.modelImage ? <img src={review.modelImage} alt={review.modelName + ' escort profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /> : <div className="grid h-[210px] place-items-center rounded-[3px] bg-white p-4 text-center text-xs font-bold uppercase tracking-wide text-[#9b8090] sm:w-[145px]">Real image pending</div>}<div className="pt-1"><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span>{review.modelSlug ? <a href={'/escort/' + review.modelSlug} className="font-bold text-[#e60073]">{review.modelName}</a> : <strong className="text-[#e60073]">{review.modelName}</strong>}<span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>)}</div><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelSlug: form.get('modelSlug'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelSlug" className={selectClass} disabled={!directory.models.length}>{directory.models.length ? directory.models.map((model) => <option key={model.id} value={model.slug}>{model.name}</option>) : <option>No real profiles yet</option>}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button disabled={!directory.models.length} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">Submit review</button></form></section><RegistrationQuickSearch /></div>;
+  }));
+  const profileReviews = reviewItems.filter((review: any) => !isAgencyModel(review.model || review));
+  const agencyReviews = reviewItems.filter((review: any) => isAgencyModel(review.model || review));
+  const reviewedAgencyModels = sortDirectoryItems(directory.models.filter((model) => isAgencyModel(model) && !agencyReviews.some((review: any) => review.modelSlug === model.slug)));
+  const ReviewArticle = ({ review }: { review: any }) => <article className="grid gap-4 rounded-[4px] border border-[#ffd1e8] bg-white p-3 shadow-sm sm:grid-cols-[145px_1fr]">{review.modelImage ? <img src={review.modelImage} alt={review.modelName + ' reviewed profile'} className="h-[210px] w-full rounded-[3px] object-cover sm:w-[145px]" /> : <div className="grid h-[210px] place-items-center rounded-[3px] bg-[#fff8fb] p-4 text-center text-xs font-bold uppercase tracking-wide text-[#9b8090] sm:w-[145px]">Real image pending</div>}<div className="pt-1"><div className="mb-2 flex flex-wrap gap-2 text-[11px] font-bold uppercase text-white">{review.trustedBadge && <span className="rounded-full bg-[#006b3f] px-2 py-1">Trusted</span>}{(review.elite || review.listingTier === 'vip') && <span className="rounded-full bg-[#ff8a00] px-2 py-1">VIP</span>}{isNewModel(review.model || review) && <span className="rounded-full bg-[#e60073] px-2 py-1">New</span>}{isIndependentModel(review.model || review) && <span className="rounded-full bg-[#3b164b] px-2 py-1">Independent</span>}{isAgencyModel(review.model || review) && <span className="rounded-full bg-[#0b6b83] px-2 py-1">Agency</span>}</div><div className="flex flex-wrap items-center gap-2 text-sm"><span className="flex">{[1, 2, 3, 4, 5].map((star) => <Star key={star} className={'h-4 w-4 ' + (star <= review.rating ? 'fill-[#f3c300] text-[#f3c300]' : 'text-[#9ac8e6]')} />)}</span><span className="italic text-[#00627c]">submitted by</span><strong className="text-[#00627c]">{review.author}</strong><span>for</span>{review.modelSlug ? <a href={'/escort/' + review.modelSlug} className="font-bold text-[#e60073]">{review.modelName}</a> : <strong className="text-[#e60073]">{review.modelName}</strong>}<span>on {new Date(review.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' })}</span></div><p className="mt-5 max-w-3xl text-sm leading-7">{review.body}</p></div></article>;
+  return <div className="grid gap-0 bg-[#fff0f6] lg:grid-cols-[1fr_220px]"><section className="px-4 py-5 text-[#003b5c] md:px-5"><div className="mb-6 flex flex-wrap items-center justify-between gap-3"><div><h1 className="text-2xl font-normal text-[#3b164b]">Reviews</h1><p className="mt-2 text-sm text-[#7b6e78]">Reviewed profiles and agencies are ranked by Trusted badges, VIP, New, then Independent signals.</p></div><div className="flex flex-wrap gap-2"><a href="#profile-reviews" className="rounded-[3px] bg-[#e60073] px-4 py-2 text-sm font-bold text-white">Profile reviews</a><a href="#agency-reviews" className="rounded-[3px] border border-[#e60073] px-4 py-2 text-sm font-bold text-[#e60073]">Agency reviews</a></div></div><section id="profile-reviews" className="space-y-4"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold uppercase text-[#ff1d9b]">Reviewed profiles</h2>{profileReviews.length === 0 && <p className="bg-white p-5 text-sm text-[#7b6e78]">No reviewed escort profiles have been submitted yet.</p>}{profileReviews.map((review: any) => <ReviewArticle key={review.id} review={review} />)}</section><section id="agency-reviews" className="mt-10 space-y-4"><h2 className="border-l-4 border-[#006b3f] pl-3 text-lg font-bold uppercase text-[#006b3f]">Reviewed agencies</h2>{agencyReviews.length === 0 && reviewedAgencyModels.length === 0 && <p className="bg-white p-5 text-sm text-[#7b6e78]">No agency reviews have been submitted yet.</p>}{agencyReviews.map((review: any) => <ReviewArticle key={review.id} review={review} />)}{reviewedAgencyModels.map((agency) => <article key={agency.id} className="rounded-[4px] border border-[#d8f0e4] bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h3 className="text-xl font-bold text-[#3b164b]">{agency.name}</h3><p className="mt-1 text-sm text-[#7b6e78]">{agency.city} - awaiting first review</p></div><a href={'/escort/' + agency.slug} className="rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">View agency</a></div></article>)}</section><form id="submit-review" onSubmit={(event) => { event.preventDefault(); const form = new FormData(event.currentTarget); utamuApi.submitReview({ modelSlug: form.get('modelSlug'), author: form.get('author'), rating: Number(form.get('rating') || 5), body: form.get('body') }).then((item: any) => setRemoteReviews((current) => [item, ...current])); event.currentTarget.reset(); }} className="mt-10 rounded-[3px] border border-[#ffd1e8] bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Submit a review</h2><div className="mt-4 grid gap-3 sm:grid-cols-3"><input name="author" placeholder="Your name" className={fieldClass} /><select name="modelSlug" className={selectClass} disabled={!directory.models.length}>{directory.models.length ? sortDirectoryItems(directory.models).map((model) => <option key={model.id} value={model.slug}>{model.name}</option>) : <option>No real profiles yet</option>}</select><select name="rating" className={selectClass}>{[5, 4, 3, 2, 1].map((rating) => <option key={rating} value={rating}>{rating} stars</option>)}</select></div><textarea name="body" placeholder="Write a concise review" className="mt-3 min-h-28 w-full border border-[#ff55c7] p-3 text-sm outline-none" /><button disabled={!directory.models.length} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white disabled:opacity-50">Submit review</button></form></section><RegistrationQuickSearch /></div>;
+
 }
 
 
@@ -1440,5 +1488,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'agencies' && <AgenciesScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'agencies', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
 }
