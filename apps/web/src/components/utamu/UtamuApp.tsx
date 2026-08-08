@@ -439,9 +439,9 @@ function FormRow({ label, hint, required = false, children }: { label: string; h
 const fieldClass = 'min-h-10 w-full min-w-0 border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
 const selectClass = 'min-h-10 min-w-0 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
 const checkboxCardClass = 'flex min-h-9 cursor-pointer items-center gap-2 rounded-[3px] border border-[#ffd0e8] bg-white/80 px-3 py-2 text-sm text-[#003b5c] transition hover:border-[#ff55c7] hover:bg-white';
-const serviceTileBaseClass = 'flex min-h-12 cursor-pointer items-center gap-3 rounded-[4px] border px-3 py-3 text-sm font-semibold transition focus-within:ring-2 focus-within:ring-[#ff55c7]/30 sm:px-4';
-const serviceTileSelectedClass = 'border-[#e60073] bg-[#e60073] text-white shadow-sm';
-const serviceTileIdleClass = 'border-[#ffbad9] bg-white/85 text-[#003b5c] hover:border-[#e60073] hover:bg-[#fff8fc]';
+const serviceTileBaseClass = 'flex min-h-10 cursor-pointer items-center gap-2 rounded-[6px] border px-3 py-2 text-xs font-bold uppercase transition focus-within:ring-2 focus-within:ring-[#6b7280]/30 sm:text-sm';
+const serviceTileSelectedClass = 'border-[#6b7280] bg-[#6b7280] text-white shadow-sm shadow-[#2b0a3d]/10';
+const serviceTileIdleClass = 'border-[#c9d0da] bg-white/90 text-[#26364a] hover:border-[#6b7280] hover:bg-[#f6f8fb]';
 const kenyanTowns = [
   'Nairobi', 'Westlands', 'Karen', 'Kilimani', 'Runda', 'Kitengela', 'Ruiru', 'Thika', 'Kiambu', 'Kikuyu',
   'Ngong', 'Athi River', 'Machakos', 'Mombasa', 'Diani', 'Kilifi', 'Malindi', 'Watamu', 'Lamu', 'Voi',
@@ -461,10 +461,16 @@ const lookOptions = ['Natural', 'Elegant', 'Glamorous', 'Sporty', 'Corporate', '
 const heightOptions = Array.from({ length: 46 }, (_, index) => 145 + index);
 const weightOptions = Array.from({ length: 36 }, (_, index) => 40 + index * 2);
 const smokerOptions = ['No', 'Occasionally', 'Yes', 'Prefer not to say'];
-const orientationOptions = ['Fashion and runway', 'Commercial modeling', 'Beauty and skincare', 'Lifestyle content', 'Event hosting', 'Hospitality presentation', 'Brand ambassador', 'Portfolio shoots', 'Editorial campaigns', 'Promotional campaigns'];
+const orientationOptions = ['Straight', 'Gay', 'Bisexual', 'Trans', 'Queer'];
 const spokenLanguages = ['English', 'Kiswahili', 'Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Somali', 'Kisii', 'Meru', 'Maasai', 'Arabic', 'French', 'German', 'Spanish', 'Chinese'];
 const languageLevels = ['Basic', 'Conversational', 'Fluent', 'Native'];
-const modelServices = ['Portfolio shoots', 'Brand launches', 'Hospitality hosting', 'Fashion campaigns', 'Beauty content', 'Runway presentation', 'Lifestyle production', 'Commercial creator work', 'Event appearance', 'Travel-ready bookings', 'VIP visibility', 'Agency management'];
+const modelServiceGroups = [
+  { label: 'Services', items: ['DINNER DATE', 'TRAVEL COMPANION', 'LESBIAN SHOW', 'RIMMING', 'RAW BJ', 'BJ', 'GFE', 'COB - CUM ON BODY', 'CIM - CUM IN MOUTH', '3 SOME', 'ANAL', 'MASSAGE'] },
+  { label: 'Other Services', items: ['AVAILABLE 24HRS', 'BFE', 'FEASTING', 'FINGERING', 'INCALLS DURING THE DAY ONLY AND OUTCALLS ANYTIME'] },
+];
+const modelServices = Array.from(new Set(modelServiceGroups.flatMap((group) => group.items)));
+const availabilityOptions = ['Incall', 'Outcall'];
+const normalizeAvailability = (items: unknown) => Array.from(new Set((Array.isArray(items) ? items : []).map((item) => String(item)).map((item) => item.toLowerCase().includes('outcall') ? 'Outcall' : item.toLowerCase().includes('incall') || item.toLowerCase().includes('studio') ? 'Incall' : item).filter((item) => availabilityOptions.includes(item))));
 
 
 function AdvancedSearchScreen() {
@@ -677,29 +683,35 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Looks" required><select name="looks" className={selectClass + ' w-full'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Height" required><select name="height" className={selectClass + ' w-full'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
                 <FormRow label="Weight" required><select name="weight" className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
-                <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{['Studio / incall', 'On-location / outcall'].map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
+                <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{availabilityOptions.map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#6b7280]' : 'border-[#c9d0da] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
                 <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
                 <FormRow label="Professional orientation"><select name="orientation" className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-full overflow-x-auto"><div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3"><span>Currency:</span><select className={selectClass + ' w-full sm:w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[440px] grid-cols-[100px_1fr_1fr] gap-2 text-center text-xs sm:grid-cols-[120px_1fr_1fr] sm:text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
-                <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">
-                  <label className={serviceTileBaseClass + ' md:col-span-2 ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+                <FormRow label="Services"><div className="space-y-4">
+                  <label className={serviceTileBaseClass + ' ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
                     <input className="sr-only" type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} />
-                    <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#e60073]' : 'border-[#e60073] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
+                    <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#6b7280]' : 'border-[#6b7280] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
                     <span className="flex-1">Select all services</span>
-                    <span className={allServicesSelected ? 'text-xs text-white' : 'text-xs text-[#9b8090]'}>{selectedServices.length}/{services.length} selected</span>
+                    <span className={allServicesSelected ? 'text-xs text-white' : 'text-xs text-[#6b7280]'}>{selectedServices.length}/{services.length} selected</span>
                   </label>
-                  {services.map((service) => {
-                    const selected = selectedServices.includes(service);
-                    return (
-                      <label key={service} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}>
-                        <input className="sr-only" type="checkbox" checked={selected} onChange={() => toggleService(service)} />
-                        <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
-                        <span>{service}</span>
-                      </label>
-                    );
-                  })}
+                  {modelServiceGroups.map((group) => (
+                    <div key={group.label} className="grid gap-2 md:grid-cols-[150px_1fr]">
+                      <p className="pt-2 text-sm font-bold text-[#26364a]">{group.label}</p>
+                      <div className="flex flex-wrap gap-2">
+                        {group.items.map((service) => {
+                          const selected = selectedServices.includes(service);
+                          return (
+                            <label key={service} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+                              <input className="sr-only" type="checkbox" checked={selected} onChange={() => toggleService(service)} />
+                              <span>{service}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
                 </div></FormRow>
               </>
             )}
@@ -992,7 +1004,7 @@ function ProfileScreen({ path }: { path: string }) {
               <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Escort rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
               <dl className="grid grid-cols-2 gap-x-6 gap-y-4 text-[13px]">{facts.map(([label, value]) => <div key={label}><dt className="mb-1 font-bold uppercase text-[#ff4eb8]">{label}</dt><dd>{value}</dd></div>)}</dl>
             </section>
-            <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Services:</h2>{services.length ? <ul className="mt-4 space-y-2 text-[14px]">{services.map((service: string) => <li key={service} className="flex gap-2"><Check className="h-4 w-4 text-[#25b86b]" /><span>{service}</span></li>)}</ul> : <p className="mt-4 text-sm text-[#7b6e78]">Services have not been listed yet.</p>}</section>
+            <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Services:</h2>{services.length ? <div className="mt-4 flex flex-wrap gap-2">{services.map((service: string) => <span key={service} className="rounded-[5px] bg-[#6b7280] px-2.5 py-1 text-xs font-bold uppercase leading-tight text-white">{service}</span>)}</div> : <p className="mt-4 text-sm text-[#7b6e78]">Services have not been listed yet.</p>}</section>
             <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Languages spoken:</h2>{languageRows.length ? <div className="mt-4 space-y-3 text-[13px]">{languageRows.map((item: any, index: number) => <p key={`${item.language}-${index}`}><strong className="uppercase text-[#ff4eb8]">{item.language}:</strong><br />{item.level || 'Conversational'}</p>)}</div> : <p className="mt-4 text-sm text-[#7b6e78]">Languages have not been listed yet.</p>}</section>
             <section className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Rates:</h2>{priceFrom ? <div className="mt-5 grid grid-cols-[1fr_1fr_1fr] text-center text-[13px]"><strong></strong><strong className="bg-[#ff4eb8] py-1 text-white">Studio</strong><strong className="bg-[#ff4eb8] py-1 text-white">Event</strong><strong className="py-3 text-left">1 hour</strong><span className="py-3">{kes(priceFrom)}</span><span className="py-3">{kes(priceFrom + 2500)}</span></div> : <p className="mt-4 text-sm text-[#7b6e78]">Rates have not been listed yet.</p>}</section>
             <section className="bg-white p-5">
@@ -1019,7 +1031,7 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   useEffect(() => {
     setSelectedServices(Array.isArray(profile.services) ? profile.services : []);
-    setSelectedAvailability(Array.isArray(profile.availability) ? profile.availability : []);
+    setSelectedAvailability(normalizeAvailability(profile.availability));
   }, [account?.user?.id]);
   const allServicesSelected = selectedServices.length === modelServices.length;
   const toggleService = (service: string) => setSelectedServices((current) => current.includes(service) ? current.filter((item) => item !== service) : [...current, service]);
@@ -1052,28 +1064,34 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
         <FormRow label="Looks" required><select name="looks" className={selectClass + ' w-full'} defaultValue={profile.looks || 'Select looks'}><option>Select looks</option>{lookOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
         <FormRow label="Height" required><select name="height" className={selectClass + ' w-full'} defaultValue={profile.height || 'Select height'}><option>Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select></FormRow>
         <FormRow label="Weight" required><select name="weight" className={selectClass + ' w-full'} defaultValue={profile.weight || 'Select weight'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
-        <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{['Studio / incall', 'On-location / outcall'].map((item) => { const selected = selectedAvailability.includes(item); return <label key={item} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><input className="sr-only" name="availability" value={item} type="checkbox" checked={selected} onChange={() => toggleAvailability(item)} /><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</label>; })}</div></FormRow>
+        <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{availabilityOptions.map((item) => { const selected = selectedAvailability.includes(item); return <label key={item} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><input className="sr-only" name="availability" value={item} type="checkbox" checked={selected} onChange={() => toggleAvailability(item)} /><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#6b7280]' : 'border-[#c9d0da] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</label>; })}</div></FormRow>
         <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'} defaultValue={profile.smoker || 'No'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
         <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" defaultValue={profile.about || ''} /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
         <FormRow label="Professional orientation"><select name="orientation" className={selectClass + ' w-full'} defaultValue={profile.orientation || 'Select orientation'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
         <FormRow label="Languages spoken"><div className="space-y-2">{languageRows.map((row: any, item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'} defaultValue={row.language || 'Select language'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'} defaultValue={row.level || 'Select level'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
-        <FormRow label="Services"><div className="grid gap-2 md:grid-cols-2">
-          <label className={serviceTileBaseClass + ' md:col-span-2 ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+        <FormRow label="Services"><div className="space-y-4">
+          <label className={serviceTileBaseClass + ' ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
             <input className="sr-only" type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} />
-            <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#e60073]' : 'border-[#e60073] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
+            <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#6b7280]' : 'border-[#6b7280] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
             <span className="flex-1">Select all services</span>
-            <span className={allServicesSelected ? 'text-xs text-white' : 'text-xs text-[#9b8090]'}>{selectedServices.length}/{modelServices.length} selected</span>
+            <span className={allServicesSelected ? 'text-xs text-white' : 'text-xs text-[#6b7280]'}>{selectedServices.length}/{modelServices.length} selected</span>
           </label>
-          {modelServices.map((service) => {
-            const selected = selectedServices.includes(service);
-            return (
-              <label key={service} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}>
-                <input className="sr-only" name="services" value={service} type="checkbox" checked={selected} onChange={() => toggleService(service)} />
-                <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#e60073]' : 'border-[#ff8bc6] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
-                <span>{service}</span>
-              </label>
-            );
-          })}
+          {modelServiceGroups.map((group) => (
+            <div key={group.label} className="grid gap-2 md:grid-cols-[150px_1fr]">
+              <p className="pt-2 text-sm font-bold text-[#26364a]">{group.label}</p>
+              <div className="flex flex-wrap gap-2">
+                {group.items.map((service) => {
+                  const selected = selectedServices.includes(service);
+                  return (
+                    <label key={service} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}>
+                      <input className="sr-only" name="services" value={service} type="checkbox" checked={selected} onChange={() => toggleService(service)} />
+                      <span>{service}</span>
+                    </label>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
         </div></FormRow>
         <div className="pt-2 text-center"><button disabled={saving} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm disabled:opacity-60">{saving ? 'Saving...' : 'Save profile changes'}</button></div>
       </div>
