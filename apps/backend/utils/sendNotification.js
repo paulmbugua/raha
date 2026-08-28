@@ -80,7 +80,7 @@ function sign(email) {
 
 function publicWebUrl() {
   // Your public SPA domain
-  return process.env.PUBLIC_WEB_URL || 'https://www.daybreaklearner.com';
+  return process.env.PUBLIC_WEB_URL || 'https://secretnairobi.co.ke';
 }
 
 function publicApiUrl() {
@@ -158,7 +158,7 @@ export const sendNotification = async ({ to, subject, body, details }) => {
     const token = sign(to);
     const webUnsub = `${publicWebUrl()}/unsubscribe?e=${encodeURIComponent(to)}&t=${token}`;
     const apiOneClick = `${publicApiUrl()}/api/email/unsubscribe/one-click?e=${encodeURIComponent(to)}&t=${token}`;
-    const supportEmail = process.env.SUPPORT_EMAIL || 'support@daybreaklearner.com';
+    const supportEmail = process.env.SUPPORT_EMAIL || 'support@grogonsacco.co.ke';
 
     // Build the inline-CSS HTML template
     const html = `
@@ -171,8 +171,8 @@ export const sendNotification = async ({ to, subject, body, details }) => {
           <table width="600" cellpadding="0" cellspacing="0" role="presentation"
                  style="background:#fff;margin:20px 0;border-radius:8px;overflow:hidden;">
             <tr>
-              <td style="background:#1d4ed8;padding:20px;text-align:center;">
-                ${logoUrl ? `<img src="${logoUrl}" alt="DayBreak" width="150" style="display:block;margin:0 auto;">` : ''}
+              <td style="background:#2b073e;padding:20px;text-align:center;">
+                ${logoUrl ? `<img src="${logoUrl}" alt="Secret Nairobi" width="150" style="display:block;margin:0 auto;">` : ''}
               </td>
             </tr>
             <tr>
@@ -185,7 +185,7 @@ export const sendNotification = async ({ to, subject, body, details }) => {
                 ${tpl.ctaUrl ? `
                 <p style="text-align:center;margin:30px 0;">
                   <a href="${tpl.ctaUrl}"
-                     style="background:#1d4ed8;color:#fff;text-decoration:none;padding:12px 24px;border-radius:4px;display:inline-block;font-weight:bold;">
+                     style="background:#e80074;color:#fff;text-decoration:none;padding:12px 24px;border-radius:999px;display:inline-block;font-weight:bold;">
                     ${tpl.ctaText || 'Take Action'}
                   </a>
                 </p>` : ''}
@@ -196,8 +196,8 @@ export const sendNotification = async ({ to, subject, body, details }) => {
             </tr>
             <tr>
               <td style="background:#f4f4f4;padding:20px;text-align:center;font-size:12px;color:#999;">
-                © ${new Date().getFullYear()} DayBreak. All rights reserved.<br>
-                1830-01000, Thika, Kenya<br>
+                © ${new Date().getFullYear()} Secret Nairobi. All rights reserved.<br>
+                Nairobi, Kenya<br>
                 <a href="${webUnsub}" style="color:#999;text-decoration:underline;">Unsubscribe</a>
               </td>
             </tr>
@@ -209,7 +209,7 @@ export const sendNotification = async ({ to, subject, body, details }) => {
     `;
 
     const info = await transporter.sendMail({
-      from: `"DayBreak 📚" <${process.env.EMAIL_USER}>`,
+      from: `"Secret Nairobi" <${process.env.EMAIL_USER}>`,
       to,
       subject,
       html,
