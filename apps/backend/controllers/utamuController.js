@@ -32,6 +32,8 @@ const MONETIZATION_PRODUCTS = [
   { id: 'tier-gold', category: 'listing', name: 'Gold featured listing - monthly', description: '30 days of top ranking, 30 photo slots, and sidebar ad eligibility.', amountKes: 1700, tokenAmount: 0, durationDays: 30, sortOrder: 41 },
   { id: 'tier-vip-weekly', category: 'listing', name: 'VIP featured listing - weekly', description: '7 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', amountKes: 600, tokenAmount: 0, durationDays: 7, sortOrder: 50 },
   { id: 'tier-vip', category: 'listing', name: 'VIP featured listing - monthly', description: '30 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', amountKes: 2000, tokenAmount: 0, durationDays: 30, sortOrder: 51 },
+  { id: 'agency-vip-weekly', category: 'agency_listing', name: 'Agency VIP subscription - weekly', description: '7 days of priority agency placement, managed-profile visibility, and VIP agency branding.', amountKes: 2000, tokenAmount: 0, durationDays: 7, sortOrder: 52 },
+  { id: 'agency-vip-monthly', category: 'agency_listing', name: 'Agency VIP subscription - monthly', description: '30 days of priority agency placement, managed-profile visibility, and VIP agency branding.', amountKes: 7000, tokenAmount: 0, durationDays: 30, sortOrder: 53 },
   { id: 'tokens-100', category: 'wallet', name: '100 message tokens', description: 'Credits for paid messages, private unlocks, and tips.', amountKes: 200, tokenAmount: 100, durationDays: null, sortOrder: 60 },
   { id: 'tokens-300', category: 'wallet', name: '300 message tokens', description: 'Best-value client credits for active messaging and tips.', amountKes: 500, tokenAmount: 300, durationDays: null, sortOrder: 70 },
   { id: 'ai-assistant-weekly', category: 'ai', name: 'AI assistant - weekly', description: '7 days of 24/7 assistant replies for common questions and weak-lead filtering.', amountKes: 450, tokenAmount: 0, durationDays: 7, sortOrder: 80 },
@@ -104,7 +106,19 @@ function productById(id) {
   return MONETIZATION_PRODUCTS.find((product) => product.id === id);
 }
 
+function productsForAccountType(accountType) {
+  const categories = accountType === 'member'
+    ? ['wallet', 'client_portal']
+    : accountType === 'agency'
+      ? ['agency_listing', 'verification', 'ai']
+      : accountType === 'independent-model'
+        ? ['listing', 'verification', 'ai']
+        : [];
+  return MONETIZATION_PRODUCTS.filter((product) => categories.includes(product.category));
+}
+
 function listingTierForProduct(product) {
+  if (product?.category === 'agency_listing') return 'vip';
   const match = String(product?.id || '').match(/^tier-(bronze|silver|gold|vip)(?:-(weekly|monthly))?$/);
   return match?.[1] || 'bronze';
 }
@@ -214,7 +228,7 @@ async function activatePaidEntitlement(reference) {
       await queryWithRetry("update utamu_models set verified = true, trusted_badge = true, verification_tier = 'trusted' where id = $1", [model.id]);
       await queryWithRetry("insert into utamu_verifications (model_id, status, risk, notes) values ($1,'approved','low','Paid Trusted badge activated after checkout')", [model.id]);
     }
-    if (product.category === 'listing' && model?.id) {
+    if (['listing', 'agency_listing'].includes(product.category) && model?.id) {
       const tier = listingTierForProduct(product);
       const settings = LISTING_TIER_SETTINGS[tier] || LISTING_TIER_SETTINGS.bronze;
       await queryWithRetry(`insert into utamu_listing_subscriptions (user_id, model_id, tier, amount_kes, gallery_limit, bump_interval_hours, sidebar_ad, expires_at, payment_id) values ($1,$2,$3,$4,$5,$6,$7,${expiresSql(product.durationDays)},$8)`, [payment.user_id, model.id, tier, product.amountKes, settings.galleryLimit, settings.bumpIntervalHours, settings.sidebarAd, payment.id]);
@@ -1248,7 +1262,7 @@ export async function getMonetizationOverview(req, res) {
   const leads = await tryQuery('select * from utamu_booking_leads where provider_user_id = $1 or client_user_id = $1 order by created_at desc limit 50', [user.id]);
   const transactions = await tryQuery('select * from utamu_wallet_transactions where user_id = $1 order by created_at desc limit 20', [user.id]);
   const payments = await tryQuery('select * from utamu_payments where user_id = $1 order by created_at desc limit 20', [user.id]);
-  res.json({ data: { products: MONETIZATION_PRODUCTS, messageTokenCost: MESSAGE_TOKEN_COST, tipCommissionRate: TIP_COMMISSION_RATE, wallet, model, subscriptions: subscriptions || [], assistant: assistant?.[0] || null, clientPortal: portal?.[0] || null, leads: leads || [], transactions: transactions || [], payments: payments || [] } });
+  res.json({ data: { products: productsForAccountType(user.account_type), accountType: user.account_type, messageTokenCost: MESSAGE_TOKEN_COST, tipCommissionRate: TIP_COMMISSION_RATE, wallet, model, subscriptions: subscriptions || [], assistant: assistant?.[0] || null, clientPortal: portal?.[0] || null, leads: leads || [], transactions: transactions || [], payments: payments || [] } });
 }
 
 export async function createMonetizationCheckout(req, res) {
@@ -1257,8 +1271,14 @@ export async function createMonetizationCheckout(req, res) {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const product = productById(req.body?.productId);
   if (!product) return res.status(404).json({ message: 'Product not found.' });
+  if (!productsForAccountType(user.account_type).some((item) => item.id === product.id)) {
+    return res.status(403).json({ message: 'This subscription is not available for your account type.' });
+  }
   const method = String(req.body?.method || 'mpesa').toLowerCase();
   const model = await resolvePaymentModel(req.body || {}, user);
+  if (['listing', 'agency_listing', 'verification', 'ai'].includes(product.category) && !model?.id) {
+    return res.status(400).json({ message: 'Complete your profile before activating this subscription.' });
+  }
   const metadata = { productId: product.id, purpose: product.category, modelId: model?.id || null, modelSlug: model?.slug || req.body?.modelSlug || null, tokenAmount: product.tokenAmount };
   const referencePrefix = method === 'paystack' ? 'SNPAY-' : 'SNMPESA-';
   if (method === 'paystack') {

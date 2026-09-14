@@ -127,6 +127,8 @@ insert into utamu_monetization_products (id, category, name, description, amount
   ('tier-gold', 'listing', 'Gold featured listing - monthly', '30 days of top ranking, 30 photo slots, and sidebar ad eligibility.', 1700, 0, 30, 41),
   ('tier-vip-weekly', 'listing', 'VIP featured listing - weekly', '7 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', 600, 0, 7, 50),
   ('tier-vip', 'listing', 'VIP featured listing - monthly', '30 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', 2000, 0, 30, 51),
+  ('agency-vip-weekly', 'agency_listing', 'Agency VIP subscription - weekly', '7 days of priority agency placement, managed-profile visibility, and VIP agency branding.', 2000, 0, 7, 52),
+  ('agency-vip-monthly', 'agency_listing', 'Agency VIP subscription - monthly', '30 days of priority agency placement, managed-profile visibility, and VIP agency branding.', 7000, 0, 30, 53),
   ('tokens-100', 'wallet', '100 message tokens', 'Credits for paid messages, private unlocks, and tips.', 200, 100, null, 60),
   ('tokens-300', 'wallet', '300 message tokens', 'Best-value client credits for active messaging and tips.', 500, 300, null, 70),
   ('ai-assistant-weekly', 'ai', 'AI assistant - weekly', '7 days of 24/7 assistant replies for common questions and weak-lead filtering.', 450, 0, 7, 80),
