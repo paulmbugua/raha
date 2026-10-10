@@ -45,6 +45,7 @@ const routeLinks = [
   '/activation-welcome',
   '/messages',
   '/blacklisted-clients',
+  '/agency-roster',
   '/delete-account',
   '/monetization',
   '/client-portal',
@@ -76,7 +77,7 @@ function viewFor(slug?: string[]): View {
   if (path === 'messages') return 'messages';
   if (path === 'monetization') return 'monetization';
   if (path === 'client-portal') return 'clientPortal';
-  if (['model/profile', 'escort/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'delete-account', 'logout'].includes(path)) return 'dashboard';
+  if (['model/profile', 'escort/profile', 'edit-profile', 'change-password', 'verify-account', 'blacklisted-clients', 'agency-roster', 'delete-account', 'logout'].includes(path)) return 'dashboard';
   if (path.startsWith('admin')) return 'admin';
   if (path.startsWith('checkout')) return 'checkout';
   if (path.startsWith('reviews')) return 'review';
@@ -92,6 +93,8 @@ function kes(value: number) {
 }
 
 function isAgencyModel(model: UtamuModel | any) {
+  const kind = String(model?.profileKind || model?.profile_kind || '').toLowerCase();
+  if (kind) return kind === 'agency';
   return String(model?.category || model?.profile?.accountType || '').toLowerCase().includes('agency');
 }
 
@@ -246,11 +249,13 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
   const tierLabel = isVip ? 'VIP' : ['bronze', 'silver', 'gold'].includes(tier) ? tier : '';
   const tierClass = tier === 'gold' ? 'from-[#c89b00] to-[#f7d867]' : tier === 'silver' ? 'from-[#8a96a8] to-[#dce3ef]' : tier === 'bronze' ? 'from-[#9b5a2e] to-[#d9965b]' : 'from-[#ff8a00] to-[#ffbd00]';
   const isNew = Boolean((model as UtamuModel & { isNew?: boolean }).isNew);
+  const agencyName = String((model as any).agencyName || '');
   return (
     <a href={`/escort/${model.slug}`} style={{ animationDelay: `${Math.min(index, 11) * 45}ms` }} className="sn-profile-card group relative block overflow-hidden rounded-[3px] border border-[#f0b323]/70 bg-white shadow-md shadow-[#2b0a3d]/10 ring-1 ring-[#e60073]/10">
       <div className="relative aspect-[3/4] overflow-hidden">
         <img src={model.image} alt={`${model.name} Nairobi escort profile`} className="h-full w-full object-cover transition duration-300 group-hover:scale-105" />
         {tierLabel && <div className={'absolute right-[-34px] top-3 rotate-45 bg-gradient-to-r px-9 py-1 text-[10px] font-bold uppercase text-white shadow ' + tierClass}>{tierLabel}</div>}
+        {agencyName && <span className="absolute left-2 top-2 rounded-full bg-[#2b0a3d]/90 px-2 py-1 text-[10px] font-bold text-white shadow">{agencyName}</span>}
         <div className="absolute bottom-0 left-0 right-0 flex items-end justify-between bg-gradient-to-r from-[#2b0a3d]/85 via-[#e60073]/75 to-[#006b3f]/80 px-2 py-1 text-white">
           <span className="truncate text-center text-base font-normal">{model.name.replace(' W.', '').replace(' K.', '').replace(' M.', '').replace(' A.', '')}</span>
           <span className="flex shrink-0 gap-1">
@@ -271,7 +276,7 @@ function DiscoveryHome() {
   }, []);
   const hasActiveFilters = Boolean(filters.query || filters.city !== 'All' || filters.category !== 'All' || filters.gender !== 'All' || filters.listingType !== 'All' || filters.service !== 'All' || filters.minPrice || filters.maxPrice || filters.verifiedOnly || filters.eliteOnly);
   const sortedHomeModels = sortDirectoryItems(filteredModels);
-  const directoryModels = sortedHomeModels;
+  const directoryModels = sortedHomeModels.filter((model) => !isAgencyModel(model));
 
   return (
     <>
@@ -457,7 +462,7 @@ const hairColors = ['Black', 'Dark brown', 'Brown', 'Light brown', 'Blonde', 'Au
 const hairLengths = ['Shaved', 'Short', 'Shoulder length', 'Medium', 'Long', 'Very long', 'Braids / locs', 'Wig / varies', 'Prefer not to say'];
 const bustSizes = ['Petite', 'Small', 'Medium', 'Full', 'Large', 'Very large', 'Prefer not to say'];
 const buildOptions = ['Petite', 'Slim', 'Athletic', 'Toned', 'Average', 'Curvy', 'Full figured', 'Tall', 'Prefer not to say'];
-const lookOptions = ['Natural', 'Elegant', 'Glamorous', 'Sporty', 'Corporate', 'Fashion-forward', 'Classic', 'Runway', 'Commercial', 'Luxury'];
+const lookOptions = ['Sexy', 'Ultra Sexy'];
 const heightOptions = Array.from({ length: 46 }, (_, index) => 145 + index);
 const weightOptions = Array.from({ length: 36 }, (_, index) => 40 + index * 2);
 const smokerOptions = ['No', 'Occasionally', 'Yes', 'Prefer not to say'];
@@ -572,7 +577,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
   async function handleRegistrationSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setRegistrationError('');
-    if (isIndependent && registrationImages.length === 0) {
+    if (!isMember && registrationImages.length === 0) {
       setRegistrationError('Please add at least one clear profile image before submitting.');
       return;
     }
@@ -587,10 +592,12 @@ function RegistrationFormScreen({ path }: { path: string }) {
     const confirmPasswordValue = String(values.confirmPassword || '');
     if (passwordValue !== confirmPasswordValue) {
       setRegistrationError('Password and confirmation password must match.');
+      setSubmitting(false);
       return;
     }
     const { confirmPassword: _confirmPassword, ...profileValues } = values;
-    const payload = { ...profileValues, accountType: kind, services: isIndependent ? selectedServices : isAgency ? agencyServices.filter((item) => formData.getAll('agencyServices').includes(item)) : [], availability: selectedAvailability, preferences: formData.getAll('preferences'), profile: profileValues };
+    const completeProfile = { ...profileValues, primaryMarkets: formData.getAll('primaryMarkets') };
+    const payload = { ...completeProfile, accountType: kind, services: isIndependent ? selectedServices : isAgency ? agencyServices.filter((item) => formData.getAll('agencyServices').includes(item)) : [], availability: selectedAvailability, preferences: formData.getAll('preferences'), profile: completeProfile };
     try {
       const result = await utamuApi.registerAccount(payload);
       if (!(result as any).registrationComplete) {
@@ -598,7 +605,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
         return;
       }
       let nextResult: any = result;
-      if (isIndependent) {
+      if (!isMember) {
         const uploadToken = (result as any).uploadToken || (result as any).token;
         if (!uploadToken) {
           console.error('[utamu:registration] missing upload token after registration', { accountType: kind, result });
@@ -621,12 +628,12 @@ function RegistrationFormScreen({ path }: { path: string }) {
   if (registrationResult) return <ConfirmEmailScreen pending={registrationResult} />;
 
 
-  const registrationImagePanel = isIndependent && (
-    <FormRow label="Profile images" hint="Add at least one clear public profile image" required>
+  const registrationImagePanel = !isMember && (
+    <FormRow label={isAgency ? 'Agency profile images' : 'Profile images'} hint={isAgency ? 'Add at least one clear agency image or logo' : 'Add at least one clear public profile image'} required>
       <div className="rounded-[3px] border border-dashed border-[#ff8fc8] bg-white/70 p-4">
         <input id="registration-profile-images" type="file" accept="image/*" multiple onChange={(event) => selectRegistrationImages(event.target.files)} className="hidden" />
         <label htmlFor="registration-profile-images" className="inline-flex cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Choose profile images</label>
-        <p className="mt-2 text-xs leading-5 text-[#7b6e78]">Your first image prevents empty profiles. You can add more later from My Account.</p>
+        <p className="mt-2 text-xs leading-5 text-[#7b6e78]">{isAgency ? 'This image represents your agency in the Agencies directory. Roster escorts are added separately after registration.' : 'Your first image prevents empty profiles. You can add more later from My Account.'}</p>
         {registrationImagePreviews.length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {registrationImagePreviews.map((preview) => (
@@ -668,9 +675,9 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {!isMember && <FormRow label="Website"><input name="website" className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Country" required><select name="country" className={selectClass}><option>Kenya</option></select></FormRow>}
             {!isMember && <FormRow label="City" required><select name="city" className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><span className="mt-1 block text-xs text-[#a99aa5]">Popular Kenyan towns and Nairobi neighborhoods are included for faster setup.</span></FormRow>}
-            {isAgency && <FormRow label="About the Agency" required><textarea className="min-h-32 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /></FormRow>}
+            {isAgency && <FormRow label="About the Agency" required><textarea name="about" className="min-h-32 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /></FormRow>}
             {isAgency && <FormRow label="Agency services"><div className="grid gap-2 md:grid-cols-2">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input name="agencyServices" value={service} type="checkbox" /> {service}</label>)}</div></FormRow>}
-            {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input type="checkbox" /> {town}</label>)}</div></FormRow>}
+            {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input name="primaryMarkets" value={town} type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
               <>
                 <FormRow label="Gender" required><select name="gender" className={selectClass + ' w-full'}><option>Female</option><option>Male</option></select></FormRow>
@@ -994,10 +1001,12 @@ function ProfileScreen({ path }: { path: string }) {
           {gallery.length > 0 ? <div className="grid grid-cols-2 gap-1 sm:grid-cols-3 lg:grid-cols-5">{gallery.map((image, index) => <img key={`${image}-${index}`} src={image} alt={`${displayName} portfolio ${index + 1}`} className="aspect-[4/5] w-full object-cover" />)}</div> : <div className="rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#7b6e78]">This real profile has not added public images yet.</div>}
           <section className="mt-6 bg-white p-5">
             <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">About me:</h2>
+            {(model as any).agencyName && <div className="mt-4 inline-flex rounded-full bg-[#eaf8f1] px-4 py-2 text-xs font-bold text-[#006b3f]">Represented by {(model as any).agencyName}</div>}
             <p className="mt-4 text-[14px] leading-7"><strong>{model.age} years old {model.category}.</strong></p>
             <p className="mt-2 text-[14px] leading-7">{model.bio || modelProfile.about || `${displayName} is based around ${model.city}, ${model.county}.`}</p>
             {phone && <a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="mt-4 inline-flex font-bold text-[#ff1d9b]">WhatsApp Me</a>}
           </section>
+          {Array.isArray((model as any).roster) && (model as any).roster.length > 0 && <section className="mt-6 bg-white p-5"><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006b3f]">Represented escorts</p><h2 className="mt-1 text-2xl font-bold text-[#2b0a3d]">Agency roster</h2></div><a href="/" className="text-sm font-bold text-[#e60073]">View all Nairobi escorts</a></div><div className="mt-4 grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">{(model as any).roster.map((member: any, index: number) => <ModelCard key={member.id} model={member} index={index} />)}</div></section>}
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
             <section className="bg-white p-5">
               <div className="mb-4 text-center text-[#1598e8]"><div className="text-4xl tracking-widest">*****</div><strong className="block text-[#2b1037]">Escort rating</strong><span className="text-sm italic text-[#7b6e78]">{model.reviews} reviews</span></div>
@@ -1098,9 +1107,15 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
   );
 }
 
-function AccountSidebar({ active }: { active: string }) {
-  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ['Monetization', '/monetization'], ['Client Portal', '/client-portal'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['Delete Account', '/delete-account'], ['LogOut', '/logout']];
+function AccountSidebar({ active, accountType }: { active: string; accountType?: string }) {
+  const links = [['View my Profile', '/escort/profile'], ['Edit my Profile', '/edit-profile'], ...(accountType === 'agency' ? [['Agency Roster', '/agency-roster']] : []), ['Monetization', '/monetization'], ['Client Portal', '/client-portal'], ['Change Password', '/change-password'], ['Verified status', '/verify-account'], ['Blacklisted Clients', '/blacklisted-clients'], ['Delete Account', '/delete-account'], ['LogOut', '/logout']];
   return <aside className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-lg font-bold text-[#ff1d9b]">My Account</h2><div className="mt-4 grid gap-2">{links.map(([label, href]) => <a key={href} href={href} className={'rounded-[3px] px-3 py-2 text-sm font-bold ' + (active === href.slice(1) ? 'bg-[#e60073] text-white' : 'bg-[#fff0f6] text-[#3b164b] hover:bg-[#ffd6ec]')}>{label}</a>)}</div></aside>;
+}
+
+function RosterMemberEditor({ member, onSave, onDelete }: { member: any; onSave: (id: string, body: any) => Promise<void>; onDelete: (id: string) => Promise<void> }) {
+  const profile = member.profile || {};
+  const [editing, setEditing] = useState(false);
+  return <article className="overflow-hidden rounded-[4px] border border-[#ffd1e8] bg-white shadow-sm"><div className="grid sm:grid-cols-[150px_1fr]">{member.image ? <img src={member.image} alt={member.name} className="aspect-[4/5] h-full w-full object-cover" /> : <div className="grid aspect-[4/5] place-items-center bg-[#fff0f6] p-4 text-center text-xs font-bold text-[#9b8090]">Image pending</div>}<div className="p-4"><div className="flex flex-wrap items-start justify-between gap-3"><div><span className="rounded-full bg-[#006b3f] px-2 py-1 text-[10px] font-bold uppercase text-white">Agency roster</span><h3 className="mt-3 text-xl font-bold text-[#2b0a3d]">{member.name}</h3><p className="mt-1 text-sm text-[#7b6e78]">{member.city} · {profile.looks || 'Sexy'}</p></div><div className="flex gap-2"><button type="button" onClick={() => setEditing((value) => !value)} className="rounded-full border border-[#e60073] px-3 py-1 text-xs font-bold text-[#e60073]">{editing ? 'Close' : 'Edit'}</button><button type="button" onClick={() => onDelete(member.id)} className="rounded-full bg-[#d70032] px-3 py-1 text-xs font-bold text-white">Remove</button></div></div><a href={`/escort/${member.slug}`} className="mt-3 inline-flex text-xs font-bold text-[#006b3f] underline">View public profile</a>{editing && <form className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={async (event) => { event.preventDefault(); const data = new FormData(event.currentTarget); await onSave(member.id, Object.fromEntries(data.entries())); setEditing(false); }}><input name="name" defaultValue={member.name} required className={fieldClass} placeholder="Display name" /><select name="city" defaultValue={member.city} className={selectClass}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><select name="looks" defaultValue={profile.looks || 'Sexy'} className={selectClass}>{lookOptions.map((look) => <option key={look}>{look}</option>)}</select><input name="phone" defaultValue={profile.phone || ''} className={fieldClass} placeholder="Contact number" /><textarea name="about" defaultValue={profile.about || member.bio || ''} className={fieldClass + ' min-h-24 sm:col-span-2'} placeholder="Short introduction" /><button className="w-fit rounded-full bg-[#006b3f] px-5 py-2 text-sm font-bold text-white">Save changes</button></form>}</div></div></article>;
 }
 
 function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
@@ -1115,6 +1130,10 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   const [blacklistLoading, setBlacklistLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [deletingAccount, setDeletingAccount] = useState(false);
+  const [roster, setRoster] = useState<any[]>([]);
+  const [rosterFiles, setRosterFiles] = useState<File[]>([]);
+  const [rosterPreviews, setRosterPreviews] = useState<{ name: string; url: string }[]>([]);
+  const [savingRoster, setSavingRoster] = useState(false);
   const [notice, setNotice] = useState('');
   useEffect(() => {
     if (path === 'logout') { clearSession(); window.location.href = '/'; return; }
@@ -1128,6 +1147,9 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
           .then((rows: any) => setBlacklist(Array.isArray(rows) ? rows : []))
           .catch((error) => setNotice(error instanceof Error ? error.message : 'Blacklisted clients could not be loaded.'))
           .finally(() => setBlacklistLoading(false));
+      }
+      if (path === 'agency-roster' && next.user?.accountType === 'agency') {
+        utamuApi.getAgencyRoster(next.token).then((rows: any) => setRoster(Array.isArray(rows) ? rows : [])).catch((error) => setNotice(error instanceof Error ? error.message : 'Agency roster could not be loaded.'));
       }
     }
   }, [path]);
@@ -1262,6 +1284,45 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
       setDeletingAccount(false);
     }
   }
+  function selectRosterImages(files: FileList | null) {
+    rosterPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+    const nextFiles = Array.from(files || []).filter((file) => file.type.startsWith('image/')).slice(0, 8);
+    setRosterFiles(nextFiles);
+    setRosterPreviews(nextFiles.map((file) => ({ name: file.name, url: URL.createObjectURL(file) })));
+  }
+  async function createRosterMember(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!session?.token || !rosterFiles.length) { setNotice('Add at least one clear image for this roster escort.'); return; }
+    setSavingRoster(true);
+    const form = event.currentTarget;
+    const values = new FormData(form);
+    const payload = new FormData();
+    ['name', 'city', 'phone', 'gender', 'age', 'height', 'build', 'looks', 'about'].forEach((key) => payload.append(key, String(values.get(key) || '')));
+    payload.append('availability', JSON.stringify(values.getAll('availability')));
+    payload.append('services', JSON.stringify(values.getAll('services')));
+    rosterFiles.forEach((file) => payload.append('images', file));
+    try {
+      const member: any = await utamuApi.createAgencyRosterMember(payload, session.token);
+      setRoster((current) => [member, ...current]);
+      rosterPreviews.forEach((preview) => URL.revokeObjectURL(preview.url));
+      setRosterFiles([]); setRosterPreviews([]); form.reset();
+      setNotice(`${member.name} is now published in All Nairobi Escorts.`);
+    } catch (error) {
+      setNotice(error instanceof Error ? error.message : 'Roster escort could not be published.');
+    } finally { setSavingRoster(false); }
+  }
+  async function updateRosterMember(id: string, body: any) {
+    if (!session?.token) return;
+    const updated: any = await utamuApi.updateAgencyRosterMember(id, body, session.token);
+    setRoster((current) => current.map((member) => member.id === id ? { ...member, ...updated, name: updated.display_name || body.name, city: updated.city || body.city, bio: updated.bio || body.about, profile: { ...(member.profile || {}), ...body } } : member));
+    setNotice('Roster details updated.');
+  }
+  async function removeRosterMember(id: string) {
+    if (!session?.token || !window.confirm('Remove this escort from your agency roster and public directory?')) return;
+    await utamuApi.deleteAgencyRosterMember(id, session.token);
+    setRoster((current) => current.filter((member) => member.id !== id));
+    setNotice('Roster escort removed from public listings.');
+  }
   if (!session?.token) return <section className="bg-[#fff0f6] px-5 py-16"><div className="rounded bg-[#d70032] p-4 text-center font-bold text-white">You need to <a className="underline" href="/register">register</a> or <a className="underline" href="/login">login</a> to access your account.</div></section>;
   const images = account?.images || [];
   const profile = account?.user?.profile || {};
@@ -1297,7 +1358,8 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   const profileDataPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">My uploaded profile data</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{profileRows.map(([label, value]) => <div key={String(label)} className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">{label}</p><p className="mt-1 text-sm text-[#2b123a]">{String(value)}</p></div>)}</div>{profile.about && <div className="mt-4 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">About</p><p className="mt-2 text-sm leading-7 text-[#2b123a]">{profile.about}</p></div>}{images.length > 0 && isViewProfile && <a href="/edit-profile" className="mt-5 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Edit profile images</a>}</div>;
   const blacklistPanel = path === 'blacklisted-clients' && <div className="bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-2 text-sm leading-6 text-[#7b6e78]">Keep a private record of clients you do not want to engage again. These entries are visible only inside your account.</p></div><span className="rounded-full bg-[#fff0f6] px-3 py-1 text-xs font-bold text-[#e60073]">{blacklist.length} saved</span></div><form onSubmit={addBlacklistedClient} className="mt-5 grid gap-3 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4 md:grid-cols-2"><input name="clientName" required className={fieldClass} placeholder="Client name" /><input name="clientPhone" className={fieldClass} placeholder="Phone number" /><input name="clientEmail" type="email" className={fieldClass} placeholder="Email address" /><select name="reason" className={selectClass} defaultValue=""><option value="" disabled>Reason</option><option>No-show</option><option>Unsafe conduct</option><option>Payment issue</option><option>Harassment</option><option>Spam or fake booking</option><option>Other</option></select><textarea name="notes" className={fieldClass + ' min-h-24 md:col-span-2'} placeholder="Private notes" /><button className="w-fit rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add client</button></form><div className="mt-5 grid gap-3">{blacklistLoading && <p className="rounded bg-[#fff8fb] p-4 text-sm text-[#7b6e78]">Loading blacklist...</p>}{!blacklistLoading && blacklist.length === 0 && <p className="rounded bg-[#fff8fb] p-4 text-sm text-[#7b6e78]">No blacklisted clients yet.</p>}{blacklist.map((entry: any) => <article key={entry.id} className="rounded-[3px] border border-[#ffd1e8] bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="text-[#2b123a]">{entry.clientName || entry.client_name}</strong><p className="mt-1 text-sm text-[#7b6e78]">{[entry.clientPhone || entry.client_phone, entry.clientEmail || entry.client_email].filter(Boolean).join(' - ')}</p></div><button onClick={() => removeBlacklistedClient(entry.id)} className="rounded-full bg-[#d70032] px-4 py-1.5 text-xs font-bold text-white">Remove</button></div><p className="mt-3 text-sm font-bold text-[#e60073]">{entry.reason || 'Not specified'}</p>{entry.notes && <p className="mt-2 text-sm leading-6 text-[#2b123a]">{entry.notes}</p>}<p className="mt-3 text-xs text-[#9b8090]">Added {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-KE') : 'today'}</p></article>)}</div></div>;
   const deleteAccountPanel = path === 'delete-account' && <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#d70032] pl-3 font-bold uppercase text-[#d70032]">Delete Account</h2><div className="mt-4 rounded-[3px] border border-[#ffc2cf] bg-[#fff4f6] p-4"><p className="text-sm leading-6 text-[#4a1220]">Deleting your account removes it from login, hides your escort profile from public pages, and clears personal contact details from the active account record.</p></div><label className="mt-5 block text-sm font-bold text-[#2b123a]">Type DELETE to confirm</label><input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} className={fieldClass + ' mt-2 max-w-md'} placeholder="DELETE" /><button onClick={deleteMyAccount} disabled={deletingAccount || deleteConfirm.trim().toUpperCase() !== 'DELETE'} className="mt-4 rounded-full bg-[#d70032] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{deletingAccount ? 'Deleting...' : 'Delete my account'}</button></div>;
-  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{blacklistPanel}{deleteAccountPanel}</div><AccountSidebar active={path} /></section>;
+  const rosterPanel = path === 'agency-roster' && session.user?.accountType === 'agency' && <><div className="overflow-hidden bg-white shadow-sm"><div className="bg-gradient-to-r from-[#2b0a3d] via-[#8d075d] to-[#006b3f] p-5 text-white"><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f0b323]">Agency workspace</p><h2 className="mt-2 text-3xl font-bold">Agency Roster</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">Your agency identity remains in Agencies. Each roster escort gets an individual public profile in All Nairobi Escorts, clearly linked back to your agency.</p></div><form onSubmit={createRosterMember} className="grid gap-4 p-5 md:grid-cols-2"><div className="md:col-span-2"><label className="text-sm font-bold text-[#2b0a3d]">Roster images *</label><input id="roster-images" type="file" accept="image/*" multiple className="hidden" onChange={(event) => selectRosterImages(event.target.files)} /><label htmlFor="roster-images" className="mt-2 inline-flex cursor-pointer items-center rounded-full bg-[#e60073] px-5 py-2 text-sm font-bold text-white"><Upload className="mr-2 h-4 w-4" />Select images</label>{rosterPreviews.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{rosterPreviews.map((preview) => <img key={preview.url} src={preview.url} alt={preview.name} className="aspect-[4/5] w-full rounded-[3px] object-cover" />)}</div>}</div><input name="name" required className={fieldClass} placeholder="Public display name" /><select name="city" className={selectClass}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><input name="phone" className={fieldClass} placeholder="Roster contact number" /><select name="gender" className={selectClass}><option>Female</option><option>Male</option></select><input name="age" type="number" min="18" max="80" required className={fieldClass} placeholder="Age" /><select name="looks" required className={selectClass}>{lookOptions.map((look) => <option key={look}>{look}</option>)}</select><select name="height" className={selectClass}><option value="">Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select><select name="build" className={selectClass}><option value="">Select build</option>{buildOptions.map((build) => <option key={build}>{build}</option>)}</select><fieldset className="rounded-[3px] border border-[#ffd1e8] p-3"><legend className="px-2 text-sm font-bold text-[#2b0a3d]">Availability</legend>{availabilityOptions.map((item) => <label key={item} className="mr-4 inline-flex items-center gap-2 text-sm"><input type="checkbox" name="availability" value={item} />{item}</label>)}</fieldset><fieldset className="rounded-[3px] border border-[#ffd1e8] p-3"><legend className="px-2 text-sm font-bold text-[#2b0a3d]">Popular services</legend>{modelServices.slice(0, 6).map((item) => <label key={item} className="mb-1 flex items-center gap-2 text-xs"><input type="checkbox" name="services" value={item} />{item}</label>)}</fieldset><textarea name="about" required className={fieldClass + ' min-h-28 md:col-span-2'} placeholder="A concise public introduction" /><button disabled={savingRoster} className="w-fit rounded-full bg-[#006b3f] px-6 py-3 text-sm font-bold text-white disabled:opacity-60">{savingRoster ? 'Publishing...' : 'Publish roster escort'}</button></form></div><section className="bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold text-[#2b0a3d]">Published roster</h2><span className="rounded-full bg-[#fff0f6] px-3 py-1 text-xs font-bold text-[#e60073]">{roster.length} escorts</span></div><div className="mt-4 grid gap-4">{roster.length === 0 && <p className="rounded-[3px] bg-[#fff8fb] p-5 text-sm text-[#7b6e78]">Your roster is ready for its first escort.</p>}{roster.map((member) => <RosterMemberEditor key={member.id} member={member} onSave={updateRosterMember} onDelete={removeRosterMember} />)}</div></section></>;
+  return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{path === 'agency-roster' ? 'Manage agency roster' : isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{rosterPanel}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{blacklistPanel}{deleteAccountPanel}</div><AccountSidebar active={path} accountType={session.user?.accountType} /></section>;
 }
 
 function MonetizationScreen() {

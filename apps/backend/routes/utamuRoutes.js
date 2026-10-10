@@ -7,13 +7,16 @@ import {
   confirmEmail,
   configureAiAssistant,
   createBookingLead,
+  createAgencyRosterMember,
   createMonetizationCheckout,
   createMpesaPayment,
   createPaystackPayment,
   deleteBlacklistedClient,
   deleteAccount,
+  deleteAgencyRosterMember,
   deleteProfileImage,
   getAdmin,
+  getAgencyRoster,
   getBlacklistedClients,
   getDirectory,
   getMe,
@@ -36,6 +39,7 @@ import {
   proxyProfileImage,
   verifyPaystackPayment,
   uploadProfileImages,
+  updateAgencyRosterMember,
   updateAccountProfile,
 } from '../controllers/utamuController.js';
 
@@ -55,6 +59,10 @@ router.put('/account/profile', updateAccountProfile);
 router.post('/account/images', addProfileImage);
 router.post('/account/images/upload', upload.array('images', 8), uploadProfileImages);
 router.delete('/account/images/:id', deleteProfileImage);
+router.get('/account/agency-roster', getAgencyRoster);
+router.post('/account/agency-roster', upload.array('images', 8), createAgencyRosterMember);
+router.put('/account/agency-roster/:id', updateAgencyRosterMember);
+router.delete('/account/agency-roster/:id', deleteAgencyRosterMember);
 router.post('/account/change-password', changePassword);
 router.get('/account/blacklisted-clients', getBlacklistedClients);
 router.post('/account/blacklisted-clients', addBlacklistedClient);

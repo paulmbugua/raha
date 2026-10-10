@@ -52,6 +52,16 @@ const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY || process.env.PAYST
 
 let utamuTransactionalSchemaReady = false;
 let utamuMonetizationSchemaReady = false;
+let utamuAgencyRosterSchemaReady = false;
+async function ensureUtamuAgencyRosterSchema() {
+  if (utamuAgencyRosterSchemaReady) return;
+  await queryWithRetry("alter table utamu_models add column if not exists profile_kind text not null default 'escort'");
+  await queryWithRetry("alter table utamu_models add column if not exists agency_model_id uuid references utamu_models(id) on delete cascade");
+  await queryWithRetry("alter table utamu_models add column if not exists profile_data jsonb not null default '{}'::jsonb");
+  await queryWithRetry("create index if not exists utamu_models_agency_roster_idx on utamu_models (agency_model_id, status, created_at desc)");
+  await queryWithRetry("update utamu_models set profile_kind = 'agency' where lower(category) like '%agency%' and profile_kind = 'escort'");
+  utamuAgencyRosterSchemaReady = true;
+}
 async function ensureUtamuTransactionalSchema() {
   if (utamuTransactionalSchemaReady) return;
   await queryWithRetry("create table if not exists utamu_blacklisted_clients (id uuid primary key default gen_random_uuid(), owner_user_id uuid not null references utamu_users(id) on delete cascade, client_name text not null, client_email text, reason text, created_at timestamptz not null default now())");
@@ -175,7 +185,8 @@ function expiresSql(days) {
 
 async function modelForUser(user) {
   if (!user?.id) return null;
-  const rows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
+  await ensureUtamuAgencyRosterSchema();
+  const rows = await tryQuery("select * from utamu_models where user_id = $1 and agency_model_id is null order by case when profile_kind = 'agency' then 0 else 1 end, created_at limit 1", [user.id]);
   return rows?.[0] || null;
 }
 
@@ -265,8 +276,7 @@ async function resolvePaymentModel(body, user) {
     if (rows?.[0]) return rows[0];
   }
   if (user?.id) {
-    const rows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
-    if (rows?.[0]) return rows[0];
+    return await modelForUser(user);
   }
   return null;
 }
@@ -303,6 +313,9 @@ function publicModelFromRow(row) {
     city: row.city || profile.city || 'Nairobi',
     county: row.county || profile.country || 'Kenya',
     category: row.category || 'Independent Escort',
+    profileKind: row.profile_kind || (String(row.category || '').toLowerCase().includes('agency') ? 'agency' : 'escort'),
+    agencyModelId: row.agency_model_id || null,
+    agencyName: row.agency_name || null,
     gender: row.gender || profile.gender || 'Female',
     phone: profile.phone || row.phone || null,
     age: row.age || Number(profile.age || 0) || 24,
@@ -528,6 +541,7 @@ function validationConfirmationUrl(token) {
 }
 
 async function ensureModelForUser(user, body, profile) {
+  await ensureUtamuAgencyRosterSchema();
   if (!['independent-model', 'agency'].includes(user.account_type)) return null;
   const displayName = body.name || body.fullName || body.agencyName || user.full_name;
   const baseSlug = slugify(displayName);
@@ -535,19 +549,21 @@ async function ensureModelForUser(user, body, profile) {
   const city = body.city || profile.city || 'Nairobi';
   const category = user.account_type === 'agency' ? 'Agency Managed Escorts' : 'Independent Escort';
   const rows = await queryWithRetry(
-    `insert into utamu_models (user_id, display_name, slug, city, county, category, age, height, bio, status, verified, elite, online, response_time)
-     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',false,false,true,'New account')
+    `insert into utamu_models (user_id, display_name, slug, city, county, category, age, height, bio, status, verified, elite, online, response_time, profile_kind, profile_data)
+     values ($1,$2,$3,$4,$5,$6,$7,$8,$9,'pending',false,false,true,'New account',$10,$11::jsonb)
      on conflict (slug) do update set display_name = excluded.display_name
      returning *`,
-    [user.id, displayName, slug, city, 'Nairobi', category, Number(profile.age || 0) || null, profile.height || null, profile.about || body.about || '',]
+    [user.id, displayName, slug, city, 'Nairobi', category, Number(profile.age || 0) || null, profile.height || null, profile.about || body.about || '', user.account_type === 'agency' ? 'agency' : 'escort', JSON.stringify(profile)]
   );
   return rows.rows[0];
 }
 
 export async function getDirectory(_req, res) {
-  const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
+  await ensureUtamuAgencyRosterSchema();
+  const dbRows = await tryQuery(`select m.*, coalesce(nullif(m.profile_data, '{}'::jsonb), u.profile) as profile, coalesce(m.profile_data->>'gender', u.profile->>'gender') as gender, u.phone, a.display_name as agency_name, coalesce(i.images, '{}') as images
     from utamu_models m
     left join utamu_users u on u.id = m.user_id
+    left join utamu_models a on a.id = m.agency_model_id
     left join lateral (
       select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
       from utamu_profile_images
@@ -563,6 +579,7 @@ export async function getDirectory(_req, res) {
 
 
 export async function searchModels(req, res) {
+  await ensureUtamuAgencyRosterSchema();
   const query = String(req.query.query || '').toLowerCase();
   const city = String(req.query.city || 'All');
   const gender = String(req.query.gender || 'All');
@@ -572,9 +589,10 @@ export async function searchModels(req, res) {
   const maxPrice = Number(req.query.maxPrice || 0);
   const verified = String(req.query.verified || '') === 'true' && listing !== 'Trusted';
   const vip = String(req.query.vip || '') === 'true' && listing !== 'VIP';
-  const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
+  const dbRows = await tryQuery(`select m.*, coalesce(nullif(m.profile_data, '{}'::jsonb), u.profile) as profile, coalesce(m.profile_data->>'gender', u.profile->>'gender') as gender, u.phone, a.display_name as agency_name, coalesce(i.images, '{}') as images
     from utamu_models m
     left join utamu_users u on u.id = m.user_id
+    left join utamu_models a on a.id = m.agency_model_id
     left join lateral (
       select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
       from utamu_profile_images
@@ -604,9 +622,11 @@ export async function searchModels(req, res) {
 }
 
 export async function getModel(req, res) {
-  const dbRows = await tryQuery(`select m.*, u.profile, u.profile->>'gender' as gender, u.phone, coalesce(i.images, '{}') as images
+  await ensureUtamuAgencyRosterSchema();
+  const dbRows = await tryQuery(`select m.*, coalesce(nullif(m.profile_data, '{}'::jsonb), u.profile) as profile, coalesce(m.profile_data->>'gender', u.profile->>'gender') as gender, u.phone, a.display_name as agency_name, coalesce(i.images, '{}') as images
     from utamu_models m
     left join utamu_users u on u.id = m.user_id
+    left join utamu_models a on a.id = m.agency_model_id
     left join lateral (
       select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
       from utamu_profile_images
@@ -617,7 +637,8 @@ export async function getModel(req, res) {
     limit 1`, [req.params.slug]);
   if (!dbRows?.[0]) return res.status(404).json({ message: 'Profile not found.' });
   const model = publicModelFromRow(dbRows[0]);
-  res.json({ data: { ...model, rankingScore: scoreModel(model) } });
+  const roster = model.profileKind === 'agency' ? await agencyRosterRows(model.id) : [];
+  res.json({ data: { ...model, roster, rankingScore: scoreModel(model) } });
 }
 
 export async function registerAccount(req, res) {
@@ -638,6 +659,7 @@ export async function registerAccount(req, res) {
     hasPhone: Boolean(phone),
   });
   if (!email || !password || !body.username) return res.status(400).json({ message: 'Username, email and password are required.' });
+  if (accountType === 'independent-model' && body.looks && !['Sexy', 'Ultra Sexy'].includes(String(body.looks))) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
   if (body.confirmPassword !== undefined && String(body.confirmPassword || '') !== password) return res.status(400).json({ message: 'Password and confirmation password must match.' });
   if (!body.availability?.length && accountType === 'independent-model') return res.status(400).json({ message: 'Please select at least one availability option.' });
 
@@ -655,11 +677,12 @@ export async function registerAccount(req, res) {
     const samePhone = phone && String(existingUser.phone || '').trim() === phone;
     const pendingEmail = sameEmail && (!existingUser.email_verified || existingUser.status === 'pending_email');
     if (pendingEmail) {
-      const duplicatePasswordMatches = Boolean(accountType === 'independent-model' && existingUser.password_hash && await bcrypt.compare(password, existingUser.password_hash));
+      const isProfileProvider = ['independent-model', 'agency'].includes(accountType);
+      const duplicatePasswordMatches = Boolean(isProfileProvider && existingUser.password_hash && await bcrypt.compare(password, existingUser.password_hash));
       const duplicateUploadToken = duplicatePasswordMatches ? signUser(existingUser) : null;
-      if (accountType === 'independent-model' && !duplicateUploadToken) {
+      if (isProfileProvider && !duplicateUploadToken) {
         emailFlowLog('registration_duplicate_pending_upload_blocked', { registrationId, userId: existingUser.id, email: maskEmail(email), username: body.username, reason: 'password_mismatch_or_missing_hash' }, 'warn');
-        return res.status(409).json({ message: 'A pending escort registration already exists for this email. Login with that account, or retry registration with the same password, then add your profile image from My Account.' });
+        return res.status(409).json({ message: 'A pending profile registration already exists for this email. Login with that account, or retry registration with the same password, then add your profile image from My Account.' });
       }
       const validationToken = existingUser.validation_token || crypto.randomBytes(24).toString('hex');
       const retryAfterSeconds = validationRetryAfterSeconds(existingUser);
@@ -801,10 +824,10 @@ export async function loginAccount(req, res) {
 export async function getMe(req, res) {
   const user = await authUser(req);
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
-  const modelRows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
-  const imageRows = await tryQuery('select * from utamu_profile_images where user_id = $1 order by sort_order, created_at', [user.id]);
+  const model = await modelForUser(user);
+  const imageRows = model?.id ? await tryQuery('select * from utamu_profile_images where model_id = $1 order by sort_order, created_at', [model.id]) : [];
   const unread = await tryQuery('select count(*)::int as count from utamu_messages where recipient_user_id = $1 and read_at is null', [user.id]);
-  res.json({ data: { user: publicUser(user), model: modelRows?.[0] || null, images: normalizeProfileImageRows(imageRows), unreadMessages: unread?.[0]?.count || 0 } });
+  res.json({ data: { user: publicUser(user), model: model || null, images: normalizeProfileImageRows(imageRows), unreadMessages: unread?.[0]?.count || 0 } });
 }
 
 function imagePublicBase() {
@@ -871,6 +894,7 @@ export async function updateAccountProfile(req, res) {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const body = req.body || {};
   const incomingProfile = body.profile && typeof body.profile === 'object' ? body.profile : body;
+  if (incomingProfile.looks && !['Sexy', 'Ultra Sexy'].includes(String(incomingProfile.looks))) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
   const currentProfile = user.profile || {};
   const services = Array.isArray(body.services) ? body.services : Array.isArray(incomingProfile.services) ? incomingProfile.services : [];
   const availability = Array.isArray(body.availability) ? body.availability : Array.isArray(incomingProfile.availability) ? incomingProfile.availability : [];
@@ -896,12 +920,11 @@ export async function updateAccountProfile(req, res) {
       'update utamu_users set full_name = $2, phone = $3, profile = $4::jsonb where id = $1 returning *',
       [user.id, fullName, phone, JSON.stringify(nextProfile)]
     );
-    const modelRows = await tryQuery('select * from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
-    let model = modelRows?.[0] || null;
+    let model = await modelForUser(user);
     if (model) {
       const changed = await queryWithRetry(
-        'update utamu_models set display_name = $2, city = coalesce($3, city), height = coalesce($4, height), bio = coalesce($5, bio) where id = $1 returning *',
-        [model.id, fullName, city, nextProfile.height || null, nextProfile.about || null]
+        'update utamu_models set display_name = $2, city = coalesce($3, city), height = coalesce($4, height), bio = coalesce($5, bio), profile_data = $6::jsonb where id = $1 returning *',
+        [model.id, fullName, city, nextProfile.height || null, nextProfile.about || null, JSON.stringify(nextProfile)]
       );
       model = changed.rows[0] || model;
     }
@@ -920,8 +943,8 @@ export async function addProfileImage(req, res) {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const url = normalizeProfileImageUrl(req.body?.url);
   if (!url) return res.status(400).json({ message: 'Image URL is required.' });
-  const modelRows = await tryQuery('select id from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
-  const inserted = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, modelRows?.[0]?.id || null, url, req.body?.alt || user.full_name, Number(req.body?.sortOrder || 0)]);
+  const model = await modelForUser(user);
+  const inserted = await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5) returning *', [user.id, model?.id || null, url, req.body?.alt || user.full_name, Number(req.body?.sortOrder || 0)]);
   res.status(201).json({ data: normalizeProfileImageRow(inserted.rows[0]) });
 }
 
@@ -930,8 +953,8 @@ export async function uploadProfileImages(req, res) {
   if (!user) return res.status(401).json({ message: 'Unauthorized' });
   const files = Array.isArray(req.files) ? req.files : [];
   if (!files.length) return res.status(400).json({ message: 'Please select at least one image.' });
-  const modelRows = await tryQuery('select id from utamu_models where user_id = $1 order by created_at desc limit 1', [user.id]);
-  const modelId = modelRows?.[0]?.id || null;
+  const model = await modelForUser(user);
+  const modelId = model?.id || null;
   const inserted = [];
 
   for (const [index, file] of files.entries()) {
@@ -944,6 +967,100 @@ export async function uploadProfileImages(req, res) {
   }
 
   res.status(201).json({ data: inserted });
+}
+
+function rosterArray(value) {
+  if (Array.isArray(value)) return value.filter(Boolean);
+  try {
+    const parsed = JSON.parse(String(value || '[]'));
+    return Array.isArray(parsed) ? parsed.filter(Boolean) : [];
+  } catch {
+    return String(value || '').split(',').map((item) => item.trim()).filter(Boolean);
+  }
+}
+
+async function requireAgencyAccount(req, res) {
+  const user = await authUser(req);
+  if (!user) { res.status(401).json({ message: 'Unauthorized' }); return null; }
+  if (user.account_type !== 'agency') { res.status(403).json({ message: 'Agency Roster is available only to agency accounts.' }); return null; }
+  await ensureUtamuAgencyRosterSchema();
+  const agency = await modelForUser(user);
+  if (!agency?.id) { res.status(400).json({ message: 'Complete your agency profile before adding roster escorts.' }); return null; }
+  return { user, agency };
+}
+
+async function agencyRosterRows(agencyId) {
+  const rows = await tryQuery(`select m.*, m.profile_data as profile, a.display_name as agency_name, coalesce(i.images, '{}') as images
+    from utamu_models m
+    join utamu_models a on a.id = m.agency_model_id
+    left join lateral (
+      select array_agg(url order by sort_order, created_at) filter (where url is not null) as images
+      from utamu_profile_images where model_id = m.id
+    ) i on true
+    where m.agency_model_id = $1 and m.status <> 'deleted'
+    order by m.created_at desc`, [agencyId]);
+  return (rows || []).map(publicModelFromRow);
+}
+
+export async function getAgencyRoster(req, res) {
+  const context = await requireAgencyAccount(req, res);
+  if (!context) return;
+  res.json({ data: await agencyRosterRows(context.agency.id) });
+}
+
+export async function createAgencyRosterMember(req, res) {
+  const context = await requireAgencyAccount(req, res);
+  if (!context) return;
+  const files = Array.isArray(req.files) ? req.files : [];
+  if (!files.length) return res.status(400).json({ message: 'Add at least one clear roster image.' });
+  if (files.some((file) => !String(file.mimetype || '').startsWith('image/'))) return res.status(400).json({ message: 'Roster uploads must be image files.' });
+  const name = String(req.body?.name || '').trim();
+  const city = String(req.body?.city || 'Nairobi').trim();
+  const looks = String(req.body?.looks || '').trim();
+  const gender = String(req.body?.gender || 'Female').trim();
+  if (!name) return res.status(400).json({ message: 'Roster name is required.' });
+  if (!['Sexy', 'Ultra Sexy'].includes(looks)) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
+  const services = rosterArray(req.body?.services);
+  const availability = rosterArray(req.body?.availability);
+  const profile = { name, city, gender, looks, phone: String(req.body?.phone || '').trim(), height: String(req.body?.height || '').trim(), build: String(req.body?.build || '').trim(), about: String(req.body?.about || '').trim(), services, availability, accountType: 'agency-roster' };
+  const slug = `${slugify(name)}-${crypto.randomBytes(3).toString('hex')}`;
+  const inserted = await queryWithRetry(
+    `insert into utamu_models (user_id, display_name, slug, city, county, category, age, height, bio, status, verified, elite, online, response_time, profile_kind, agency_model_id, profile_data)
+     values ($1,$2,$3,$4,'Nairobi','Agency Roster Escort',$5,$6,$7,'active',false,false,true,'Managed by agency','roster',$8,$9::jsonb) returning *`,
+    [context.user.id, name, slug, city, Number(req.body?.age || 0) || null, profile.height || null, profile.about, context.agency.id, JSON.stringify(profile)]
+  );
+  const model = inserted.rows[0];
+  for (const [index, file] of files.entries()) {
+    const ext = imageExtension(file.mimetype);
+    const unique = crypto.randomUUID ? crypto.randomUUID() : crypto.randomBytes(12).toString('hex');
+    const key = ['agencies', context.user.id, model.id, unique + '-' + safeUploadName(file.originalname) + '.' + ext].join('/');
+    const uploaded = await putImageObject({ key, body: file.buffer, contentType: file.mimetype });
+    await queryWithRetry('insert into utamu_profile_images (user_id, model_id, url, alt, sort_order) values ($1,$2,$3,$4,$5)', [context.user.id, model.id, uploaded.url, `${name} - ${context.agency.display_name}`, index]);
+  }
+  const roster = await agencyRosterRows(context.agency.id);
+  res.status(201).json({ data: roster.find((item) => item.id === model.id) });
+}
+
+export async function updateAgencyRosterMember(req, res) {
+  const context = await requireAgencyAccount(req, res);
+  if (!context) return;
+  const id = String(req.params?.id || '');
+  const currentRows = await tryQuery('select * from utamu_models where id = $1 and agency_model_id = $2 and user_id = $3 limit 1', [id, context.agency.id, context.user.id]);
+  const current = currentRows?.[0];
+  if (!current) return res.status(404).json({ message: 'Roster escort not found.' });
+  const currentProfile = profileFromRow({ profile: current.profile_data });
+  const nextProfile = { ...currentProfile, ...req.body, services: rosterArray(req.body?.services ?? currentProfile.services), availability: rosterArray(req.body?.availability ?? currentProfile.availability) };
+  if (nextProfile.looks && !['Sexy', 'Ultra Sexy'].includes(nextProfile.looks)) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
+  const updated = await queryWithRetry(`update utamu_models set display_name = $4, city = $5, age = $6, height = $7, bio = $8, profile_data = $9::jsonb where id = $1 and agency_model_id = $2 and user_id = $3 returning *`, [id, context.agency.id, context.user.id, String(nextProfile.name || current.display_name).trim(), String(nextProfile.city || current.city), Number(nextProfile.age || current.age || 0) || null, nextProfile.height || current.height, nextProfile.about || current.bio, JSON.stringify(nextProfile)]);
+  res.json({ data: updated.rows[0] });
+}
+
+export async function deleteAgencyRosterMember(req, res) {
+  const context = await requireAgencyAccount(req, res);
+  if (!context) return;
+  const deleted = await queryWithRetry("update utamu_models set status = 'deleted', online = false where id = $1 and agency_model_id = $2 and user_id = $3 returning id", [req.params.id, context.agency.id, context.user.id]);
+  if (!deleted.rows[0]) return res.status(404).json({ message: 'Roster escort not found.' });
+  res.json({ data: { deleted: true, id: deleted.rows[0].id } });
 }
 
 export async function proxyProfileImage(req, res) {
@@ -1278,6 +1395,9 @@ export async function createMonetizationCheckout(req, res) {
   const model = await resolvePaymentModel(req.body || {}, user);
   if (['listing', 'agency_listing', 'verification', 'ai'].includes(product.category) && !model?.id) {
     return res.status(400).json({ message: 'Complete your profile before activating this subscription.' });
+  }
+  if (['listing', 'agency_listing', 'verification', 'ai'].includes(product.category) && model?.user_id !== user.id) {
+    return res.status(403).json({ message: 'You can activate subscriptions only for profiles owned by your account.' });
   }
   const metadata = { productId: product.id, purpose: product.category, modelId: model?.id || null, modelSlug: model?.slug || req.body?.modelSlug || null, tokenAmount: product.tokenAmount };
   const referencePrefix = method === 'paystack' ? 'SNPAY-' : 'SNMPESA-';

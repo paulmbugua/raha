@@ -62,6 +62,12 @@ async function uploadFiles<T>(path: string, files: File[], fallback: T, token?: 
   return await parseResponse<T>(response);
 }
 
+async function uploadForm<T>(path: string, formData: FormData, fallback: T, token?: string): Promise<T> {
+  if (!API_BASE || !token) return fallback;
+  const response = await fetch(`${API_BASE}${path}`, { method: 'POST', headers: { Accept: 'application/json', Authorization: `Bearer ${token}` }, body: formData });
+  return await parseResponse<T>(response);
+}
+
 async function deleteJson<T>(path: string, fallback: T, token?: string): Promise<T> {
   if (!API_BASE || !token) return fallback;
   const response = await fetch(`${API_BASE}${path}`, {
@@ -112,6 +118,10 @@ export const utamuApi = {
   addProfileImage: (body: unknown, token?: string) => postJson('/api/utamu/account/images', body, { id: 'local-image', ...(body as object) }, token),
   uploadProfileImages: (files: File[], token?: string) => uploadFiles('/api/utamu/account/images/upload', files, [], token),
   deleteProfileImage: (id: string, token?: string) => deleteJson(`/api/utamu/account/images/${encodeURIComponent(id)}`, { deleted: true, id }, token),
+  getAgencyRoster: (token?: string) => getJsonAuth('/api/utamu/account/agency-roster', token, []),
+  createAgencyRosterMember: (formData: FormData, token?: string) => uploadForm('/api/utamu/account/agency-roster', formData, null, token),
+  updateAgencyRosterMember: (id: string, body: unknown, token?: string) => putJson(`/api/utamu/account/agency-roster/${encodeURIComponent(id)}`, body, null, token),
+  deleteAgencyRosterMember: (id: string, token?: string) => deleteJson(`/api/utamu/account/agency-roster/${encodeURIComponent(id)}`, { deleted: true, id }, token),
   changePassword: (body: unknown, token?: string) => postJson('/api/utamu/account/change-password', body, { changed: true }, token),
   getBlacklistedClients: (token?: string) => getJsonAuth('/api/utamu/account/blacklisted-clients', token, []),
   addBlacklistedClient: (body: unknown, token?: string) => postJson('/api/utamu/account/blacklisted-clients', body, { id: 'local-blacklist', ...(body as object) }, token),
