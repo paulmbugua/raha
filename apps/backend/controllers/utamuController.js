@@ -1051,8 +1051,9 @@ export async function updateAgencyRosterMember(req, res) {
   const currentProfile = profileFromRow({ profile: current.profile_data });
   const nextProfile = { ...currentProfile, ...req.body, services: rosterArray(req.body?.services ?? currentProfile.services), availability: rosterArray(req.body?.availability ?? currentProfile.availability) };
   if (nextProfile.looks && !['Sexy', 'Ultra Sexy'].includes(nextProfile.looks)) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
-  const updated = await queryWithRetry(`update utamu_models set display_name = $4, city = $5, age = $6, height = $7, bio = $8, profile_data = $9::jsonb where id = $1 and agency_model_id = $2 and user_id = $3 returning *`, [id, context.agency.id, context.user.id, String(nextProfile.name || current.display_name).trim(), String(nextProfile.city || current.city), Number(nextProfile.age || current.age || 0) || null, nextProfile.height || current.height, nextProfile.about || current.bio, JSON.stringify(nextProfile)]);
-  res.json({ data: updated.rows[0] });
+  await queryWithRetry(`update utamu_models set display_name = $4, city = $5, age = $6, height = $7, bio = $8, profile_data = $9::jsonb where id = $1 and agency_model_id = $2 and user_id = $3 returning *`, [id, context.agency.id, context.user.id, String(nextProfile.name || current.display_name).trim(), String(nextProfile.city || current.city), Number(nextProfile.age || current.age || 0) || null, nextProfile.height || current.height, nextProfile.about || current.bio, JSON.stringify(nextProfile)]);
+  const roster = await agencyRosterRows(context.agency.id);
+  res.json({ data: roster.find((item) => item.id === id) });
 }
 
 export async function deleteAgencyRosterMember(req, res) {
