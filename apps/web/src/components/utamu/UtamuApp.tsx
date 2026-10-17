@@ -325,8 +325,6 @@ function RegisterScreen() {
       cta: 'Register here',
       ctaHref: '/register/independent-model',
       features: ['Add a single profile', 'Add portfolio pictures', 'Add contact information', 'Manage blocked clients', 'Profile analytics and messages'],
-      vipFeature: 'Upgrade to VIP visibility',
-      highlight: 'From Ksh 600 weekly / Ksh 2,000 monthly',
     },
     {
       title: 'Register as Agency',
@@ -334,8 +332,6 @@ function RegisterScreen() {
       cta: 'Register here',
       ctaHref: '/register/agency',
       features: ['Add multiple profiles', 'Add profile pictures', 'Add contact information', 'Add internal notes', 'Manage verification workflow'],
-      vipFeature: 'Agency VIP subscription',
-      highlight: 'Weekly or monthly billing',
     },
     {
       title: 'Register as Normal User',
@@ -377,7 +373,6 @@ function RegisterScreen() {
                     </li>
                   ))}
                 </ul>
-                {plan.vipFeature && <div className="mt-4 rounded-[3px] border border-[#ffb100] bg-[#fff8df] p-3 text-[#3b164b]"><div className="flex flex-wrap items-center justify-between gap-2"><span className="font-bold">{plan.vipFeature}</span>{plan.highlight && <span className="rounded-full bg-[#1fbfa5] px-3 py-1 text-xs font-bold text-white">{plan.highlight}</span>}</div><a href={plan.ctaHref} className="mt-3 inline-flex rounded-full bg-[#e60073] px-4 py-2 text-xs font-bold text-white">Upgrade after registration</a></div>}
                 <div className="mt-6 border-t border-[#eeeeee] pt-4">
                   <p className="mb-4 text-2xl font-normal text-[#555]">{plan.price}</p>
                   <a href={plan.ctaHref} className="sn-lift inline-flex items-center gap-2 rounded-[3px] bg-[#23b86b] px-5 py-3 text-sm font-bold text-white hover:bg-[#1fa461]">{plan.cta}<ChevronRight className="h-4 w-4" /></a>
