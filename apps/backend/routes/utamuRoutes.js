@@ -6,7 +6,6 @@ import {
   changePassword,
   confirmEmail,
   configureAiAssistant,
-  createBookingLead,
   createAgencyRosterMember,
   createMonetizationCheckout,
   createMpesaPayment,
@@ -32,7 +31,6 @@ import {
   resendValidation,
   searchModels,
   sendMessage,
-  sendTip,
   submitReview,
   submitVerification,
   mpesaPaymentCallback,
@@ -74,8 +72,6 @@ router.get('/notifications', getNotifications);
 router.get('/monetization', getMonetizationOverview);
 router.post('/monetization/checkout', createMonetizationCheckout);
 router.post('/ai-assistant', configureAiAssistant);
-router.post('/tips', sendTip);
-router.post('/booking-leads', createBookingLead);
 router.get('/client-portal', getClientPortal);
 router.post('/payments/mpesa', createMpesaPayment);
 router.post('/payments/mpesa/callback', mpesaPaymentCallback);

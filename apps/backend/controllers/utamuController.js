@@ -20,7 +20,12 @@ const MAIL_REPLY_TO = process.env.MAIL_REPLY_TO || MAIL_FROM_ADDRESS;
 const VALIDATION_RESEND_COOLDOWN_MS = Number(process.env.UTAMU_VALIDATION_RESEND_COOLDOWN_MS || 60_000);
 const VIP_VISIBILITY_PRICE_KES = 2000;
 const MESSAGE_TOKEN_COST = Number(process.env.UTAMU_MESSAGE_TOKEN_COST || 5);
-const TIP_COMMISSION_RATE = Number(process.env.UTAMU_TIP_COMMISSION_RATE || 0.15);
+const ROSTER_AVAILABILITY = ['Incall', 'Outcall'];
+const ROSTER_SERVICES = ['DINNER DATE', 'TRAVEL COMPANION', 'LESBIAN SHOW', 'RIMMING', 'RAW BJ', 'BJ', 'GFE', 'COB - CUM ON BODY', 'CIM - CUM IN MOUTH', '3 SOME', 'ANAL', 'MASSAGE', 'AVAILABLE 24HRS', 'BFE', 'FEASTING', 'FINGERING', 'INCALLS DURING THE DAY ONLY AND OUTCALLS ANYTIME'];
+const ROSTER_SMOKER_OPTIONS = ['No', 'Occasionally', 'Yes', 'Prefer not to say'];
+const SEX_ORIENTATIONS = ['Straight', 'Gay', 'Bisexual', 'Trans', 'Queer'];
+const ROSTER_LANGUAGES = ['English', 'Kiswahili', 'Kikuyu', 'Luhya', 'Luo', 'Kalenjin', 'Kamba', 'Somali', 'Kisii', 'Meru', 'Maasai', 'Arabic', 'French', 'German', 'Spanish', 'Chinese'];
+const ROSTER_LANGUAGE_LEVELS = ['Basic', 'Conversational', 'Fluent', 'Native'];
 const MONETIZATION_PRODUCTS = [
   { id: 'verification-trusted-weekly', category: 'verification', name: 'Trusted badge - weekly', description: '7-day Trusted badge after ID/document review and approval.', amountKes: 350, tokenAmount: 0, durationDays: 7, sortOrder: 10 },
   { id: 'verification-trusted', category: 'verification', name: 'Trusted badge - monthly', description: '30-day Trusted badge after ID/document review and approval.', amountKes: 1200, tokenAmount: 0, durationDays: 30, sortOrder: 11 },
@@ -34,8 +39,8 @@ const MONETIZATION_PRODUCTS = [
   { id: 'tier-vip', category: 'listing', name: 'VIP featured listing - monthly', description: '30 days of VIP homepage priority, sidebar ad spot, and strongest bumping.', amountKes: 2000, tokenAmount: 0, durationDays: 30, sortOrder: 51 },
   { id: 'agency-vip-weekly', category: 'agency_listing', name: 'Agency VIP subscription - weekly', description: '7 days of priority agency placement, managed-profile visibility, and VIP agency branding.', amountKes: 2000, tokenAmount: 0, durationDays: 7, sortOrder: 52 },
   { id: 'agency-vip-monthly', category: 'agency_listing', name: 'Agency VIP subscription - monthly', description: '30 days of priority agency placement, managed-profile visibility, and VIP agency branding.', amountKes: 7000, tokenAmount: 0, durationDays: 30, sortOrder: 53 },
-  { id: 'tokens-100', category: 'wallet', name: '100 message tokens', description: 'Credits for paid messages, private unlocks, and tips.', amountKes: 200, tokenAmount: 100, durationDays: null, sortOrder: 60 },
-  { id: 'tokens-300', category: 'wallet', name: '300 message tokens', description: 'Best-value client credits for active messaging and tips.', amountKes: 500, tokenAmount: 300, durationDays: null, sortOrder: 70 },
+  { id: 'tokens-100', category: 'wallet', name: '100 message tokens', description: 'Credits for paid messages and private content unlocks.', amountKes: 200, tokenAmount: 100, durationDays: null, sortOrder: 60 },
+  { id: 'tokens-300', category: 'wallet', name: '300 message tokens', description: 'Best-value credits for members who message regularly.', amountKes: 500, tokenAmount: 300, durationDays: null, sortOrder: 70 },
   { id: 'ai-assistant-weekly', category: 'ai', name: 'AI assistant - weekly', description: '7 days of 24/7 assistant replies for common questions and weak-lead filtering.', amountKes: 450, tokenAmount: 0, durationDays: 7, sortOrder: 80 },
   { id: 'ai-assistant-monthly', category: 'ai', name: 'AI assistant - monthly', description: '30 days of 24/7 assistant replies for common questions and weak-lead filtering.', amountKes: 1600, tokenAmount: 0, durationDays: 30, sortOrder: 81 },
   { id: 'client-portal-weekly', category: 'client_portal', name: 'Vetted client portal - weekly', description: '7-day access to vetted-client-only discovery and matchmaking.', amountKes: 300, tokenAmount: 0, durationDays: 7, sortOrder: 90 },
@@ -1022,7 +1027,15 @@ export async function createAgencyRosterMember(req, res) {
   if (!['Sexy', 'Ultra Sexy'].includes(looks)) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
   const services = rosterArray(req.body?.services);
   const availability = rosterArray(req.body?.availability);
-  const profile = { name, city, gender, looks, phone: String(req.body?.phone || '').trim(), height: String(req.body?.height || '').trim(), build: String(req.body?.build || '').trim(), about: String(req.body?.about || '').trim(), services, availability, accountType: 'agency-roster' };
+  const smoker = String(req.body?.smoker || '').trim();
+  const orientation = String(req.body?.orientation || '').trim();
+  const languages = rosterArray(req.body?.languages).filter((item) => item && typeof item === 'object').map((item) => ({ language: String(item.language || '').trim(), level: String(item.level || '').trim() })).filter((item) => item.language);
+  if (!availability.length || availability.some((item) => !ROSTER_AVAILABILITY.includes(item))) return res.status(400).json({ message: 'Select Incall, Outcall, or both.' });
+  if (!services.length || services.some((item) => !ROSTER_SERVICES.includes(item))) return res.status(400).json({ message: 'Select at least one valid service.' });
+  if (!ROSTER_SMOKER_OPTIONS.includes(smoker)) return res.status(400).json({ message: 'Select a valid smoker option.' });
+  if (!SEX_ORIENTATIONS.includes(orientation)) return res.status(400).json({ message: 'Select a valid sex orientation.' });
+  if (languages.length > 3 || languages.some((item) => !ROSTER_LANGUAGES.includes(item.language) || !ROSTER_LANGUAGE_LEVELS.includes(item.level))) return res.status(400).json({ message: 'Select valid languages and proficiency levels.' });
+  const profile = { name, city, gender, looks, phone: String(req.body?.phone || '').trim(), height: String(req.body?.height || '').trim(), build: String(req.body?.build || '').trim(), smoker, orientation, languages, about: String(req.body?.about || '').trim(), services, availability, accountType: 'agency-roster' };
   const slug = `${slugify(name)}-${crypto.randomBytes(3).toString('hex')}`;
   const inserted = await queryWithRetry(
     `insert into utamu_models (user_id, display_name, slug, city, county, category, age, height, bio, status, verified, elite, online, response_time, profile_kind, agency_model_id, profile_data)
@@ -1049,8 +1062,13 @@ export async function updateAgencyRosterMember(req, res) {
   const current = currentRows?.[0];
   if (!current) return res.status(404).json({ message: 'Roster escort not found.' });
   const currentProfile = profileFromRow({ profile: current.profile_data });
-  const nextProfile = { ...currentProfile, ...req.body, services: rosterArray(req.body?.services ?? currentProfile.services), availability: rosterArray(req.body?.availability ?? currentProfile.availability) };
+  const nextProfile = { ...currentProfile, ...req.body, services: rosterArray(req.body?.services ?? currentProfile.services), availability: rosterArray(req.body?.availability ?? currentProfile.availability), languages: rosterArray(req.body?.languages ?? currentProfile.languages).filter((item) => item && typeof item === 'object') };
   if (nextProfile.looks && !['Sexy', 'Ultra Sexy'].includes(nextProfile.looks)) return res.status(400).json({ message: 'Looks must be Sexy or Ultra Sexy.' });
+  if (nextProfile.availability.some((item) => !ROSTER_AVAILABILITY.includes(item))) return res.status(400).json({ message: 'Availability must be Incall, Outcall, or both.' });
+  if (nextProfile.services.some((item) => !ROSTER_SERVICES.includes(item))) return res.status(400).json({ message: 'Select only supported services.' });
+  if (nextProfile.smoker && !ROSTER_SMOKER_OPTIONS.includes(nextProfile.smoker)) return res.status(400).json({ message: 'Select a valid smoker option.' });
+  if (nextProfile.orientation && !SEX_ORIENTATIONS.includes(nextProfile.orientation)) return res.status(400).json({ message: 'Select a valid sex orientation.' });
+  if (nextProfile.languages.length > 3 || nextProfile.languages.some((item) => !ROSTER_LANGUAGES.includes(String(item.language || '')) || !ROSTER_LANGUAGE_LEVELS.includes(String(item.level || '')))) return res.status(400).json({ message: 'Select valid languages and proficiency levels.' });
   await queryWithRetry(`update utamu_models set display_name = $4, city = $5, age = $6, height = $7, bio = $8, profile_data = $9::jsonb where id = $1 and agency_model_id = $2 and user_id = $3 returning *`, [id, context.agency.id, context.user.id, String(nextProfile.name || current.display_name).trim(), String(nextProfile.city || current.city), Number(nextProfile.age || current.age || 0) || null, nextProfile.height || current.height, nextProfile.about || current.bio, JSON.stringify(nextProfile)]);
   const roster = await agencyRosterRows(context.agency.id);
   res.json({ data: roster.find((item) => item.id === id) });
@@ -1380,7 +1398,7 @@ export async function getMonetizationOverview(req, res) {
   const leads = await tryQuery('select * from utamu_booking_leads where provider_user_id = $1 or client_user_id = $1 order by created_at desc limit 50', [user.id]);
   const transactions = await tryQuery('select * from utamu_wallet_transactions where user_id = $1 order by created_at desc limit 20', [user.id]);
   const payments = await tryQuery('select * from utamu_payments where user_id = $1 order by created_at desc limit 20', [user.id]);
-  res.json({ data: { products: productsForAccountType(user.account_type), accountType: user.account_type, messageTokenCost: MESSAGE_TOKEN_COST, tipCommissionRate: TIP_COMMISSION_RATE, wallet, model, subscriptions: subscriptions || [], assistant: assistant?.[0] || null, clientPortal: portal?.[0] || null, leads: leads || [], transactions: transactions || [], payments: payments || [] } });
+  res.json({ data: { products: productsForAccountType(user.account_type), accountType: user.account_type, messageTokenCost: MESSAGE_TOKEN_COST, wallet, model, subscriptions: subscriptions || [], assistant: assistant?.[0] || null, clientPortal: portal?.[0] || null, leads: leads || [], transactions: transactions || [], payments: payments || [] } });
 }
 
 export async function createMonetizationCheckout(req, res) {
@@ -1448,36 +1466,6 @@ export async function configureAiAssistant(req, res) {
     [user.id, model.id, enabled, existing?.plan || 'off', existing?.monthly_price_kes || 0, req.body?.tone || existing?.tone || 'polite', req.body?.instructions || null, req.body?.autoReplyEnabled !== false, existing?.expires_at || null, existing?.payment_id || null]
   );
   res.json({ data: { ...row.rows[0], activeEntitlement: isAssistantEntitlementActive(row.rows[0]) } });
-}
-
-export async function sendTip(req, res) {
-  await ensureUtamuMonetizationSchema();
-  const user = await authUser(req);
-  if (!user) return res.status(401).json({ message: 'Unauthorized' });
-  const amount = Math.max(1, Math.round(Number(req.body?.amountTokens || 0)));
-  const model = await resolvePaymentModel(req.body || {}, null);
-  if (!model?.user_id) return res.status(404).json({ message: 'Profile not found.' });
-  const wallet = await debitWallet(user.id, amount, `Tip to ${model.display_name}`, model.user_id, model.id, 'tip');
-  if (!wallet) return res.status(402).json({ message: 'Buy tokens before sending a tip.' });
-  const commission = Math.floor(amount * TIP_COMMISSION_RATE);
-  const net = amount - commission;
-  await creditWallet(model.user_id, net, `Tip received from ${user.full_name}`, null, user.id, model.id, 'tip_received');
-  const inserted = await queryWithRetry('insert into utamu_tips (sender_user_id, recipient_user_id, model_id, amount_tokens, commission_tokens, message) values ($1,$2,$3,$4,$5,$6) returning *', [user.id, model.user_id, model.id, amount, commission, req.body?.message || null]);
-  res.status(201).json({ data: { tip: inserted.rows[0], wallet } });
-}
-
-export async function createBookingLead(req, res) {
-  await ensureUtamuMonetizationSchema();
-  const user = await authUser(req);
-  if (!user) return res.status(401).json({ message: 'Unauthorized' });
-  const message = String(req.body?.message || '').trim();
-  if (!message) return res.status(400).json({ message: 'Booking details are required.' });
-  const model = await resolvePaymentModel(req.body || {}, null);
-  if (!model) return res.status(404).json({ message: 'Profile not found.' });
-  const tier = model.listing_tier || 'free';
-  const leadFee = tier === 'free' ? 0 : tier === 'bronze' ? 100 : tier === 'silver' ? 200 : tier === 'gold' ? 350 : 500;
-  const inserted = await queryWithRetry('insert into utamu_booking_leads (client_user_id, provider_user_id, model_id, model_slug, model_name, requested_date, location, budget_kes, message, lead_fee_kes) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) returning *', [user.id, model.user_id || null, model.id, model.slug, model.display_name, req.body?.requestedDate || null, req.body?.location || null, req.body?.budgetKes ? Number(req.body.budgetKes) : null, message, leadFee]);
-  res.status(201).json({ data: inserted.rows[0] });
 }
 
 export async function getClientPortal(req, res) {

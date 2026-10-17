@@ -549,7 +549,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const formMinHeight = isIndependent ? 'lg:min-h-[2080px]' : isAgency ? 'lg:min-h-[980px]' : 'lg:min-h-[720px]';
   const services = modelServices;
   const agencyServices = ['Independent escort management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Escort onboarding', 'Brand partnerships'];
-  const memberPreferences = ['Save favorite profiles', 'Compare escort profiles', 'Request booking details', 'Follow verified escorts', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
+  const memberPreferences = ['Save favorite profiles', 'Compare escort profiles', 'Follow verified escorts', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
   const [selectedServices, setSelectedServices] = useState<string[]>([]);
   const [selectedAvailability, setSelectedAvailability] = useState<string[]>([]);
   const [registrationImages, setRegistrationImages] = useState<File[]>([]);
@@ -693,7 +693,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{availabilityOptions.map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#6b7280]' : 'border-[#c9d0da] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
                 <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
-                <FormRow label="Professional orientation"><select name="orientation" className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+                <FormRow label="Sex orientation"><select name="orientation" className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-full overflow-x-auto"><div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3"><span>Currency:</span><select className={selectClass + ' w-full sm:w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[440px] grid-cols-[100px_1fr_1fr] gap-2 text-center text-xs sm:grid-cols-[120px_1fr_1fr] sm:text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
                 <FormRow label="Services"><div className="space-y-4">
@@ -886,16 +886,6 @@ function ProfileScreen({ path }: { path: string }) {
   const [remoteModel, setRemoteModel] = useState<UtamuModel | null>(null);
   const [loadingProfile, setLoadingProfile] = useState(true);
   const [profileError, setProfileError] = useState('');
-  const [loginPrompt, setLoginPrompt] = useState(false);
-  const [composerOpen, setComposerOpen] = useState(false);
-  const [messageBody, setMessageBody] = useState('');
-  const [messageStatus, setMessageStatus] = useState('');
-  const [tipTokens, setTipTokens] = useState('25');
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [bookingStatus, setBookingStatus] = useState('');
-  const [bookingMessage, setBookingMessage] = useState('');
-  const [bookingDate, setBookingDate] = useState('');
-  const [bookingLocation, setBookingLocation] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -935,50 +925,8 @@ function ProfileScreen({ path }: { path: string }) {
     ['Build', modelProfile.build || 'Not specified'],
     ['Looks', modelProfile.looks || 'Not specified'],
     ['Smoker', modelProfile.smoker || 'Not specified'],
-    ['Professional style', modelProfile.orientation || modelProfile.professionalOrientation || 'Not specified'],
+    ['Sex orientation', modelProfile.orientation || modelProfile.professionalOrientation || 'Not specified'],
   ];
-
-  useEffect(() => {
-    if (model?.city && !bookingLocation) setBookingLocation(model.city);
-  }, [model?.city, bookingLocation]);
-
-  async function startMessage() {
-    const session = readSession();
-    if (!session?.token) { setLoginPrompt(true); return; }
-    setComposerOpen(true);
-  }
-  async function sendProfileMessage() {
-    const session = readSession();
-    if (!session?.token || !model) { setLoginPrompt(true); return; }
-    try {
-      await utamuApi.sendMessage({ modelSlug: model.slug, modelName: displayName, message: messageBody, subject: 'Profile enquiry' }, session.token);
-      setMessageStatus('Message sent. The escort will see it in their account notifications.');
-      setMessageBody('');
-    } catch (error) {
-      setMessageStatus(error instanceof Error ? error.message : 'Message could not be sent.');
-    }
-  }
-  async function sendProfileTip() {
-    const session = readSession();
-    if (!session?.token || !model) { setLoginPrompt(true); return; }
-    try {
-      await utamuApi.sendTip({ modelSlug: model.slug, amountTokens: Number(tipTokens || 0), message: 'Profile appreciation tip' }, session.token);
-      setMessageStatus('Tip sent successfully.');
-    } catch (error) {
-      setMessageStatus(error instanceof Error ? error.message : 'Tip could not be sent.');
-    }
-  }
-  async function submitBookingLead() {
-    const session = readSession();
-    if (!session?.token || !model) { setLoginPrompt(true); return; }
-    try {
-      await utamuApi.createBookingLead({ modelSlug: model.slug, modelName: displayName, requestedDate: bookingDate || null, location: bookingLocation, message: bookingMessage }, session.token);
-      setBookingStatus('Booking request sent to the dashboard.');
-      setBookingMessage('');
-    } catch (error) {
-      setBookingStatus(error instanceof Error ? error.message : 'Booking request could not be sent.');
-    }
-  }
 
   if (loadingProfile && !model) {
     return <div className="grid gap-0 lg:grid-cols-[1fr_220px]"><section className="min-h-[520px] bg-[#fff0f6] px-5 py-10 text-[#3b164b]"><div className="rounded-[4px] bg-white p-6 shadow-sm">Loading real profile...</div></section><QuickSearchPanel spacerClass="hidden min-h-[520px] bg-[#101010] lg:block" /></div>;
@@ -1019,7 +967,6 @@ function ProfileScreen({ path }: { path: string }) {
               <h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Contact info:</h2>
               {phone ? <dl className="mt-4 grid grid-cols-[110px_1fr] gap-y-2 text-[13px]"><dt className="font-bold">Phone:</dt><dd className="text-[#ff4eb8]">{phone}</dd><dt className="font-bold">WhatsApp:</dt><dd><a href={`https://wa.me/${phone.replace(/\D/g, '')}`} className="text-[#ff4eb8]">WhatsApp</a></dd></dl> : <p className="mt-4 text-sm text-[#7b6e78]">Contact details are available after login or direct enquiry.</p>}
               <p className="mt-4 text-[13px] leading-6">Tell us you found this profile on <strong>Secret Nairobi</strong> to improve response handling and platform safety.</p>
-              <div className="mt-4 flex flex-wrap gap-2"><button onClick={startMessage} className="inline-flex rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white"><Mail className="mr-1 h-4 w-4" />Email Me</button><button onClick={() => setBookingOpen((value) => !value)} className="inline-flex rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">Request booking</button><button onClick={sendProfileTip} className="inline-flex rounded-full bg-[#f0b323] px-4 py-2 text-xs font-bold text-[#211000]">Tip {tipTokens} tokens</button><input value={tipTokens} onChange={(event) => setTipTokens(event.target.value)} className="w-20 rounded-full border border-[#ffd0e8] px-3 text-xs" /></div>{loginPrompt && <div className="mt-4 flex items-center justify-between rounded-[3px] bg-[#d70032] px-4 py-3 text-sm font-bold text-white"><span>You need to register or login to send messages, tips, or booking requests</span><button onClick={() => setLoginPrompt(false)} className="rounded-full bg-white px-2 py-1 text-xs text-[#d70032]">Close x</button></div>}{composerOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><p className="mb-2 text-xs text-[#7b6e78]">Private messages cost wallet tokens. Buy bundles from My Account - Monetization.</p><textarea value={messageBody} onChange={(event) => setMessageBody(event.target.value)} placeholder="Write your message" className="min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={sendProfileMessage} className="mt-2 rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Send message</button>{messageStatus && <p className="mt-2 text-xs text-[#168a4a]">{messageStatus}</p>}</div>}{bookingOpen && <div className="mt-4 rounded border border-[#ffd0e8] bg-[#fff0f6] p-3"><div className="grid gap-2 sm:grid-cols-2"><input type="datetime-local" value={bookingDate} onChange={(event) => setBookingDate(event.target.value)} className={fieldClass} /><input value={bookingLocation} onChange={(event) => setBookingLocation(event.target.value)} placeholder="Preferred location" className={fieldClass} /></div><textarea value={bookingMessage} onChange={(event) => setBookingMessage(event.target.value)} placeholder="Share timing, area, screening details, and what you want confirmed" className="mt-2 min-h-24 w-full border border-[#ff55c7] bg-white p-2 text-sm outline-none" /><button onClick={submitBookingLead} className="mt-2 rounded-full bg-[#006b3f] px-4 py-2 text-xs font-bold text-white">Send booking request</button>{bookingStatus && <p className="mt-2 text-xs text-[#168a4a]">{bookingStatus}</p>}</div>}
             </section>
           </div>
           <section className="mt-3 bg-white p-5"><div className="flex items-center justify-between"><h2 className="border-l-4 border-[#ff1d9b] pl-3 text-base font-bold uppercase text-[#ff1d9b]">Reviews:</h2><a href="/reviews/ratings" className="rounded-full bg-[#ff4eb8] px-4 py-2 text-xs font-bold text-white">Add Review</a></div><p className="mt-4 text-sm">No reviews yet</p></section>
@@ -1075,7 +1022,7 @@ function EditProfileForm({ account, onSave, saving }: { account: any; onSave: (e
         <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{availabilityOptions.map((item) => { const selected = selectedAvailability.includes(item); return <label key={item} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><input className="sr-only" name="availability" value={item} type="checkbox" checked={selected} onChange={() => toggleAvailability(item)} /><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#6b7280]' : 'border-[#c9d0da] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</label>; })}</div></FormRow>
         <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'} defaultValue={profile.smoker || 'No'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
         <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" defaultValue={profile.about || ''} /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
-        <FormRow label="Professional orientation"><select name="orientation" className={selectClass + ' w-full'} defaultValue={profile.orientation || 'Select orientation'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
+        <FormRow label="Sex orientation"><select name="orientation" className={selectClass + ' w-full'} defaultValue={profile.orientation || 'Select orientation'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
         <FormRow label="Languages spoken"><div className="space-y-2">{languageRows.map((row: any, item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'} defaultValue={row.language || 'Select language'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'} defaultValue={row.level || 'Select level'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
         <FormRow label="Services"><div className="space-y-4">
           <label className={serviceTileBaseClass + ' ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
@@ -1297,9 +1244,10 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
     const form = event.currentTarget;
     const values = new FormData(form);
     const payload = new FormData();
-    ['name', 'city', 'phone', 'gender', 'age', 'height', 'build', 'looks', 'about'].forEach((key) => payload.append(key, String(values.get(key) || '')));
+    ['name', 'city', 'phone', 'gender', 'age', 'height', 'build', 'looks', 'smoker', 'orientation', 'about'].forEach((key) => payload.append(key, String(values.get(key) || '')));
     payload.append('availability', JSON.stringify(values.getAll('availability')));
     payload.append('services', JSON.stringify(values.getAll('services')));
+    payload.append('languages', JSON.stringify([0, 1, 2].map((index) => ({ language: String(values.get(`rosterLanguage${index}`) || ''), level: String(values.get(`rosterLanguageLevel${index}`) || '') })).filter((item) => item.language && item.language !== 'Select language')));
     rosterFiles.forEach((file) => payload.append('images', file));
     try {
       const member: any = await utamuApi.createAgencyRosterMember(payload, session.token);
@@ -1350,7 +1298,7 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
     ['Build', profile.build],
     ['Looks', profile.looks],
     ['Smoker', profile.smoker],
-    ['Professional orientation', profile.orientation],
+    ['Sex orientation', profile.orientation],
     ['Availability', (profile.availability || []).join(', ')],
     ['Languages', (profile.languages || []).map((item: any) => [item.language, item.level].filter(Boolean).join(' - ')).filter(Boolean).join(', ')],
     ['Services', (profile.services || []).join(', ')],
@@ -1360,7 +1308,53 @@ function DashboardScreen({ path = 'escort/dashboard' }: { path?: string }) {
   const profileDataPanel = <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">My uploaded profile data</h2><div className="mt-5 grid gap-3 sm:grid-cols-2">{profileRows.map(([label, value]) => <div key={String(label)} className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">{label}</p><p className="mt-1 text-sm text-[#2b123a]">{String(value)}</p></div>)}</div>{profile.about && <div className="mt-4 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-3"><p className="text-[11px] font-bold uppercase text-[#ff1d9b]">About</p><p className="mt-2 text-sm leading-7 text-[#2b123a]">{profile.about}</p></div>}{images.length > 0 && isViewProfile && <a href="/edit-profile" className="mt-5 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Edit profile images</a>}</div>;
   const blacklistPanel = path === 'blacklisted-clients' && <div className="bg-white p-5 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Blacklisted Clients</h2><p className="mt-2 text-sm leading-6 text-[#7b6e78]">Keep a private record of clients you do not want to engage again. These entries are visible only inside your account.</p></div><span className="rounded-full bg-[#fff0f6] px-3 py-1 text-xs font-bold text-[#e60073]">{blacklist.length} saved</span></div><form onSubmit={addBlacklistedClient} className="mt-5 grid gap-3 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4 md:grid-cols-2"><input name="clientName" required className={fieldClass} placeholder="Client name" /><input name="clientPhone" className={fieldClass} placeholder="Phone number" /><input name="clientEmail" type="email" className={fieldClass} placeholder="Email address" /><select name="reason" className={selectClass} defaultValue=""><option value="" disabled>Reason</option><option>No-show</option><option>Unsafe conduct</option><option>Payment issue</option><option>Harassment</option><option>Spam or fake booking</option><option>Other</option></select><textarea name="notes" className={fieldClass + ' min-h-24 md:col-span-2'} placeholder="Private notes" /><button className="w-fit rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Add client</button></form><div className="mt-5 grid gap-3">{blacklistLoading && <p className="rounded bg-[#fff8fb] p-4 text-sm text-[#7b6e78]">Loading blacklist...</p>}{!blacklistLoading && blacklist.length === 0 && <p className="rounded bg-[#fff8fb] p-4 text-sm text-[#7b6e78]">No blacklisted clients yet.</p>}{blacklist.map((entry: any) => <article key={entry.id} className="rounded-[3px] border border-[#ffd1e8] bg-white p-4 shadow-sm"><div className="flex flex-wrap items-start justify-between gap-3"><div><strong className="text-[#2b123a]">{entry.clientName || entry.client_name}</strong><p className="mt-1 text-sm text-[#7b6e78]">{[entry.clientPhone || entry.client_phone, entry.clientEmail || entry.client_email].filter(Boolean).join(' - ')}</p></div><button onClick={() => removeBlacklistedClient(entry.id)} className="rounded-full bg-[#d70032] px-4 py-1.5 text-xs font-bold text-white">Remove</button></div><p className="mt-3 text-sm font-bold text-[#e60073]">{entry.reason || 'Not specified'}</p>{entry.notes && <p className="mt-2 text-sm leading-6 text-[#2b123a]">{entry.notes}</p>}<p className="mt-3 text-xs text-[#9b8090]">Added {entry.createdAt ? new Date(entry.createdAt).toLocaleDateString('en-KE') : 'today'}</p></article>)}</div></div>;
   const deleteAccountPanel = path === 'delete-account' && <div className="bg-white p-5 shadow-sm"><h2 className="border-l-4 border-[#d70032] pl-3 font-bold uppercase text-[#d70032]">Delete Account</h2><div className="mt-4 rounded-[3px] border border-[#ffc2cf] bg-[#fff4f6] p-4"><p className="text-sm leading-6 text-[#4a1220]">Deleting your account removes it from login, hides your escort profile from public pages, and clears personal contact details from the active account record.</p></div><label className="mt-5 block text-sm font-bold text-[#2b123a]">Type DELETE to confirm</label><input value={deleteConfirm} onChange={(event) => setDeleteConfirm(event.target.value)} className={fieldClass + ' mt-2 max-w-md'} placeholder="DELETE" /><button onClick={deleteMyAccount} disabled={deletingAccount || deleteConfirm.trim().toUpperCase() !== 'DELETE'} className="mt-4 rounded-full bg-[#d70032] px-5 py-2 text-sm font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{deletingAccount ? 'Deleting...' : 'Delete my account'}</button></div>;
-  const rosterPanel = path === 'agency-roster' && session.user?.accountType === 'agency' && <><div className="overflow-hidden bg-white shadow-sm"><div className="bg-gradient-to-r from-[#2b0a3d] via-[#8d075d] to-[#006b3f] p-5 text-white"><p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f0b323]">Agency workspace</p><h2 className="mt-2 text-3xl font-bold">Agency Roster</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">Your agency identity remains in Agencies. Each roster escort gets an individual public profile in All Nairobi Escorts, clearly linked back to your agency.</p></div><form onSubmit={createRosterMember} className="grid gap-4 p-5 md:grid-cols-2"><div className="md:col-span-2"><label className="text-sm font-bold text-[#2b0a3d]">Roster images *</label><input id="roster-images" type="file" accept="image/*" multiple className="hidden" onChange={(event) => selectRosterImages(event.target.files)} /><label htmlFor="roster-images" className="mt-2 inline-flex cursor-pointer items-center rounded-full bg-[#e60073] px-5 py-2 text-sm font-bold text-white"><Upload className="mr-2 h-4 w-4" />Select images</label>{rosterPreviews.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{rosterPreviews.map((preview) => <img key={preview.url} src={preview.url} alt={preview.name} className="aspect-[4/5] w-full rounded-[3px] object-cover" />)}</div>}</div><input name="name" required className={fieldClass} placeholder="Public display name" /><select name="city" className={selectClass}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><input name="phone" className={fieldClass} placeholder="Roster contact number" /><select name="gender" className={selectClass}><option>Female</option><option>Male</option></select><input name="age" type="number" min="18" max="80" required className={fieldClass} placeholder="Age" /><select name="looks" required className={selectClass}>{lookOptions.map((look) => <option key={look}>{look}</option>)}</select><select name="height" className={selectClass}><option value="">Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select><select name="build" className={selectClass}><option value="">Select build</option>{buildOptions.map((build) => <option key={build}>{build}</option>)}</select><fieldset className="rounded-[3px] border border-[#ffd1e8] p-3"><legend className="px-2 text-sm font-bold text-[#2b0a3d]">Availability</legend>{availabilityOptions.map((item) => <label key={item} className="mr-4 inline-flex items-center gap-2 text-sm"><input type="checkbox" name="availability" value={item} />{item}</label>)}</fieldset><fieldset className="rounded-[3px] border border-[#ffd1e8] p-3"><legend className="px-2 text-sm font-bold text-[#2b0a3d]">Popular services</legend>{modelServices.slice(0, 6).map((item) => <label key={item} className="mb-1 flex items-center gap-2 text-xs"><input type="checkbox" name="services" value={item} />{item}</label>)}</fieldset><textarea name="about" required className={fieldClass + ' min-h-28 md:col-span-2'} placeholder="A concise public introduction" /><button disabled={savingRoster} className="w-fit rounded-full bg-[#006b3f] px-6 py-3 text-sm font-bold text-white disabled:opacity-60">{savingRoster ? 'Publishing...' : 'Publish roster escort'}</button></form></div><section className="bg-white p-5 shadow-sm"><div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold text-[#2b0a3d]">Published roster</h2><span className="rounded-full bg-[#fff0f6] px-3 py-1 text-xs font-bold text-[#e60073]">{roster.length} escorts</span></div><div className="mt-4 grid gap-4">{roster.length === 0 && <p className="rounded-[3px] bg-[#fff8fb] p-5 text-sm text-[#7b6e78]">Your roster is ready for its first escort.</p>}{roster.map((member) => <RosterMemberEditor key={member.id} member={member} onSave={updateRosterMember} onDelete={removeRosterMember} />)}</div></section></>;
+  const rosterPanel = path === 'agency-roster' && session.user?.accountType === 'agency' && <>
+    <div className="overflow-hidden bg-white shadow-sm">
+      <div className="bg-gradient-to-r from-[#2b0a3d] via-[#8d075d] to-[#006b3f] p-5 text-white">
+        <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f0b323]">Agency workspace</p>
+        <h2 className="mt-2 text-3xl font-bold">Agency Roster</h2>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-white/80">Build a complete public profile for every escort your agency represents. Published roster profiles appear individually in All Nairobi Escorts.</p>
+      </div>
+      <form onSubmit={createRosterMember} className="grid gap-4 p-5 md:grid-cols-2">
+        <div className="md:col-span-2">
+          <label className="text-sm font-bold text-[#2b0a3d]">Roster images *</label>
+          <input id="roster-images" type="file" accept="image/*" multiple className="hidden" onChange={(event) => selectRosterImages(event.target.files)} />
+          <label htmlFor="roster-images" className="mt-2 inline-flex cursor-pointer items-center rounded-full bg-[#e60073] px-5 py-2 text-sm font-bold text-white"><Upload className="mr-2 h-4 w-4" />Select images</label>
+          {rosterPreviews.length > 0 && <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">{rosterPreviews.map((preview) => <img key={preview.url} src={preview.url} alt={preview.name} className="aspect-[4/5] w-full rounded-[3px] object-cover" />)}</div>}
+        </div>
+        <input name="name" required className={fieldClass} placeholder="Public display name" />
+        <select name="city" className={selectClass}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select>
+        <input name="phone" className={fieldClass} placeholder="Roster contact number" />
+        <select name="gender" className={selectClass}><option>Female</option><option>Male</option></select>
+        <input name="age" type="number" min="18" max="80" required className={fieldClass} placeholder="Age" />
+        <select name="looks" required className={selectClass}>{lookOptions.map((look) => <option key={look}>{look}</option>)}</select>
+        <select name="height" className={selectClass}><option value="">Select height</option>{heightOptions.map((height) => <option key={height}>{height} cm</option>)}</select>
+        <select name="build" className={selectClass}><option value="">Select build</option>{buildOptions.map((build) => <option key={build}>{build}</option>)}</select>
+        <fieldset className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4">
+          <legend className="px-2 text-sm font-bold text-[#2b0a3d]">Availability *</legend>
+          <div className="grid grid-cols-2 gap-2">{availabilityOptions.map((item) => <label key={item} className={checkboxCardClass + ' has-[:checked]:border-[#006b3f] has-[:checked]:bg-[#006b3f] has-[:checked]:font-bold has-[:checked]:text-white'}><input type="checkbox" name="availability" value={item} /> {item}</label>)}</div>
+        </fieldset>
+        <div className="grid gap-3 rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4 sm:grid-cols-2">
+          <label className="text-sm font-bold text-[#2b0a3d]">Smoker *<select name="smoker" required className={selectClass + ' mt-2 w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+          <label className="text-sm font-bold text-[#2b0a3d]">Sex orientation *<select name="orientation" required className={selectClass + ' mt-2 w-full'}><option value="">Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></label>
+        </div>
+        <fieldset className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4 md:col-span-2">
+          <legend className="px-2 text-sm font-bold text-[#2b0a3d]">Languages spoken</legend>
+          <div className="grid gap-3">{[0, 1, 2].map((index) => <div key={index} className="grid gap-2 sm:grid-cols-[1fr_180px]"><select name={`rosterLanguage${index}`} className={selectClass}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={`rosterLanguageLevel${index}`} className={selectClass}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div>
+        </fieldset>
+        <fieldset className="rounded-[3px] border border-[#ffd1e8] bg-[#fff8fb] p-4 md:col-span-2">
+          <legend className="px-2 text-sm font-bold text-[#2b0a3d]">Popular services *</legend>
+          <div className="space-y-4">{modelServiceGroups.map((group) => <div key={group.label}><p className="mb-2 text-xs font-bold uppercase tracking-wide text-[#7b6e78]">{group.label}</p><div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">{group.items.map((item) => <label key={item} className={checkboxCardClass + ' has-[:checked]:border-[#e60073] has-[:checked]:bg-[#e60073] has-[:checked]:font-bold has-[:checked]:text-white'}><input type="checkbox" name="services" value={item} /> {item}</label>)}</div></div>)}</div>
+        </fieldset>
+        <textarea name="about" required className={fieldClass + ' min-h-28 md:col-span-2'} placeholder="A concise public introduction" />
+        <button disabled={savingRoster} className="w-fit rounded-full bg-[#006b3f] px-6 py-3 text-sm font-bold text-white disabled:opacity-60">{savingRoster ? 'Publishing...' : 'Publish roster escort'}</button>
+      </form>
+    </div>
+    <section className="bg-white p-5 shadow-sm">
+      <div className="flex items-center justify-between gap-3"><h2 className="text-xl font-bold text-[#2b0a3d]">Published roster</h2><span className="rounded-full bg-[#fff0f6] px-3 py-1 text-xs font-bold text-[#e60073]">{roster.length} escorts</span></div>
+      <div className="mt-4 grid gap-4">{roster.length === 0 && <p className="rounded-[3px] bg-[#fff8fb] p-5 text-sm text-[#7b6e78]">Your roster is ready for its first escort.</p>}{roster.map((member) => <RosterMemberEditor key={member.id} member={member} onSave={updateRosterMember} onDelete={removeRosterMember} />)}</div>
+    </section>
+  </>;
   return <section className="grid gap-4 bg-[#fff0f6] px-4 py-6 lg:grid-cols-[minmax(0,1fr)_260px]"><div className="space-y-4"><div className="bg-white p-5 shadow-sm"><h1 className="text-3xl text-[#ff4eb8]">{path === 'agency-roster' ? 'Manage agency roster' : isEditProfile ? 'Edit my profile' : isViewProfile ? 'View my profile' : 'My account'}</h1><p className="mt-2 text-sm text-[#7b6e78]">Logged in as {session.user?.fullName || session.user?.email}</p>{notice && <p className="mt-3 rounded bg-[#e6ffe9] p-3 text-sm text-[#147a33]">{notice}</p>}</div>{showFirstUpload && uploadPanel}{isViewProfile && profileDataPanel}{isEditProfile && account?.user && <><EditProfileForm account={account} onSave={saveProfile} saving={savingProfile} />{uploadPanel}{profileDataPanel}</>}{rosterPanel}{path === 'change-password' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Change password</h2><input type="password" value={password} onChange={(event) => setPassword(event.target.value)} className={fieldClass + ' mt-4'} placeholder="New password" /><button onClick={changePassword} className="mt-3 rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Change password</button></div>}{path === 'verify-account' && <div className="bg-white p-5"><h2 className="border-l-4 border-[#ff1d9b] pl-3 font-bold uppercase text-[#ff1d9b]">Verified status</h2><p className="mt-4 text-sm">Email: {account?.user?.emailVerified ? 'Verified' : 'Pending validation'}<br />Profile: {account?.model?.verified ? 'Verified' : 'Pending review'}</p><a href="/verification/step-1" className="mt-4 inline-flex rounded-full bg-[#ff4eb8] px-5 py-2 text-sm font-bold text-white">Submit verification</a></div>}{blacklistPanel}{deleteAccountPanel}</div><AccountSidebar active={path} accountType={session.user?.accountType} /></section>;
 }
 
