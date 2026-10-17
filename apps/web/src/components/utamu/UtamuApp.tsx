@@ -10,7 +10,7 @@ import { useUtamuDirectory } from '../../hooks/useUtamuDirectory';
 type UtamuAppProps = { slug?: string[] };
 
 type UtamuSession = { token: string; user: { id?: string; username?: string; email?: string; phone?: string; fullName?: string; role?: string; accountType?: string; emailVerified?: boolean } | null };
-type View = 'home' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'activationWelcome' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'agencies' | 'admin' | 'notification';
+type View = 'home' | 'maleEscorts' | 'advancedSearch' | 'legal' | 'register' | 'registration' | 'confirm' | 'activationWelcome' | 'profile' | 'dashboard' | 'messages' | 'monetization' | 'clientPortal' | 'verification' | 'checkout' | 'review' | 'agencies' | 'admin' | 'notification';
 
 const SESSION_KEY = 'utamu.session';
 const PENDING_REGISTRATION_KEY = 'utamu.pendingRegistration';
@@ -32,6 +32,7 @@ function clearSession() {
 const routeLinks = [
   '/',
   '/discover',
+  '/male-escorts',
   '/advanced-search',
   '/agencies',
   '/privacy-policy',
@@ -67,6 +68,7 @@ const routeLinks = [
 function viewFor(slug?: string[]): View {
   const path = slug?.join('/') || '';
   if (!path || path === 'discover') return 'home';
+  if (path === 'male-escorts') return 'maleEscorts';
   if (path === 'advanced-search') return 'advancedSearch';
   if (path === 'agencies') return 'agencies';
   if (['privacy-policy', 'terms', 'help'].includes(path)) return 'legal';
@@ -149,6 +151,7 @@ function Shell({ children }: { children: React.ReactNode }) {
             <a href="/" className="text-center font-serif text-3xl font-bold italic leading-none tracking-tight text-white [text-shadow:0_2px_0_#7f6a90,0_0_22px_rgba(240,179,35,.22)] sm:text-4xl lg:text-left lg:text-5xl">Secret Nairobi</a>
             <nav className="flex flex-wrap items-center justify-center gap-2 text-xs font-bold sm:text-sm lg:flex-1 lg:justify-start">
               <a href="/" className="rounded-full bg-gradient-to-r from-[#e60073] to-[#ff57b8] px-3 py-2 text-white shadow-sm shadow-[#e60073]/30 ring-1 ring-white/15 sm:px-4">All Nairobi Escorts</a>
+              <a href="/male-escorts" className="rounded-full border border-[#f0b323]/50 bg-white/5 px-3 py-2 text-[#ffe49a] transition hover:bg-[#f0b323] hover:text-[#2b0a3d] sm:px-4">Male Escorts</a>
               <a href="/agencies" className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-[#f0b323]">Agencies</a>
               <a href="/reviews/ratings" className="rounded-full px-3 py-2 transition hover:bg-white/10 hover:text-[#f0b323]">Reviews</a>
               <a href="/register" className="rounded-full px-3 py-2 uppercase transition hover:bg-white/10 hover:text-[#f0b323]">Advertise here</a>
@@ -181,16 +184,16 @@ function buildSearchUrl(params: Record<string, string | boolean | undefined>) {
   return query ? `/discover?${query}` : '/discover';
 }
 
-function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:block' }: { spacerClass?: string }) {
+function QuickSearchPanel({ spacerClass = 'hidden min-h-[760px] bg-[#101010] lg:block', defaultGender = 'All' }: { spacerClass?: string; defaultGender?: 'All' | 'Female' | 'Male' }) {
   const [query, setQuery] = useState('');
   const [country, setCountry] = useState('Kenya');
-  const [gender, setGender] = useState('All');
+  const [gender, setGender] = useState<string>(defaultGender);
   const [listing, setListing] = useState('All');
   useEffect(() => {
     if (typeof window === 'undefined') return;
     const params = new URLSearchParams(window.location.search);
     setQuery(params.get('query') || '');
-    setGender(params.get('gender') || 'All');
+    setGender(params.get('gender') || defaultGender);
     setListing(params.get('listing') || (params.get('vip') === 'true' ? 'VIP' : params.get('verified') === 'true' ? 'Trusted' : 'All'));
   }, []);
   const listingOptions = [
@@ -268,49 +271,53 @@ function ModelCard({ model, index = 0 }: { model: UtamuModel; index?: number }) 
   );
 }
 
-function DiscoveryHome() {
+function DiscoveryHome({ section = 'female' }: { section?: 'female' | 'male' }) {
   const { filteredModels, filters, actions } = useUtamuDirectory();
+  const isMaleSection = section === 'male';
+  const defaultGender = isMaleSection ? 'Male' : 'Female';
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
+    if (!params.has('gender')) params.set('gender', defaultGender);
     actions.applySearchParams(params);
-  }, []);
-  const hasActiveFilters = Boolean(filters.query || filters.city !== 'All' || filters.category !== 'All' || filters.gender !== 'All' || filters.listingType !== 'All' || filters.service !== 'All' || filters.minPrice || filters.maxPrice || filters.verifiedOnly || filters.eliteOnly);
+  }, [defaultGender]);
   const sortedHomeModels = sortDirectoryItems(filteredModels);
-  const directoryModels = sortedHomeModels.filter((model) => !isAgencyModel(model));
+  const effectiveGender = isMaleSection ? 'Male' : filters.gender === 'All' ? 'Female' : filters.gender;
+  const directoryModels = sortedHomeModels.filter((model) => !isAgencyModel(model) && String((model as any).gender || (model as any).profile?.gender || 'Female').toLowerCase() === effectiveGender.toLowerCase());
 
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
         <section className="sn-fade-up bg-[#fff7fb] px-4 py-5 md:px-5">
           <div className="sn-fade-up mb-6 flex flex-wrap items-center justify-between gap-4">
-            <h1 className="text-xl font-normal text-[#3b164b]">All escorts</h1>
+            <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#006b3f]">Secret Nairobi directory</p><h1 className="mt-1 text-2xl font-normal text-[#3b164b]">{isMaleSection ? 'Male Escorts' : 'All Nairobi Escorts'}</h1></div>
             <div className="flex flex-wrap gap-2 text-sm">
               {[
-                { label: 'Female', href: '/discover?gender=Female' },
+                { label: 'Female Escorts', href: '/' },
+                { label: 'Male Escorts', href: '/male-escorts' },
                 { label: 'Independent', href: '/discover?listing=Independent' },
                 { label: 'VIP', href: '/discover?listing=VIP&vip=true' },
                 { label: 'New', href: '/discover?query=new' },
-              ].map((item) => <a key={item.label} href={item.href} className="rounded-full border border-[#f0b323]/40 bg-white px-4 py-2 text-[#e60073] shadow-sm hover:border-[#006b3f]/50 hover:text-[#006b3f]">{item.label}</a>)}
+              ].map((item) => { const active = item.href === (isMaleSection ? '/male-escorts' : '/'); return <a key={item.label} href={item.href} className={'rounded-full border px-4 py-2 font-bold shadow-sm transition ' + (active ? 'border-[#006b3f] bg-[#006b3f] text-white' : 'border-[#f0b323]/40 bg-white text-[#e60073] hover:border-[#006b3f]/50 hover:text-[#006b3f]')}>{item.label}</a>; })}
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4">
             {directoryModels.map((model, index) => <ModelCard key={model.id} model={model} index={index} />)}
           </div>
-          {directoryModels.length === 0 && <div className="mt-6 rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#3b164b]">No real escort profiles are available for those filters yet.</div>}
+          {directoryModels.length === 0 && <div className="mt-6 rounded-[4px] border border-[#ffd1e8] bg-white p-6 text-center text-sm font-semibold text-[#3b164b]">No {isMaleSection ? 'male ' : 'female '}escort profiles are available for those filters yet.</div>}
 
         </section>
-        <QuickSearchPanel />
+        <QuickSearchPanel defaultGender={defaultGender} />
       </div>
       <section className="sn-fade-up border-t-4 border-[#006b3f] bg-[#fff7fb] px-4 py-7 text-[#111] md:px-5">
-        <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">Secret Nairobi Escorts - Nairobi's Premium Companion Directory</h2>
-        <p className="mb-3 text-[15px] leading-7">Across Nairobi, adults need a discreet and organized way to discover verified escorts with polished presentation, clear communication, and reliable profile details. Secret Nairobi Escorts gives members a simple way to browse listings, compare styles, review availability, and connect with companions suited for private bookings, hospitality, travel-ready arrangements, and premium social experiences.</p>
+        <h2 className="mb-3 text-2xl font-bold leading-tight sm:text-3xl">{isMaleSection ? 'Male Escorts in Nairobi - Discreet, Detailed Profiles' : "Secret Nairobi Escorts - Nairobi's Premium Companion Directory"}</h2>
+        <p className="mb-3 text-[15px] leading-7">{isMaleSection ? 'Explore male escort profiles from one focused Nairobi directory. Compare real portfolio images, listed services, availability, verification signals, and agency representation before opening the full profile.' : 'Across Nairobi, adults need a discreet and organized way to discover verified escorts with polished presentation, clear communication, and reliable profile details. Secret Nairobi Escorts gives members a simple way to browse listings, compare styles, review availability, and connect with companions suited for private bookings, hospitality, travel-ready arrangements, and premium social experiences.'}</p>
         <p className="mb-3 text-[15px] leading-7">Our directory focuses on elegant presentation, quick discovery, and visible trust signals. You can explore independent escorts, VIP profiles, new listings, and verified members from one place, with Nairobi neighborhoods and Kenyan payment flows designed into the experience.</p>
         <h3 className="mb-2 text-2xl font-bold">We Serve The Best Escort Directory Experience In Kenya</h3>
         <p className="text-[15px] leading-7">At Secret Nairobi, listed escorts are presented with clear photos, verification labels, review flows, and profile details so adults can make informed choices. Whether you prefer VIP visibility, independent listings, agency-managed profiles, or discreet Nairobi bookings, the goal is to make discovery fast, attractive, and easy to navigate.</p>
       </section>
       <footer className="sn-fade-up bg-gradient-to-r from-[#170421] via-[#2b0a3d] to-[#063b2c] px-5 py-5 text-center text-sm text-white">
         <div className="mb-2 font-serif text-3xl font-bold italic">Secret Nairobi</div>
-        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Escorts</a><a href="/agencies">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
+        <div className="flex flex-wrap justify-center gap-4 font-bold text-[#ffb7df]"><a href="/">All Nairobi Escorts</a><a href="/male-escorts">Male Escorts</a><a href="/agencies">Agencies</a><a href="/reviews/ratings">Reviews</a><a href="/register">Advertise here</a></div>
       </footer>
     </>
   );
@@ -429,17 +436,17 @@ function RegistrationFooter() {
 
 function FormRow({ label, hint, required = false, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
   return (
-    <div className="sn-fade-up grid gap-2 lg:grid-cols-[minmax(160px,260px)_1fr] lg:items-start">
-      <label className="text-sm font-normal text-[#00627c]">{label}{required && <span className="text-[#ff1493]">*</span>}{hint && <span className="mt-1 block text-xs text-[#a99aa5]">{hint}</span>}</label>
-      <div>{children}</div>
+    <div className="sn-fade-up grid gap-2 border-b border-[#f1e6ec] pb-4 last:border-b-0 last:pb-0 md:grid-cols-[170px_minmax(0,1fr)] md:items-start md:gap-5">
+      <label className="pt-1 text-[13px] font-bold leading-5 text-[#3b164b]">{label}{required && <span className="ml-0.5 text-[#e60073]">*</span>}{hint && <span className="mt-0.5 block text-[11px] font-normal leading-4 text-[#958892]">{hint}</span>}</label>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
-const fieldClass = 'min-h-10 w-full min-w-0 border border-[#ff55c7] bg-white px-2 text-sm text-[#111] outline-none focus:ring-2 focus:ring-[#ff55c7]/20';
-const selectClass = 'min-h-10 min-w-0 border border-[#ff55c7] bg-white px-2 text-sm text-[#59606a] outline-none';
-const checkboxCardClass = 'flex min-h-9 cursor-pointer items-center gap-2 rounded-[3px] border border-[#ffd0e8] bg-white/80 px-3 py-2 text-sm text-[#003b5c] transition hover:border-[#ff55c7] hover:bg-white';
-const serviceTileBaseClass = 'flex min-h-10 cursor-pointer items-center gap-2 rounded-[6px] border px-3 py-2 text-xs font-bold uppercase transition focus-within:ring-2 focus-within:ring-[#6b7280]/30 sm:text-sm';
+const fieldClass = 'min-h-10 w-full min-w-0 rounded-[6px] border border-[#d9ccd5] bg-[#fffdfd] px-3 text-sm text-[#21102b] outline-none transition placeholder:text-[#aa9da6] hover:border-[#c3abb9] focus:border-[#e60073] focus:bg-white focus:ring-2 focus:ring-[#e60073]/10';
+const selectClass = 'min-h-10 min-w-0 rounded-[6px] border border-[#d9ccd5] bg-[#fffdfd] px-3 text-sm text-[#4f4550] outline-none transition hover:border-[#c3abb9] focus:border-[#e60073] focus:bg-white focus:ring-2 focus:ring-[#e60073]/10';
+const checkboxCardClass = 'flex min-h-9 cursor-pointer items-center gap-2 rounded-[6px] border border-[#e7dce3] bg-[#fffdfd] px-3 py-2 text-[13px] font-semibold text-[#3b164b] transition hover:border-[#e60073]/50 hover:bg-[#fff8fb] [&_input]:accent-[#006b3f]';
+const serviceTileBaseClass = 'flex min-h-9 cursor-pointer items-center gap-2 rounded-[6px] border px-3 py-1.5 text-xs font-bold uppercase transition focus-within:ring-2 focus-within:ring-[#6b7280]/30';
 const serviceTileSelectedClass = 'border-[#6b7280] bg-[#6b7280] text-white shadow-sm shadow-[#2b0a3d]/10';
 const serviceTileIdleClass = 'border-[#c9d0da] bg-white/90 text-[#26364a] hover:border-[#6b7280] hover:bg-[#f6f8fb]';
 const kenyanTowns = [
@@ -541,7 +548,6 @@ function RegistrationFormScreen({ path }: { path: string }) {
   const isAgency = kind === 'agency';
   const isMember = kind === 'member';
   const title = isIndependent ? 'Independent Escort Registration' : isAgency ? 'Register as Agency' : 'Member Registration';
-  const formMinHeight = isIndependent ? 'lg:min-h-[2080px]' : isAgency ? 'lg:min-h-[980px]' : 'lg:min-h-[720px]';
   const services = modelServices;
   const agencyServices = ['Independent escort management', 'Portfolio coordination', 'Client vetting', 'Campaign staffing', 'Event staffing', 'Verification support', 'Image review', 'Booking calendar', 'VIP placement', 'Multi-city coverage', 'Escort onboarding', 'Brand partnerships'];
   const memberPreferences = ['Save favorite profiles', 'Compare escort profiles', 'Follow verified escorts', 'Review completed bookings', 'Receive availability updates', 'Browse VIP profiles', 'Contact agencies'];
@@ -625,10 +631,12 @@ function RegistrationFormScreen({ path }: { path: string }) {
 
   const registrationImagePanel = !isMember && (
     <FormRow label={isAgency ? 'Agency profile images' : 'Profile images'} hint={isAgency ? 'Add at least one clear agency image or logo' : 'Add at least one clear public profile image'} required>
-      <div className="rounded-[3px] border border-dashed border-[#ff8fc8] bg-white/70 p-4">
+      <div className="rounded-[8px] border border-dashed border-[#ddb9cd] bg-[#fff8fb] p-3 sm:p-4">
         <input id="registration-profile-images" type="file" accept="image/*" multiple onChange={(event) => selectRegistrationImages(event.target.files)} className="hidden" />
-        <label htmlFor="registration-profile-images" className="inline-flex cursor-pointer rounded-full bg-[#3b164b] px-5 py-2 text-sm font-bold text-white">Choose profile images</label>
-        <p className="mt-2 text-xs leading-5 text-[#7b6e78]">{isAgency ? 'This image represents your agency in the Agencies directory. Roster escorts are added separately after registration.' : 'Your first image prevents empty profiles. You can add more later from My Account.'}</p>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div><p className="text-sm font-bold text-[#3b164b]">Add your public image</p><p className="mt-0.5 text-xs leading-5 text-[#7b6e78]">{isAgency ? 'Your agency image or logo. Roster profiles can be added later.' : 'Start with one clear image. Add more later from My Account.'}</p></div>
+          <label htmlFor="registration-profile-images" className="inline-flex shrink-0 cursor-pointer items-center justify-center rounded-full bg-[#3b164b] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#006b3f]">Choose images</label>
+        </div>
         {registrationImagePreviews.length > 0 && (
           <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
             {registrationImagePreviews.map((preview) => (
@@ -649,11 +657,14 @@ function RegistrationFormScreen({ path }: { path: string }) {
   return (
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
-        <section className={'sn-fade-up min-w-0 bg-[#fff0f6] px-4 py-5 text-[#003b5c] sm:px-5 ' + formMinHeight}>
-          <h1 className="text-2xl font-normal text-[#3b164b]">{title}</h1>
-          {isMember && <div className="mt-5 bg-[#d70032] py-2 text-center text-sm font-bold text-white">Escorts should register here</div>}
-          <p className="mt-4 text-xs">Fields marked with <span className="font-bold text-[#ff1493]">*</span> are mandatory</p>
-          <form className="sn-stagger mt-7 space-y-6" onSubmit={handleRegistrationSubmit}>
+        <section className="sn-fade-up min-w-0 bg-[#f8f4f7] px-3 py-6 text-[#003b5c] sm:px-5 sm:py-8">
+          <div className="mx-auto max-w-[860px]">
+            <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+              <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#006b3f]">Create your account</p><h1 className="mt-1 text-2xl font-bold text-[#3b164b]">{title}</h1></div>
+              <p className="text-xs text-[#7b6e78]"><span className="font-bold text-[#e60073]">*</span> Required fields</p>
+            </div>
+            {isMember && <div className="mb-4 rounded-[6px] border border-[#ffd1e8] bg-[#fff8fb] px-4 py-2 text-center text-xs font-bold text-[#b00058]">Escort accounts use the independent or agency registration option.</div>}
+            <form className="sn-stagger space-y-4 rounded-[8px] border border-[#eadde5] bg-white p-4 shadow-[0_12px_35px_rgba(59,22,75,0.07)] sm:p-6" onSubmit={handleRegistrationSubmit}>
             {registrationImagePanel}
             <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
             <FormRow label='Password' hint='Must be between 6 and 50 characters' required><input name='password' type='password' className={fieldClass} /></FormRow>
@@ -668,9 +679,9 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {isAgency && <FormRow label="Agency Name" required><input name="agencyName" className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Phone" required><input name="phone" className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Website"><input name="website" className={fieldClass} /></FormRow>}
-            {!isMember && <FormRow label="Country" required><select name="country" className={selectClass}><option>Kenya</option></select></FormRow>}
+            {!isMember && <FormRow label="Country" required><select name="country" className={selectClass + ' w-full'}><option>Kenya</option></select></FormRow>}
             {!isMember && <FormRow label="City" required><select name="city" className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><span className="mt-1 block text-xs text-[#a99aa5]">Popular Kenyan towns and Nairobi neighborhoods are included for faster setup.</span></FormRow>}
-            {isAgency && <FormRow label="About the Agency" required><textarea name="about" className="min-h-32 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /></FormRow>}
+            {isAgency && <FormRow label="About the Agency" required><textarea name="about" className={fieldClass + ' min-h-28 resize-y py-3'} /></FormRow>}
             {isAgency && <FormRow label="Agency services"><div className="grid gap-2 md:grid-cols-2">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input name="agencyServices" value={service} type="checkbox" /> {service}</label>)}</div></FormRow>}
             {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input name="primaryMarkets" value={town} type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
@@ -687,7 +698,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Weight" required><select name="weight" className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
                 <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{availabilityOptions.map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#6b7280]' : 'border-[#c9d0da] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
                 <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="About you" required><textarea name="about" className="min-h-36 w-full border border-[#ff55c7] bg-white p-2 text-sm text-[#111] outline-none" /><span className="mt-1 block text-xs text-[#a99aa5]">html code will be removed</span></FormRow>
+                <FormRow label="About you" required><textarea name="about" className={fieldClass + ' min-h-28 resize-y py-3'} /><span className="mt-1 block text-[11px] text-[#958892]">Plain text only</span></FormRow>
                 <FormRow label="Sex orientation"><select name="orientation" className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
                 <FormRow label="Rates"><div className="max-w-full overflow-x-auto"><div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3"><span>Currency:</span><select className={selectClass + ' w-full sm:w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[440px] grid-cols-[100px_1fr_1fr] gap-2 text-center text-xs sm:grid-cols-[120px_1fr_1fr] sm:text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
@@ -717,8 +728,9 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 </div></FormRow>
               </>
             )}
-            {registrationError && <p className="rounded bg-[#d70032] p-3 text-center text-sm font-bold text-white">{registrationError}</p>}<div className="pt-2 text-center"><button disabled={submitting} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-3 text-sm font-bold text-white shadow-sm disabled:opacity-60">{submitting ? 'Submitting...' : 'Complete Registration'}</button></div>
-          </form>
+              {registrationError && <p className="rounded-[6px] bg-[#d70032] p-3 text-center text-sm font-bold text-white">{registrationError}</p>}<div className="pt-1 text-center"><button disabled={submitting} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-2.5 text-sm font-bold text-white shadow-sm transition hover:shadow-md disabled:opacity-60">{submitting ? 'Submitting...' : 'Complete Registration'}</button></div>
+            </form>
+          </div>
         </section>
         <RegistrationQuickSearch />
       </div>
@@ -1670,5 +1682,5 @@ function RouteIndex() {
 export default function UtamuApp({ slug }: UtamuAppProps) {
   const path = useMemo(() => slug?.join('/') || '', [slug]);
   const view = viewFor(slug);
-  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'activationWelcome' && <ActivationWelcomeScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'agencies' && <AgenciesScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'activationWelcome', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'agencies', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
+  return <Shell>{view === 'home' && <DiscoveryHome />}{view === 'maleEscorts' && <DiscoveryHome section="male" />}{view === 'advancedSearch' && <AdvancedSearchScreen />}{view === 'legal' && <LegalScreen path={path} />}{view === 'register' && <RegisterScreen />}{view === 'registration' && <RegistrationFormScreen path={path} />}{view === 'confirm' && <ConfirmEmailScreen />}{view === 'activationWelcome' && <ActivationWelcomeScreen />}{view === 'profile' && <ProfileScreen path={path} />}{view === 'dashboard' && <DashboardScreen path={path} />}{view === 'messages' && <MessagesScreen />}{view === 'monetization' && <MonetizationScreen />}{view === 'clientPortal' && <ClientPortalScreen />}{view === 'verification' && <VerificationScreen path={path} />}{view === 'checkout' && <CheckoutScreen />}{view === 'review' && <ReviewScreen />}{view === 'agencies' && <AgenciesScreen />}{view === 'admin' && <AdminScreen path={path} />}{view === 'notification' && <NotificationScreen />}{!['home', 'maleEscorts', 'advancedSearch', 'legal', 'register', 'registration', 'confirm', 'activationWelcome', 'profile', 'dashboard', 'messages', 'monetization', 'clientPortal', 'verification', 'checkout', 'review', 'agencies', 'admin', 'notification'].includes(view) && <RouteIndex />}</Shell>;
 }
