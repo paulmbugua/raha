@@ -434,10 +434,10 @@ function RegistrationFooter() {
   );
 }
 
-function FormRow({ label, hint, required = false, children }: { label: string; hint?: string; required?: boolean; children: React.ReactNode }) {
+function FormRow({ label, hint, required = false, wide = false, children }: { label: string; hint?: string; required?: boolean; wide?: boolean; children: React.ReactNode }) {
   return (
-    <div className="sn-fade-up grid gap-2 border-b border-[#f1e6ec] pb-4 last:border-b-0 last:pb-0 md:grid-cols-[170px_minmax(0,1fr)] md:items-start md:gap-5">
-      <label className="pt-1 text-[13px] font-bold leading-5 text-[#3b164b]">{label}{required && <span className="ml-0.5 text-[#e60073]">*</span>}{hint && <span className="mt-0.5 block text-[11px] font-normal leading-4 text-[#958892]">{hint}</span>}</label>
+    <div className={'sn-fade-up min-w-0 space-y-1.5 ' + (wide ? 'md:col-span-2' : '')}>
+      <label className="block text-[12px] font-bold leading-4 text-[#3b164b]">{label}{required && <span className="ml-0.5 text-[#e60073]">*</span>}{hint && <span className="ml-2 font-normal text-[#958892]">{hint}</span>}</label>
       <div className="min-w-0">{children}</div>
     </div>
   );
@@ -630,7 +630,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
 
 
   const registrationImagePanel = !isMember && (
-    <FormRow label={isAgency ? 'Agency profile images' : 'Profile images'} hint={isAgency ? 'Add at least one clear agency image or logo' : 'Add at least one clear public profile image'} required>
+    <FormRow label={isAgency ? 'Agency profile images' : 'Profile images'} hint={isAgency ? 'Add at least one clear agency image or logo' : 'Add at least one clear public profile image'} required wide>
       <div className="rounded-[8px] border border-dashed border-[#ddb9cd] bg-[#fff8fb] p-3 sm:p-4">
         <input id="registration-profile-images" type="file" accept="image/*" multiple onChange={(event) => selectRegistrationImages(event.target.files)} className="hidden" />
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -658,13 +658,13 @@ function RegistrationFormScreen({ path }: { path: string }) {
     <>
       <div className="grid gap-0 lg:grid-cols-[1fr_220px]">
         <section className="sn-fade-up min-w-0 bg-[#f8f4f7] px-3 py-6 text-[#003b5c] sm:px-5 sm:py-8">
-          <div className="mx-auto max-w-[860px]">
+          <div className="mx-auto max-w-[920px]">
             <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
               <div><p className="text-[11px] font-bold uppercase tracking-[0.16em] text-[#006b3f]">Create your account</p><h1 className="mt-1 text-2xl font-bold text-[#3b164b]">{title}</h1></div>
               <p className="text-xs text-[#7b6e78]"><span className="font-bold text-[#e60073]">*</span> Required fields</p>
             </div>
             {isMember && <div className="mb-4 rounded-[6px] border border-[#ffd1e8] bg-[#fff8fb] px-4 py-2 text-center text-xs font-bold text-[#b00058]">Escort accounts use the independent or agency registration option.</div>}
-            <form className="sn-stagger space-y-4 rounded-[8px] border border-[#eadde5] bg-white p-4 shadow-[0_12px_35px_rgba(59,22,75,0.07)] sm:p-6" onSubmit={handleRegistrationSubmit}>
+            <form className="sn-stagger grid gap-x-4 gap-y-4 rounded-[8px] border border-[#eadde5] bg-white p-4 shadow-[0_12px_35px_rgba(59,22,75,0.07)] sm:p-5 md:grid-cols-2" onSubmit={handleRegistrationSubmit}>
             {registrationImagePanel}
             <FormRow label="Username" hint="Between 4 and 30 characters" required><input name="username" className={fieldClass} /></FormRow>
             <FormRow label='Password' hint='Must be between 6 and 50 characters' required><input name='password' type='password' className={fieldClass} /></FormRow>
@@ -674,20 +674,20 @@ function RegistrationFormScreen({ path }: { path: string }) {
             {isMember && <FormRow label="Email" required><input name="email" type="email" className={fieldClass} /></FormRow>}
             {isMember && <FormRow label="City"><select className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select></FormRow>}
             {isMember && <FormRow label="Browsing interest"><select className={selectClass + ' w-full'}><option>Verified Nairobi escorts</option><option>VIP escorts</option><option>Agency represented escorts</option><option>Discreet Nairobi companions</option></select></FormRow>}
-            {isMember && <FormRow label="Member preferences"><div className="grid gap-2 md:grid-cols-2">{memberPreferences.map((item) => <label key={item} className={checkboxCardClass}><input name="preferences" value={item} type="checkbox" /> {item}</label>)}</div></FormRow>}
+            {isMember && <FormRow label="Member preferences" wide><div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{memberPreferences.map((item) => <label key={item} className={checkboxCardClass}><input name="preferences" value={item} type="checkbox" /> {item}</label>)}</div></FormRow>}
             {isIndependent && <FormRow label="Name" hint="will be publicly shown" required><input name="name" className={fieldClass} /></FormRow>}
             {isAgency && <FormRow label="Agency Name" required><input name="agencyName" className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Phone" required><input name="phone" className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Website"><input name="website" className={fieldClass} /></FormRow>}
             {!isMember && <FormRow label="Country" required><select name="country" className={selectClass + ' w-full'}><option>Kenya</option></select></FormRow>}
             {!isMember && <FormRow label="City" required><select name="city" className={selectClass + ' w-full'}>{kenyanTowns.map((town) => <option key={town}>{town}</option>)}</select><span className="mt-1 block text-xs text-[#a99aa5]">Popular Kenyan towns and Nairobi neighborhoods are included for faster setup.</span></FormRow>}
-            {isAgency && <FormRow label="About the Agency" required><textarea name="about" className={fieldClass + ' min-h-28 resize-y py-3'} /></FormRow>}
-            {isAgency && <FormRow label="Agency services"><div className="grid gap-2 md:grid-cols-2">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input name="agencyServices" value={service} type="checkbox" /> {service}</label>)}</div></FormRow>}
-            {isAgency && <FormRow label="Primary markets"><div className="grid gap-2 md:grid-cols-2">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input name="primaryMarkets" value={town} type="checkbox" /> {town}</label>)}</div></FormRow>}
+            {isAgency && <FormRow label="About the Agency" required wide><textarea name="about" className={fieldClass + ' min-h-24 resize-y py-3'} /></FormRow>}
+            {isAgency && <FormRow label="Agency services" wide><div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{agencyServices.map((service) => <label key={service} className={checkboxCardClass}><input name="agencyServices" value={service} type="checkbox" /> {service}</label>)}</div></FormRow>}
+            {isAgency && <FormRow label="Primary markets" wide><div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">{kenyanTowns.slice(0, 12).map((town) => <label key={town} className={checkboxCardClass}><input name="primaryMarkets" value={town} type="checkbox" /> {town}</label>)}</div></FormRow>}
             {isIndependent && (
               <>
                 <FormRow label="Gender" required><select name="gender" className={selectClass + ' w-full'}><option>Female</option><option>Male</option></select></FormRow>
-                <FormRow label="Date of birth" hint="we calculate your age from this" required><div className="grid gap-2 sm:grid-cols-3"><select name="birthYear" className={selectClass + ' w-full'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select name="birthMonth" className={selectClass + ' w-full'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select name="birthDay" className={selectClass + ' w-full'}><option>Date</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
+                <FormRow label="Date of birth" hint="Age is calculated automatically" required><div className="grid grid-cols-3 gap-1.5"><select name="birthYear" className={selectClass + ' w-full px-2'}><option>Year</option>{birthYears.map((year) => <option key={year}>{year}</option>)}</select><select name="birthMonth" className={selectClass + ' w-full px-2'}><option>Month</option>{birthMonths.map((month) => <option key={month}>{month}</option>)}</select><select name="birthDay" className={selectClass + ' w-full px-2'}><option>Day</option>{birthDays.map((day) => <option key={day}>{day}</option>)}</select></div></FormRow>
                 <FormRow label="Ethnicity" required><select name="ethnicity" className={selectClass + ' w-full'}><option>Select ethnicity</option>{kenyanEthnicities.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Hair Color" required><select name="hairColor" className={selectClass + ' w-full'}><option>Select hair color</option>{hairColors.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
                 <FormRow label="Hair length" required><select name="hairLength" className={selectClass + ' w-full'}><option>Select hair length</option>{hairLengths.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
@@ -698,11 +698,11 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 <FormRow label="Weight" required><select name="weight" className={selectClass + ' w-full'}><option>Select weight</option>{weightOptions.map((weight) => <option key={weight}>{weight} kg</option>)}</select></FormRow>
                 <FormRow label="Availability" required><div className="grid gap-2 sm:grid-cols-2">{availabilityOptions.map((item) => { const selected = selectedAvailability.includes(item); return <button type="button" key={item} onClick={() => toggleAvailability(item)} className={serviceTileBaseClass + ' ' + (selected ? serviceTileSelectedClass : serviceTileIdleClass)}><span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (selected ? 'border-white bg-white text-[#6b7280]' : 'border-[#c9d0da] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>{item}</button>; })}</div></FormRow>
                 <FormRow label="Smoker" required><select name="smoker" className={selectClass + ' w-full'}>{smokerOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="About you" required><textarea name="about" className={fieldClass + ' min-h-28 resize-y py-3'} /><span className="mt-1 block text-[11px] text-[#958892]">Plain text only</span></FormRow>
+                <FormRow label="About you" required wide><textarea name="about" className={fieldClass + ' min-h-24 resize-y py-3'} /><span className="mt-1 block text-[11px] text-[#958892]">Plain text only</span></FormRow>
                 <FormRow label="Sex orientation"><select name="orientation" className={selectClass + ' w-full'}><option>Select orientation</option>{orientationOptions.map((item) => <option key={item}>{item}</option>)}</select></FormRow>
-                <FormRow label="Languages spoken"><div className="space-y-2">{[0, 1, 2].map((item) => <div key={item} className="grid gap-2 sm:grid-cols-[1fr_160px]"><select name={'language' + item} className={selectClass + ' w-full'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full'}><option>Select level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
-                <FormRow label="Rates"><div className="max-w-full overflow-x-auto"><div className="mb-4 flex flex-col gap-2 text-sm sm:flex-row sm:items-center sm:justify-end sm:gap-3"><span>Currency:</span><select className={selectClass + ' w-full sm:w-72'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[440px] grid-cols-[100px_1fr_1fr] gap-2 text-center text-xs sm:grid-cols-[120px_1fr_1fr] sm:text-sm"><strong></strong><strong>Incall</strong><strong>Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="py-2 text-right">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
-                <FormRow label="Services"><div className="space-y-4">
+                <FormRow label="Languages spoken" wide><div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">{[0, 1, 2].map((item) => <div key={item} className="grid grid-cols-[minmax(0,1fr)_110px] gap-1.5"><select name={'language' + item} className={selectClass + ' w-full px-2'}><option>Select language</option>{spokenLanguages.map((language) => <option key={language}>{language}</option>)}</select><select name={'languageLevel' + item} className={selectClass + ' w-full px-2'}><option>Level</option>{languageLevels.map((level) => <option key={level}>{level}</option>)}</select></div>)}</div></FormRow>
+                <FormRow label="Rates" wide><div className="max-w-full overflow-x-auto rounded-[6px] border border-[#eadde5] bg-[#fffafb] p-3"><div className="mb-3 flex flex-col gap-1.5 text-xs sm:flex-row sm:items-center sm:justify-end"><strong>Currency</strong><select className={selectClass + ' w-full sm:w-60'}><option>KES - Kenyan Shilling</option></select></div><div className="grid min-w-[390px] grid-cols-[82px_1fr_1fr] gap-1.5 text-center text-xs sm:grid-cols-[100px_1fr_1fr]"><strong></strong><strong className="py-1 text-[#e60073]">Incall</strong><strong className="py-1 text-[#e60073]">Outcall</strong>{['30 minutes', '1 hour', '2 hours', '3 hours', '6 hours', '12 hours', '24 hours'].map((rate) => <div key={rate} className="contents"><span className="self-center pr-1 text-right text-[11px] text-[#7b6e78]">{rate}</span><input className={fieldClass} /><input className={fieldClass} /></div>)}</div></div></FormRow>
+                <FormRow label="Services" wide><div className="space-y-3">
                   <label className={serviceTileBaseClass + ' ' + (allServicesSelected ? serviceTileSelectedClass : serviceTileIdleClass)}>
                     <input className="sr-only" type="checkbox" checked={allServicesSelected} onChange={toggleAllServices} />
                     <span className={'grid h-5 w-5 shrink-0 place-items-center rounded-full border ' + (allServicesSelected ? 'border-white bg-white text-[#6b7280]' : 'border-[#6b7280] bg-white text-transparent')}><Check className="h-3.5 w-3.5" /></span>
@@ -728,7 +728,7 @@ function RegistrationFormScreen({ path }: { path: string }) {
                 </div></FormRow>
               </>
             )}
-              {registrationError && <p className="rounded-[6px] bg-[#d70032] p-3 text-center text-sm font-bold text-white">{registrationError}</p>}<div className="pt-1 text-center"><button disabled={submitting} className="rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-2.5 text-sm font-bold text-white shadow-sm transition hover:shadow-md disabled:opacity-60">{submitting ? 'Submitting...' : 'Complete Registration'}</button></div>
+              {registrationError && <p className="rounded-[6px] bg-[#d70032] p-3 text-center text-sm font-bold text-white md:col-span-2">{registrationError}</p>}<div className="flex justify-end border-t border-[#eadde5] pt-4 md:col-span-2"><button disabled={submitting} className="w-full rounded-full bg-gradient-to-b from-[#ff58bf] to-[#e60073] px-8 py-2.5 text-sm font-bold text-white shadow-sm transition hover:shadow-md disabled:opacity-60 sm:w-auto">{submitting ? 'Submitting...' : 'Complete Registration'}</button></div>
             </form>
           </div>
         </section>
