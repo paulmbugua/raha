@@ -2,6 +2,9 @@
 set -eu
 set -o pipefail
 
+if [ -z "${PGUSER:-}" ] && [ -n "${POSTGRES_USER:-}" ]; then export PGUSER=$POSTGRES_USER; fi
+if [ -z "${PGDATABASE:-}" ] && [ -n "${POSTGRES_DB:-}" ]; then export PGDATABASE=$POSTGRES_DB; fi
+
 tab=$(printf '\t')
 
 printf 'section\tname\tcount\n'

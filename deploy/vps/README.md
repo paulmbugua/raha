@@ -184,7 +184,7 @@ The release identifier must match on:
 
 ```bash
 docker compose --env-file .env.production -f compose.yml exec -T postgres \
-  sh -c 'PGDATABASE="$POSTGRES_DB" /bin/sh -s' < scripts/db-fingerprint.sh \
+  sh -c 'PGUSER="$POSTGRES_USER" PGDATABASE="$POSTGRES_DB" /bin/sh -s' < scripts/db-fingerprint.sh \
   > artifacts/target-db.tsv
 bash scripts/compare-fingerprints.sh artifacts/source-db.tsv artifacts/target-db.tsv
 docker compose --env-file .env.production -f compose.yml run --rm \
