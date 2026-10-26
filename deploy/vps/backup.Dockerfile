@@ -1,9 +1,6 @@
-FROM minio/mc:RELEASE.2025-04-16T18-13-26Z AS minio-client
-
 FROM postgres:16-alpine
 
-RUN apk add --no-cache age bash coreutils findutils jq rclone tar
-COPY --from=minio-client /usr/bin/mc /usr/local/bin/mc
+RUN apk add --no-cache age aws-cli bash coreutils findutils jq rclone tar
 
 COPY deploy/vps/scripts/backup.sh /app/backup.sh
 COPY deploy/vps/scripts/backup-loop.sh /app/backup-loop.sh

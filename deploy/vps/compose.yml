@@ -44,17 +44,14 @@ services:
     logging: *default-logging
 
   minio:
-    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    image: chrislusf/seaweedfs:3.80
     restart: *default-restart
-    command: server /data --console-address :9001
-    environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    command: server -dir=/data -s3 -s3.port=9000 -master.port=9333 -volume.port=8080 -filer.port=8888 -ip=minio -ip.bind=0.0.0.0
     volumes:
       - media_data:/data
     networks: [data]
     healthcheck:
-      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live >/dev/null"]
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9333/cluster/status"]
       interval: 15s
       timeout: 5s
       retries: 10
@@ -62,22 +59,25 @@ services:
     logging: *default-logging
 
   minio-init:
-    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    image: secretnairobi/backup:${RELEASE_ID}
+    build:
+      context: ../..
+      dockerfile: deploy/vps/backup.Dockerfile
     restart: "no"
     depends_on:
       minio:
         condition: service_healthy
-    entrypoint: ["/bin/sh", "-c"]
+    entrypoint: ["/bin/sh", "-ec"]
     command:
-      - >-
-        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" &&
-        mc mb --ignore-existing local/secretnairobi-images &&
-        mc mb --ignore-existing local/secretnairobi-previews &&
-        mc anonymous set none local/secretnairobi-images &&
-        mc anonymous set none local/secretnairobi-previews
+      - |
+        aws --endpoint-url http://minio:9000 s3api head-bucket --bucket secretnairobi-images 2>/dev/null ||
+          aws --endpoint-url http://minio:9000 s3api create-bucket --bucket secretnairobi-images
+        aws --endpoint-url http://minio:9000 s3api head-bucket --bucket secretnairobi-previews 2>/dev/null ||
+          aws --endpoint-url http://minio:9000 s3api create-bucket --bucket secretnairobi-previews
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      AWS_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      AWS_DEFAULT_REGION: us-east-1
     networks: [data]
     logging: *default-logging
 
@@ -175,6 +175,7 @@ services:
     logging: *default-logging
 
   backup:
+    image: secretnairobi/backup:${RELEASE_ID}
     build:
       context: ../..
       dockerfile: deploy/vps/backup.Dockerfile

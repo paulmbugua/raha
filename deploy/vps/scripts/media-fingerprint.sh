@@ -5,9 +5,12 @@ set -Eeuo pipefail
 : "${MINIO_ACCESS_KEY:?MINIO_ACCESS_KEY is required}"
 : "${MINIO_SECRET_KEY:?MINIO_SECRET_KEY is required}"
 
-mc alias set source "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" >/dev/null
+export AWS_ACCESS_KEY_ID=$MINIO_ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=$MINIO_SECRET_KEY
+export AWS_DEFAULT_REGION=us-east-1
 for bucket in secretnairobi-images secretnairobi-previews; do
-  count=$(mc find "source/$bucket" --type f --print | wc -l | tr -d ' ')
-  bytes=$(mc du --json "source/$bucket" | jq -s 'map(.size // 0) | add // 0')
+  listing=$(aws --endpoint-url "$MINIO_ENDPOINT" s3api list-objects-v2 --bucket "$bucket" --output json)
+  count=$(printf '%s' "$listing" | jq '[.Contents[]?] | length')
+  bytes=$(printf '%s' "$listing" | jq '[.Contents[]?.Size] | add // 0')
   printf '%s\t%s\t%s\n' "$bucket" "$count" "$bytes"
 done

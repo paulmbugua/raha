@@ -25,7 +25,6 @@ published=$("${compose[@]}" ps -q | xargs -r docker inspect --format '{{range $p
 
 "${compose[@]}" exec -T postgres sh -c 'pg_isready -U "$POSTGRES_USER" -d "$POSTGRES_DB"'
 "${compose[@]}" exec -T redis sh -c 'redis-cli -a "$REDIS_PASSWORD" ping' | grep -q PONG
-"${compose[@]}" exec -T backup sh -c 'mc alias set verify "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY"' >/dev/null
-"${compose[@]}" exec -T backup mc stat verify/secretnairobi-images >/dev/null
+"${compose[@]}" exec -T backup sh -c 'AWS_ACCESS_KEY_ID="$MINIO_ACCESS_KEY" AWS_SECRET_ACCESS_KEY="$MINIO_SECRET_KEY" aws --endpoint-url "$MINIO_ENDPOINT" s3api head-bucket --bucket secretnairobi-images' >/dev/null
 
 printf 'Deployment verification passed for release %s.\n' "$release"

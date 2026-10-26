@@ -1,7 +1,7 @@
 # Secret Nairobi HostPinnacle deployment
 
 This directory deploys PostgreSQL 16, Redis, the API, web app, admin SPA,
-private MinIO media storage, encrypted backups, and a dedicated Cloudflare
+private S3-compatible SeaweedFS media storage, encrypted backups, and a dedicated Cloudflare
 Tunnel. No service publishes a host port; Cloudflare Tunnel is the only public
 application ingress.
 
@@ -107,7 +107,7 @@ docker compose --env-file .env.production -f compose.yml ps
 ```
 
 The Compose file intentionally has no `ports` entries. PostgreSQL, Redis, and
-MinIO are reachable only on the internal `data` network.
+the S3 media service are reachable only on the internal `data` network.
 
 ## 5. Database migration
 

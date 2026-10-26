@@ -22,9 +22,11 @@ mkdir -p "$backup_root" "$workdir/media/images" "$workdir/media/previews"
 
 pg_dump --format=custom --no-owner --no-acl --file="$workdir/database.dump"
 
-mc alias set source "$MINIO_ENDPOINT" "$MINIO_ACCESS_KEY" "$MINIO_SECRET_KEY" >/dev/null
-mc mirror --overwrite source/secretnairobi-images "$workdir/media/images" >/dev/null
-mc mirror --overwrite source/secretnairobi-previews "$workdir/media/previews" >/dev/null
+export AWS_ACCESS_KEY_ID=$MINIO_ACCESS_KEY
+export AWS_SECRET_ACCESS_KEY=$MINIO_SECRET_KEY
+export AWS_DEFAULT_REGION=us-east-1
+aws --endpoint-url "$MINIO_ENDPOINT" s3 sync s3://secretnairobi-images "$workdir/media/images" --only-show-errors
+aws --endpoint-url "$MINIO_ENDPOINT" s3 sync s3://secretnairobi-previews "$workdir/media/previews" --only-show-errors
 
 (
   cd "$workdir"
