@@ -1,11 +1,9 @@
+FROM minio/mc:RELEASE.2025-04-16T18-13-26Z AS minio-client
+
 FROM postgres:16-alpine
 
-ARG TARGETARCH
-RUN apk add --no-cache age bash coreutils curl findutils jq rclone tar && \
-    arch="${TARGETARCH:-$(uname -m)}" && \
-    case "$arch" in amd64|x86_64) mc_arch=amd64 ;; arm64|aarch64) mc_arch=arm64 ;; *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; esac && \
-    curl -fsSL "https://dl.min.io/client/mc/release/linux-${mc_arch}/mc" -o /usr/local/bin/mc && \
-    chmod 0755 /usr/local/bin/mc
+RUN apk add --no-cache age bash coreutils findutils jq rclone tar
+COPY --from=minio-client /usr/bin/mc /usr/local/bin/mc
 
 COPY deploy/vps/scripts/backup.sh /app/backup.sh
 COPY deploy/vps/scripts/backup-loop.sh /app/backup-loop.sh
