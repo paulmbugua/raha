@@ -108,6 +108,8 @@ docker compose --env-file .env.production -f compose.yml ps
 
 The Compose file intentionally has no `ports` entries. PostgreSQL, Redis, and
 the S3 media service are reachable only on the internal `data` network.
+The stack uses dedicated `10.254.251.0/24` and `10.254.252.0/24` bridges; verify
+they do not overlap host routes during the VPS audit before deployment.
 
 ## 5. Database migration
 
