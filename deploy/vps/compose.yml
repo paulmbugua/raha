@@ -202,7 +202,7 @@ services:
         condition: service_healthy
       minio-init:
         condition: service_completed_successfully
-    networks: [data]
+    networks: [data, egress]
     healthcheck:
       test: ["CMD-SHELL", "test -f /backups/.last-success && test $$(($$(date +%s)-$$(cat /backups/.last-success))) -lt 172800"]
       interval: 1h
@@ -242,6 +242,11 @@ networks:
     ipam:
       config:
         - subnet: 10.254.251.0/24
+  egress:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 10.254.250.0/24
 
 volumes:
   postgres_data:
