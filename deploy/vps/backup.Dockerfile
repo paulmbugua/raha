@@ -2,7 +2,8 @@ FROM postgres:16-alpine
 
 ARG TARGETARCH
 RUN apk add --no-cache age bash coreutils curl findutils jq rclone tar && \
-    case "$TARGETARCH" in amd64) mc_arch=amd64 ;; arm64) mc_arch=arm64 ;; *) echo "Unsupported architecture: $TARGETARCH" >&2; exit 1 ;; esac && \
+    arch="${TARGETARCH:-$(uname -m)}" && \
+    case "$arch" in amd64|x86_64) mc_arch=amd64 ;; arm64|aarch64) mc_arch=arm64 ;; *) echo "Unsupported architecture: $arch" >&2; exit 1 ;; esac && \
     curl -fsSL "https://dl.min.io/client/mc/release/linux-${mc_arch}/mc" -o /usr/local/bin/mc && \
     chmod 0755 /usr/local/bin/mc
 

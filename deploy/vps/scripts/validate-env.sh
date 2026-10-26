@@ -21,7 +21,7 @@ required=(
 for key in "${required[@]}"; do
   line=$(grep -m1 -E "^${key}=" "$env_file" || true)
   value=${line#*=}
-  if [[ -z "$line" || -z "$value" || "$value" == *replace-with* ]]; then
+  if [[ -z "$line" || -z "$value" || "$value" == *replace-with* || "$value" == *pending-* ]]; then
     echo "Required production setting is missing or still a placeholder: $key" >&2
     exit 1
   fi
