@@ -1,0 +1,243 @@
+name: ${COMPOSE_PROJECT_NAME:-secretnairobi}
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: "5"
+
+x-restart: &default-restart unless-stopped
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: *default-restart
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+
+  redis:
+    image: redis:7-alpine
+    restart: *default-restart
+    command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
+    volumes:
+      - redis_data:/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a '$${REDIS_PASSWORD}' ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+    logging: *default-logging
+
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    restart: *default-restart
+    command: server /data --console-address :9001
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    volumes:
+      - media_data:/data
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9000/minio/health/live >/dev/null"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    logging: *default-logging
+
+  minio-init:
+    image: minio/mc:RELEASE.2025-04-16T18-13-26Z
+    restart: "no"
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - >-
+        mc alias set local http://minio:9000 "$${MINIO_ROOT_USER}" "$${MINIO_ROOT_PASSWORD}" &&
+        mc mb --ignore-existing local/secretnairobi-images &&
+        mc mb --ignore-existing local/secretnairobi-previews &&
+        mc anonymous set none local/secretnairobi-images &&
+        mc anonymous set none local/secretnairobi-previews
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+    networks: [data]
+    logging: *default-logging
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/backend.Dockerfile
+    restart: *default-restart
+    env_file: .env.production
+    environment:
+      NODE_ENV: production
+      PORT: 4008
+      RELEASE_ID: ${RELEASE_ID}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      PGSSL: disable
+      DB_STARTUP_REQUIRED: "true"
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      R2_ENDPOINT: http://minio:9000
+      R2_REGION: us-east-1
+      R2_FORCE_PATH_STYLE: "true"
+      R2_ACCESS_KEY_ID: ${MINIO_ROOT_USER}
+      R2_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD}
+      R2_BUCKET_IMAGES: secretnairobi-images
+      R2_BUCKET_PREVIEWS: secretnairobi-previews
+      R2_PUBLIC_BASE_URL_IMAGES: https://server.secretnairobi.co.ke/api/utamu/images/proxy
+      R2_PUBLIC_BASE_URL_PREVIEWS: https://server.secretnairobi.co.ke/api/utamu/images/proxy
+      UTAMU_PROXY_R2_IMAGES: "true"
+      WEB_APP_URL: https://secretnairobi.co.ke
+      FRONTEND_URL: https://secretnairobi.co.ke
+      WEB_BACKEND_URL: https://server.secretnairobi.co.ke
+      BACKEND_PUBLIC_URL: https://server.secretnairobi.co.ke
+      JWT_SECRET: ${JWT_SECRET}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks: [data, edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4008/healthz').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+
+  web:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/web.Dockerfile
+      args:
+        NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+        NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+        NEXT_PUBLIC_RELEASE_ID: ${RELEASE_ID}
+    restart: *default-restart
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      RELEASE_ID: ${RELEASE_ID}
+      NEXT_PUBLIC_BACKEND_URL: ${NEXT_PUBLIC_BACKEND_URL}
+      NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
+      NEXT_PUBLIC_RELEASE_ID: ${RELEASE_ID}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/version').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    logging: *default-logging
+
+  admin:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/admin.Dockerfile
+    restart: *default-restart
+    environment:
+      BACKEND_URL: https://server.secretnairobi.co.ke
+      RELEASE_ID: ${RELEASE_ID}
+    depends_on:
+      backend:
+        condition: service_healthy
+    networks: [edge]
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz | grep -q ok"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    logging: *default-logging
+
+  backup:
+    build:
+      context: ../..
+      dockerfile: deploy/vps/backup.Dockerfile
+    restart: *default-restart
+    env_file: .env.production
+    environment:
+      PGHOST: postgres
+      PGPORT: 5432
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      MINIO_ENDPOINT: http://minio:9000
+      MINIO_ACCESS_KEY: ${MINIO_ROOT_USER}
+      MINIO_SECRET_KEY: ${MINIO_ROOT_PASSWORD}
+      BACKUP_AGE_RECIPIENT: ${BACKUP_AGE_RECIPIENT}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-14}
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      RCLONE_REMOTE: ${RCLONE_REMOTE:-}
+    volumes:
+      - backup_data:/backups
+      - ./secrets:/run/secrets:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+    networks: [data]
+    healthcheck:
+      test: ["CMD-SHELL", "test -f /backups/.last-success && test $$(($$(date +%s)-$$(cat /backups/.last-success))) -lt 172800"]
+      interval: 1h
+      timeout: 5s
+      retries: 3
+      start_period: 2m
+    logging: *default-logging
+
+  cloudflared:
+    image: cloudflare/cloudflared:2025.8.1
+    restart: *default-restart
+    command: tunnel --no-autoupdate --metrics 0.0.0.0:2000 run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      web:
+        condition: service_healthy
+      backend:
+        condition: service_healthy
+      admin:
+        condition: service_healthy
+    networks: [edge]
+    healthcheck:
+      test: ["CMD", "cloudflared", "version"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    logging: *default-logging
+
+networks:
+  edge:
+    driver: bridge
+  data:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+  redis_data:
+  media_data:
+  backup_data:

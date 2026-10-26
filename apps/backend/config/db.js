@@ -46,9 +46,9 @@ const cfg = effectiveDatabaseUrl && !productionLocalDatabaseUrl
 
     
          
-  const wantSsl =
+const wantSsl =
   process.env.PGSSL === 'require' ||
-  (isProd && !!cfg.connectionString);
+  (process.env.PGSSL !== 'disable' && isProd && !!cfg.connectionString);
 
 const pool = new Pool({
   ...cfg,

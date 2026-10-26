@@ -1,0 +1,13 @@
+tunnel: replace-with-tunnel-uuid
+credentials-file: /etc/cloudflared/credentials.json
+
+ingress:
+  - hostname: secretnairobi.co.ke
+    service: http://web:3000
+  - hostname: www.secretnairobi.co.ke
+    service: http://web:3000
+  - hostname: server.secretnairobi.co.ke
+    service: http://backend:4008
+  - hostname: admin.secretnairobi.co.ke
+    service: http://admin:80
+  - service: http_status:404

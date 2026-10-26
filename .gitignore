@@ -57,6 +57,7 @@ yarn-error.log*
 .env.*
 !.env.example
 !**/.env.example
+!**/.env.production.example
 .env.*.local
 .env.local
 
@@ -81,6 +82,18 @@ turbo/
 
 # Next.js build output
 apps/web/.next/
+
+# VPS deployment secrets and migration artifacts
+deploy/vps/.env.production
+deploy/vps/secrets/
+deploy/vps/artifacts/
+deploy/vps/cloudflared/credentials.json
+deploy/vps/cloudflared/*.pem
+deploy/vps/backups/
+*.dump
+*.dump.age
+*.tar.age
+*.sql.age
 apps/web/.open-next/
 
 

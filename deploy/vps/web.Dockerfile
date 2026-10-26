@@ -1,0 +1,22 @@
+FROM node:20-bookworm-slim AS builder
+
+WORKDIR /app
+RUN corepack enable
+COPY . .
+RUN yarn install --immutable
+ARG NEXT_PUBLIC_BACKEND_URL
+ARG NEXT_PUBLIC_SITE_URL
+ARG NEXT_PUBLIC_RELEASE_ID
+ENV NEXT_PUBLIC_BACKEND_URL=$NEXT_PUBLIC_BACKEND_URL
+ENV NEXT_PUBLIC_SITE_URL=$NEXT_PUBLIC_SITE_URL
+ENV NEXT_PUBLIC_RELEASE_ID=$NEXT_PUBLIC_RELEASE_ID
+RUN yarn workspace @desirenairobi/web build
+
+FROM node:20-bookworm-slim
+ENV NODE_ENV=production
+WORKDIR /app
+RUN corepack enable
+COPY --from=builder /app /app
+WORKDIR /app/apps/web
+EXPOSE 3000
+CMD ["yarn", "start", "-p", "3000"]

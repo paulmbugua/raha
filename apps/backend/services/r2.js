@@ -40,6 +40,7 @@ if (!endpoint || !bucket) {
 export const r2Client = new S3Client({
   region,
   endpoint,
+  forcePathStyle: String(process.env.R2_FORCE_PATH_STYLE || '').toLowerCase() === 'true',
   credentials: {
     accessKeyId: process.env.R2_ACCESS_KEY_ID || '',
     secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || '',

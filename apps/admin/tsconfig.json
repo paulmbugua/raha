@@ -17,5 +17,5 @@
       "@mindcare/shared/types": ["../../packages/shared/types/index.ts", "../../packages/shared/types/index.d.ts"]
     }
   },
-  "include": ["src", "*.ts", "*.tsx", "../../packages/shared"]
+  "include": ["src", "../../packages/shared"]
 }

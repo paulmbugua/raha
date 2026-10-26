@@ -8,6 +8,8 @@ import mpesaUrlsRoutes from './routes/mpesaUrlsRoutes.js';
 
 const app = express();
 const port = Number(process.env.PORT || 4008);
+const releaseId = process.env.RELEASE_ID || process.env.GIT_SHA || 'development';
+const versionPayload = { service: 'utamu-backend', release: releaseId };
 const defaultAllowedOrigins = [
   'http://localhost:3000',
   'http://127.0.0.1:3000',
@@ -54,6 +56,8 @@ app.use(express.urlencoded({ extended: true }));
 app.get('/', (_req, res) => res.json({ name: 'Utamu Directory API', status: 'ok' }));
 app.get('/healthz', (_req, res) => res.status(200).send('ok'));
 app.get('/health', (_req, res) => res.status(200).json({ status: 'ok', service: 'utamu-backend' }));
+app.get('/version', (_req, res) => res.status(200).json(versionPayload));
+app.get('/api/version', (_req, res) => res.status(200).json(versionPayload));
 app.use('/api/utamu', utamuRoutes);
 app.use('/api/mpesa', mpesaUrlsRoutes);
 app.use('/api', (_req, res) => res.status(200).json({ message: 'Utamu API is ready.', routes: ['/api/utamu/directory', '/api/utamu/models', '/api/utamu/payments/mpesa', '/api/mpesa/callback', '/api/utamu/admin'] }));
