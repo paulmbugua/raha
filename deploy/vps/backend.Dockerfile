@@ -1,6 +1,8 @@
 FROM node:20-bookworm-slim
 
 ENV NODE_ENV=production
+ENV PUPPETEER_SKIP_DOWNLOAD=true
+ENV PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1
 WORKDIR /app
 RUN corepack enable
 COPY . .
