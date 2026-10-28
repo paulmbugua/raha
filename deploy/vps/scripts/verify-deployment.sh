@@ -7,13 +7,15 @@ release=${RELEASE_ID:-$(git rev-parse --short=12 HEAD)}
 "${compose[@]}" ps
 
 for service in postgres redis minio backend web admin backup cloudflared; do
-  status=$("${compose[@]}" ps --format json "$service" | jq -r 'if type == "array" then .[0].Health // .[0].State else .Health // .State end')
+  container_id=$("${compose[@]}" ps -q "$service")
+  [[ -n "$container_id" ]] || { echo "$service container is missing" >&2; exit 1; }
+  status=$(docker inspect --format '{{if .State.Health}}{{.State.Health.Status}}{{else}}{{.State.Status}}{{end}}' "$container_id")
   [[ "$status" == healthy || "$status" == running ]] || { echo "$service is not healthy: $status" >&2; exit 1; }
 done
 
 backend_release=$("${compose[@]}" exec -T backend node -e "fetch('http://127.0.0.1:4008/api/version').then(r=>r.json()).then(v=>process.stdout.write(v.release))")
 web_release=$("${compose[@]}" exec -T web node -e "fetch('http://127.0.0.1:3000/version').then(r=>r.json()).then(v=>process.stdout.write(v.release))")
-admin_release=$("${compose[@]}" exec -T admin wget -qO- http://127.0.0.1/version.json | jq -r .release)
+admin_release=$("${compose[@]}" exec -T admin wget -qO- http://127.0.0.1/version.json | sed -n 's/.*"release"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
 
 [[ "$backend_release" == "$release" && "$web_release" == "$release" && "$admin_release" == "$release" ]] || {
   echo "Release mismatch: backend=$backend_release web=$web_release admin=$admin_release expected=$release" >&2
