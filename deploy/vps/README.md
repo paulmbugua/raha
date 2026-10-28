@@ -218,8 +218,11 @@ identity. Run one final encrypted backup after cutover.
 
 ## 10. Cloudflare Tunnel and cutover
 
-Create a dedicated tunnel named `secret-nairobi-hostpinnacle`, save its token in
-`.env.production`, and configure these dashboard-managed public hostnames:
+Create a dedicated locally managed tunnel named `secret-nairobi-hostpinnacle`.
+Copy `cloudflared/config.example.yml` to `cloudflared/config.yml`, replace the
+tunnel UUID, and store the generated tunnel credential as
+`cloudflared/credentials.json`. Both runtime files are ignored and must be mode
+`0600`; the container mounts them read-only.
 
 | Hostname | Private service |
 | --- | --- |

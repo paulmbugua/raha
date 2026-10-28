@@ -88,6 +88,8 @@ deploy/vps/.env.production
 deploy/vps/secrets/
 deploy/vps/artifacts/
 deploy/vps/cloudflared/credentials.json
+deploy/vps/cloudflared/config.yml
+deploy/vps/cloudflared-auth/
 deploy/vps/cloudflared/*.pem
 deploy/vps/backups/
 *.dump
